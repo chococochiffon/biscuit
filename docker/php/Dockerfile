@@ -1,4 +1,4 @@
-FROM php:8.3-fpm
+FROM php:8.5-fpm
 RUN apt-get update \
     && apt-get install -y \
     git \
@@ -23,14 +23,14 @@ RUN php composer-setup.php
 RUN php -r "unlink('composer-setup.php');"
 RUN mv composer.phar /usr/local/bin/composer
 
-ENV COMPOSER_ALLOW_SUPERUSER 1
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
-ENV COMPOSER_HOME /composer
+ENV COMPOSER_HOME=/composer
 
-ENV PATH $PATH:/composer/vendor/bin
+ENV PATH=$PATH:/composer/vendor/bin
 
 WORKDIR /var/www/app
 
-RUN composer global require "laravel/installer"
+#RUN composer global require "laravel/installer"
 
 ENTRYPOINT [ "bash", "-c", "composer install; exec php-fpm" ]

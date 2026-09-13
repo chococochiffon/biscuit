@@ -7,60 +7,52 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
-## About Laravel
+## Laravel について
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Laravel は、表現力豊かで洗練された構文を持つ Web アプリケーションフレームワークです。開発は真に充実したものであるためには、楽しく創造的な体験でなければならないと私たちは考えています。Laravel は、次のような多くの Web プロジェクトで使われる共通のタスクを簡単にすることで、開発の苦労を取り除きます。
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- [シンプルで高速なルーティングエンジン](https://laravel.com/docs/routing)
+- [強力な依存性注入コンテナ](https://laravel.com/docs/container)
+- [セッション](https://laravel.com/docs/session)や[キャッシュ](https://laravel.com/docs/cache)保存のための複数のバックエンド
+- 表現力豊かで直感的な[データベース ORM](https://laravel.com/docs/eloquent)
+- データベースに依存しない[スキーママイグレーション](https://laravel.com/docs/migrations)
+- [堅牢なバックグラウンドジョブ処理](https://laravel.com/docs/queues)
+- [リアルタイムのイベントブロードキャスト](https://laravel.com/docs/broadcasting)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Laravel はアクセスしやすく、パワフルで、大規模で堅牢なアプリケーションに必要なツールを備えています。
 
-## Learning Laravel
+## Laravel を学ぶ
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Laravel は、現代の Web アプリケーションフレームワークの中で最も充実した[ドキュメント](https://laravel.com/docs)と動画チュートリアルライブラリを持っており、簡単にフレームワークを使い始めることができます。
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+さらに、[Laracasts](https://laracasts.com) では、Laravel、モダン PHP、単体テスト、JavaScript など幅広いトピックの動画チュートリアルを何千本も公開しています。充実した動画ライブラリでスキルを磨きましょう。
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+また、[Laravel Learn](https://laravel.com/learn) では、PHP の基礎を学びながら Laravel アプリケーションをゼロから構築する、実践的なプロジェクトに基づく小さなレッスンも視聴できます。
 
-## Laravel Sponsors
+## エージェントによる開発
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Laravel の予測しやすい構造と規約は、Claude Code、Cursor、GitHub Copilot のような AI コーディングエージェントにとって理想的です。AI ワークフローを強化するために [Laravel Boost](https://laravel.com/docs/ai) を導入しましょう。
 
-### Premium Partners
+```bash
+composer require laravel/boost --dev
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+php artisan boost:install
+```
 
-## Contributing
+Boost は、Laravel アプリケーションのベストプラクティスに沿った開発をエージェントが行えるよう、15 個以上のツールとスキルを提供します。
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## コントリビューション
 
-## Code of Conduct
+Laravel フレームワークへの貢献をご検討いただきありがとうございます。コントリビューションガイドは [Laravel ドキュメント](https://laravel.com/docs/contributions)にあります。
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## 行動規範
 
-## Security Vulnerabilities
+Laravel コミュニティがすべての人にとって歓迎される場所であり続けるため、[行動規範](https://laravel.com/docs/contributions#code-of-conduct)を確認し、遵守してください。
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## セキュリティの脆弱性
 
-## License
+Laravel 内でセキュリティの脆弱性を発見した場合は、Taylor Otwell 宛てに [taylor@laravel.com](mailto:taylor@laravel.com) までメールでご連絡ください。セキュリティの脆弱性には迅速に対応いたします。
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## ライセンス
+
+Laravel フレームワークは [MIT ライセンス](https://opensource.org/licenses/MIT)の下でオープンソース化されています。
