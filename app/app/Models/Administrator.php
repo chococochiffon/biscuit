@@ -7,11 +7,11 @@ use Database\Factories\AdministratorFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
 #[Fillable(['name', 'email', 'password', 'role', 'last_login_at'])]
 #[Hidden(['password'])]
-class Administrator extends Model
+class Administrator extends Authenticatable
 {
     /** @use HasFactory<AdministratorFactory> */
     use HasFactory;
