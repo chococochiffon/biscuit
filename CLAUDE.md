@@ -34,6 +34,8 @@ php artisan storage:link
 php artisan migrate
 ```
 
+`composer run setup` bundles most of this (install, `.env` copy, key generation, migrate, npm install/build) in one step.
+
 ## Common commands
 
 All run from `app/`:
@@ -57,3 +59,4 @@ Scaffolding conventions used in this project (from `README.md`):
 - `bootstrap/app.php` already renders JSON error responses for `api/*` routes or JSON-expecting requests via `shouldRenderJsonWhen`.
 - Autoloading: `App\` → `app/app/` (mind the doubled `app`), `Database\Factories\` → `app/database/factories/`, `Database\Seeders\` → `app/database/seeders/` (see `app/composer.json`).
 - Default DB driver for both dev (`.env`) and testing (`phpunit.xml`) is SQLite; tests use an in-memory SQLite DB, array cache/session/mail, and sync queue.
+- `app/` has its own Laravel Boost-managed AI guidance (`app/CLAUDE.md`, `app/AGENTS.md`, `app/.claude/skills/`) covering PHP/Laravel/Pint/PHPUnit conventions and exposing a Boost MCP server (`app/.mcp.json`) with tools like `database-schema` and `search-docs`. That guidance loads automatically when working inside `app/` — this file intentionally doesn't duplicate it and instead covers repo-level layout and the Docker environment.
