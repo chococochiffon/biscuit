@@ -6,6 +6,7 @@ use App\Http\Requests\StoreContentModelRelationRequest;
 use App\Http\Requests\UpdateContentModelRelationRequest;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use App\Rules\AllowedTableName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -28,7 +29,9 @@ class ContentModelRelationController extends Controller
      */
     public function create(): View
     {
-        return view('admin.content_model_relations.create');
+        $tableNames = AllowedTableName::availableTables();
+
+        return view('admin.content_model_relations.create', compact('tableNames'));
     }
 
     /**
@@ -54,7 +57,15 @@ class ContentModelRelationController extends Controller
      */
     public function edit(ContentModelRelation $contentModelRelation): View
     {
-        return view('admin.content_model_relations.edit', compact('contentModelRelation'));
+        // 登録済みのtable_nameが取得元テーブル一覧から漏れていても選択肢から消えないようにする
+        $tableNames = collect(AllowedTableName::availableTables())
+            ->push($contentModelRelation->table_name)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return view('admin.content_model_relations.edit', compact('contentModelRelation', 'tableNames'));
     }
 
     /**

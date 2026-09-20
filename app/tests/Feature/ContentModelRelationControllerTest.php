@@ -6,7 +6,9 @@ use App\Enums\CallContentType;
 use App\Models\Administrator;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class ContentModelRelationControllerTest extends TestCase
@@ -38,6 +40,53 @@ class ContentModelRelationControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.content-model-relations.create'));
 
         $response->assertOk();
+    }
+
+    public function test_create_screen_offers_table_names_from_the_database_as_a_select(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.content-model-relations.create'));
+
+        $response->assertOk();
+        $response->assertSee('<select id="table_name" name="table_name"', false);
+        $response->assertSee('<option value="articles"', false);
+        $response->assertSee('<option value="single_pages"', false);
+        $response->assertDontSee('<option value="users"', false);
+    }
+
+    public function test_create_screen_offers_user_details_even_though_the_table_does_not_exist_yet(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.content-model-relations.create'));
+
+        $response->assertOk();
+        $response->assertSee('<option value="user_details"', false);
+    }
+
+    public function test_create_screen_offers_user_made_tables_that_exist_in_the_database(): void
+    {
+        Schema::create('user_make_recipes', fn (Blueprint $table) => $table->id());
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.content-model-relations.create'));
+
+        $response->assertOk();
+        $response->assertSee('<option value="user_make_recipes"', false);
+
+        Schema::dropIfExists('user_make_recipes');
+    }
+
+    public function test_edit_screen_keeps_the_current_table_name_as_an_option_even_if_not_a_real_table(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = ContentModelRelation::factory()->create(['table_name' => 'user_make_recipes']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.content-model-relations.edit', $target));
+
+        $response->assertOk();
+        $response->assertSee('<option value="user_make_recipes"', false);
     }
 
     public function test_store_creates_content_model_relation_with_valid_data(): void
