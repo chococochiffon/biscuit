@@ -36,15 +36,14 @@
 
 <div class="mb-3">
     <label for="table_name" class="form-label">{{ __('テーブル名') }}</label>
-    <input
-        id="table_name"
-        type="text"
-        name="table_name"
-        value="{{ old('table_name', $contentModelRelation->table_name ?? '') }}"
-        required
-        class="form-control"
-    >
-    <div class="form-text">
-        {{ __('articles・single_pages・user_details のいずれか、または「user_make_」から始まる名前を指定してください。') }}
-    </div>
+    <select id="table_name" name="table_name" required class="form-select">
+        <option value="" disabled @selected(old('table_name', $contentModelRelation->table_name ?? '') === '')>
+            {{ __('選択してください') }}
+        </option>
+        @foreach ($tableNames as $tableName)
+            <option value="{{ $tableName }}" @selected(old('table_name', $contentModelRelation->table_name ?? '') === $tableName)>
+                {{ $tableName }}
+            </option>
+        @endforeach
+    </select>
 </div>
