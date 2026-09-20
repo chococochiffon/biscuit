@@ -87,4 +87,66 @@ class SiteSettingControllerTest extends TestCase
         $response->assertOk();
         $response->assertSee('表示確認サイト');
     }
+
+    public function test_edit_screen_can_be_rendered(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting));
+
+        $response->assertOk();
+    }
+
+    public function test_update_modifies_site_setting(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create(['site_title' => '更新前サイト']);
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => '更新後サイト',
+            'description' => '更新後の説明文',
+        ]);
+
+        $response->assertRedirect(route('admin.site-settings.show', $siteSetting));
+        $this->assertSame('更新後サイト', $siteSetting->fresh()->site_title);
+        $this->assertSame('更新後の説明文', $siteSetting->fresh()->description);
+    }
+
+    public function test_update_fails_validation_with_missing_fields(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => '',
+        ]);
+
+        $response->assertSessionHasErrors(['site_title']);
+    }
+
+    public function test_update_replaces_site_icon_and_site_image_with_expected_filenames(): void
+    {
+        $this->freezeTime();
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $icon = UploadedFile::fake()->image('new-icon.png');
+        $image = UploadedFile::fake()->image('new-image.jpg');
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'site_icon' => $icon,
+            'site_image' => $image,
+        ]);
+
+        $response->assertRedirect(route('admin.site-settings.show', $siteSetting));
+
+        $expectedIconPath = 'image/site_icon/'.now()->format('YmdHis').'_site_settings_'.$siteSetting->id.'.png';
+        $expectedImagePath = 'image/site_image/'.now()->format('YmdHis').'_site_settings_'.$siteSetting->id.'.jpg';
+        $this->assertSame($expectedIconPath, $siteSetting->fresh()->site_icon);
+        $this->assertSame($expectedImagePath, $siteSetting->fresh()->site_image);
+        Storage::disk('public')->assertExists($expectedIconPath);
+        Storage::disk('public')->assertExists($expectedImagePath);
+    }
 }
