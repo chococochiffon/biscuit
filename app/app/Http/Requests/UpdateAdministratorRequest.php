@@ -30,7 +30,7 @@ class UpdateAdministratorRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required', 'string', 'email', 'max:255',
-                Rule::unique('administrators', 'email')->ignore($this->route('administrator')),
+                Rule::unique('administrators', 'email')->ignore($this->route('administrator'))->withoutTrashed(),
             ],
             'password' => ['nullable', 'string', Password::default(), 'confirmed'],
             'role' => ['required', new Enum(AdministratorRole::class)],

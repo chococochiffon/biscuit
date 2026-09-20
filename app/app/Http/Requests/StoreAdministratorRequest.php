@@ -28,7 +28,7 @@ class StoreAdministratorRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('administrators', 'email')],
+            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('administrators', 'email')->withoutTrashed()],
             'password' => ['required', 'string', Password::default(), 'confirmed'],
             'role' => ['required', new Enum(AdministratorRole::class)],
         ];

@@ -83,6 +83,31 @@ class AdministratorControllerTest extends TestCase
         $response->assertSessionHasErrors('email');
     }
 
+    public function test_store_succeeds_with_email_of_soft_deleted_administrator(): void
+    {
+        $actor = Administrator::factory()->create();
+        $deleted = Administrator::factory()->create(['email' => 'reused@example.com']);
+        $deleted->delete();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.store'), [
+            'name' => 'New Administrator',
+            'email' => 'reused@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'role' => AdministratorRole::Admin->value,
+        ]);
+
+        $response->assertRedirect(route('admin.index'));
+        $this->assertDatabaseHas('administrators', [
+            'id' => $deleted->id,
+            'email' => 'reused@example.com',
+        ]);
+        $this->assertDatabaseHas('administrators', [
+            'email' => 'reused@example.com',
+            'deleted_at' => null,
+        ]);
+    }
+
     public function test_show_displays_administrator(): void
     {
         $actor = Administrator::factory()->create();
@@ -166,6 +191,6 @@ class AdministratorControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->delete(route('admin.destroy', $target));
 
         $response->assertRedirect(route('admin.index'));
-        $this->assertDatabaseMissing('administrators', ['id' => $target->id]);
+        $this->assertSoftDeleted('administrators', ['id' => $target->id]);
     }
 }

@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\View\Composers\SiteSettingComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 
@@ -28,5 +31,9 @@ class AppServiceProvider extends ServiceProvider
                 Str::lower($request->string('email')).'|'.$request->ip()
             ));
         });
+
+        Paginator::useBootstrapFive();
+
+        View::composer('layouts.admin', SiteSettingComposer::class);
     }
 }

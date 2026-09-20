@@ -1,63 +1,73 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="{{ app()->getLocale() }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title>管理者ログイン - {{ config('app.name', 'Laravel') }}</title>
+        <title>{{ __('管理者ログイン') }} - {{ config('app.name', 'Laravel') }}</title>
 
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @vite(['resources/css/admin.css', 'resources/js/admin.js'])
     </head>
-    <body class="flex min-h-screen items-center justify-center bg-gray-50 font-sans text-gray-900 antialiased">
-        <div class="w-full max-w-sm rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-            <h1 class="mb-6 text-center text-xl font-semibold">管理者ログイン</h1>
-
-            @if ($errors->any())
-                <div class="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-800">
-                    <ul class="list-inside list-disc">
-                        @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
-
-            <form method="POST" action="{{ route('admin.login.store') }}" class="space-y-4">
-                @csrf
-
-                <div>
-                    <label for="email" class="block text-sm font-medium text-gray-700">メールアドレス</label>
-                    <input
-                        id="email"
-                        type="email"
-                        name="email"
-                        value="{{ old('email') }}"
-                        required
-                        autofocus
-                        autocomplete="username"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    >
+    <body class="bg-light d-flex align-items-center justify-content-center vh-100">
+        <div class="card shadow-sm" style="width: 100%; max-width: 24rem;">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-end gap-2 mb-2">
+                    @foreach (config('app.available_locales') as $availableLocale)
+                        <a
+                            href="{{ route('locale.update', $availableLocale) }}"
+                            class="small {{ app()->getLocale() === $availableLocale ? 'fw-semibold text-decoration-none text-body' : 'text-secondary' }}"
+                        >
+                            {{ ['ja' => '日本語', 'en' => 'English'][$availableLocale] ?? $availableLocale }}
+                        </a>
+                    @endforeach
                 </div>
 
-                <div>
-                    <label for="password" class="block text-sm font-medium text-gray-700">パスワード</label>
-                    <input
-                        id="password"
-                        type="password"
-                        name="password"
-                        required
-                        autocomplete="current-password"
-                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    >
-                </div>
+                <h1 class="h4 text-center mb-4">{{ __('管理者ログイン') }}</h1>
 
-                <button
-                    type="submit"
-                    class="w-full rounded-md bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
-                >
-                    ログイン
-                </button>
-            </form>
+                @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul class="mb-0 ps-3">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <form method="POST" action="{{ route('admin.login.store') }}">
+                    @csrf
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label">{{ __('メールアドレス') }}</label>
+                        <input
+                            id="email"
+                            type="email"
+                            name="email"
+                            value="{{ old('email') }}"
+                            required
+                            autofocus
+                            autocomplete="username"
+                            class="form-control"
+                        >
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">{{ __('パスワード') }}</label>
+                        <input
+                            id="password"
+                            type="password"
+                            name="password"
+                            required
+                            autocomplete="current-password"
+                            class="form-control"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        {{ __('ログイン') }}
+                    </button>
+                </form>
+            </div>
         </div>
     </body>
 </html>
