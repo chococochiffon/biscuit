@@ -1,32 +1,72 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="{{ app()->getLocale() }}">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>@yield('title', '管理画面') - {{ config('app.name', 'Laravel') }}</title>
+        <title>@yield('title', __('管理画面')) - {{ config('app.name', 'Laravel') }}</title>
 
-        @vite(['resources/css/app.css', 'resources/js/app.js'])
+        @vite(['resources/css/admin.css', 'resources/js/admin.js'])
     </head>
-    <body class="min-h-screen bg-gray-50 font-sans text-gray-900 antialiased">
-        <nav class="border-b border-gray-200 bg-white">
-            <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-                <a href="{{ route('admin.index') }}" class="font-semibold text-gray-900">管理者管理</a>
+    <body class="bg-light">
+        <nav class="navbar navbar-expand navbar-light bg-white border-bottom">
+            <div class="container flex-wrap">
+                <div class="d-flex w-100 align-items-center justify-content-between">
+                    <a href="{{ route('admin.index') }}" class="navbar-brand fw-semibold mb-0 fs-2">{{ __('システム管理') }}</a>
 
-                @auth('admin')
-                    <form method="POST" action="{{ route('admin.logout') }}">
-                        @csrf
-                        <button type="submit" class="text-sm text-gray-600 hover:text-gray-900">
-                            ログアウト
-                        </button>
-                    </form>
-                @endauth
+                    <div class="d-flex flex-column align-items-end gap-1">
+                        @auth('admin')
+                            <div class="small text-secondary">{{ auth('admin')->user()->name }}</div>
+                        @endauth
+
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="d-flex align-items-center gap-2">
+                                @foreach (config('app.available_locales') as $availableLocale)
+                                    <a
+                                        href="{{ route('locale.update', $availableLocale) }}"
+                                        class="small {{ app()->getLocale() === $availableLocale ? 'fw-semibold text-decoration-none text-body' : 'text-secondary' }}"
+                                    >
+                                        {{ ['ja' => '日本語', 'en' => 'English'][$availableLocale] ?? $availableLocale }}
+                                    </a>
+                                @endforeach
+                            </div>
+
+                            @auth('admin')
+                                <form method="POST" action="{{ route('admin.logout') }}">
+                                    @csrf
+                                    <button type="submit" class="btn btn-link nav-link text-secondary p-0 small">
+                                        {{ __('ログアウト') }}
+                                    </button>
+                                </form>
+                            @endauth
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="navbar-nav w-100 mt-2">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.index') }}" class="nav-link">{{ __('管理者一覧') }}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.tags.index') }}" class="nav-link">{{ __('タグ一覧') }}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ route('admin.articles.index') }}" class="nav-link">{{ __('記事一覧') }}</a>
+                    </li>
+                    <li class="nav-item">
+                        <a
+                            href="{{ $currentSiteSetting ? route('admin.site-settings.show', $currentSiteSetting) : route('admin.site-settings.create') }}"
+                            class="nav-link"
+                        >{{ __('サイト設定') }}</a>
+                    </li>
+                </ul>
             </div>
         </nav>
 
-        <main class="mx-auto max-w-5xl px-4 py-8">
+        <main class="container py-4">
             @if (session('status'))
-                <div class="mb-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-800">
+                <div class="alert alert-success">
                     {{ session('status') }}
                 </div>
             @endif
