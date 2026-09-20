@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdministratorController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
+use App\Http\Controllers\ContentModelRelationController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
@@ -44,9 +45,14 @@ Route::resource('admin/articles', ArticleController::class)
     ->middleware('auth:admin');
 
 Route::resource('admin/site-settings', SiteSettingController::class)
-    ->only(['create', 'store', 'show'])
+    ->only(['create', 'store', 'show', 'edit', 'update'])
     ->parameters(['site-settings' => 'siteSetting'])
     ->names('admin.site-settings')
+    ->middleware('auth:admin');
+
+Route::resource('admin/content-model-relations', ContentModelRelationController::class)
+    ->parameters(['content-model-relations' => 'contentModelRelation'])
+    ->names('admin.content-model-relations')
     ->middleware('auth:admin');
 
 Route::resource('admin', AdministratorController::class)

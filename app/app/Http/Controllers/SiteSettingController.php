@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSiteSettingRequest;
+use App\Http\Requests\UpdateSiteSettingRequest;
 use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -44,5 +45,36 @@ class SiteSettingController extends Controller
     public function show(SiteSetting $siteSetting): View
     {
         return view('admin.site_settings.show', compact('siteSetting'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(SiteSetting $siteSetting): View
+    {
+        return view('admin.site_settings.edit', compact('siteSetting'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateSiteSettingRequest $request, SiteSetting $siteSetting): RedirectResponse
+    {
+        $siteSetting->fill([
+            'site_title' => $request->validated('site_title'),
+            'description' => $request->validated('description'),
+        ]);
+
+        if ($request->hasFile('site_icon')) {
+            $siteSetting->site_icon = $siteSetting->storeSiteIcon($request->file('site_icon'));
+        }
+
+        if ($request->hasFile('site_image')) {
+            $siteSetting->site_image = $siteSetting->storeSiteImage($request->file('site_image'));
+        }
+
+        $siteSetting->save();
+
+        return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を更新しました。');
     }
 }
