@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CallContentPlace;
 use App\Enums\CallContentType;
 use Database\Factories\CallContentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,6 +25,7 @@ class CallContent extends Model
     {
         return [
             'content_type' => CallContentType::class,
+            'place' => CallContentPlace::class,
         ];
     }
 }

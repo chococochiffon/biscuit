@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreSiteSettingRequest;
 use App\Http\Requests\UpdateSiteSettingRequest;
+use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -15,7 +17,10 @@ class SiteSettingController extends Controller
      */
     public function create(): View
     {
-        return view('admin.site_settings.create');
+        $callContents = collect();
+        $contentModelRelations = ContentModelRelation::all(['content_type', 'model_name']);
+
+        return view('admin.site_settings.create', compact('callContents', 'contentModelRelations'));
     }
 
     /**
@@ -36,6 +41,8 @@ class SiteSettingController extends Controller
             $siteSetting->update(['site_image' => $siteSetting->storeSiteImage($request->file('site_image'))]);
         }
 
+        $this->syncCallContents($request->validated('call_contents', []));
+
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を登録しました。');
     }
 
@@ -44,7 +51,9 @@ class SiteSettingController extends Controller
      */
     public function show(SiteSetting $siteSetting): View
     {
-        return view('admin.site_settings.show', compact('siteSetting'));
+        $callContents = CallContent::query()->orderBy('id')->get();
+
+        return view('admin.site_settings.show', compact('siteSetting', 'callContents'));
     }
 
     /**
@@ -52,7 +61,10 @@ class SiteSettingController extends Controller
      */
     public function edit(SiteSetting $siteSetting): View
     {
-        return view('admin.site_settings.edit', compact('siteSetting'));
+        $callContents = CallContent::query()->orderBy('id')->get();
+        $contentModelRelations = ContentModelRelation::all(['content_type', 'model_name']);
+
+        return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'contentModelRelations'));
     }
 
     /**
@@ -75,6 +87,36 @@ class SiteSettingController extends Controller
 
         $siteSetting->save();
 
+        $this->syncCallContents($request->validated('call_contents', []));
+
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を更新しました。');
+    }
+
+    /**
+     * フォームから送信された呼び出しコンテンツ(call_contents)の内容にデータベースを同期する。
+     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
+     *
+     * @param  array<int, array{id?: int|string|null, content_type: int|string, model_name: string, view_count: int|string, place: int|string}>  $rows
+     */
+    private function syncCallContents(array $rows): void
+    {
+        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        CallContent::query()->whereNotIn('id', $submittedIds)->delete();
+
+        foreach ($rows as $row) {
+            $attributes = [
+                'content_type' => $row['content_type'],
+                'model_name' => $row['model_name'],
+                'view_count' => $row['view_count'],
+                'place' => $row['place'],
+            ];
+
+            if (! empty($row['id'])) {
+                CallContent::query()->whereKey($row['id'])->update($attributes);
+            } else {
+                CallContent::create($attributes);
+            }
+        }
     }
 }

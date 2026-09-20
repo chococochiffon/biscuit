@@ -5,7 +5,10 @@
 @section('content')
     <div class="mb-4 d-flex align-items-center justify-content-between">
         <h1 class="h5 mb-0">{{ __('サイト設定詳細') }}</h1>
-        <a href="{{ route('admin.site-settings.edit', $siteSetting) }}" class="link-primary">{{ __('編集する') }}</a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ route('admin.content-model-relations.index') }}" class="link-secondary">{{ __('データ種別紐付け一覧') }}</a>
+            <a href="{{ route('admin.site-settings.edit', $siteSetting) }}" class="link-primary">{{ __('編集する') }}</a>
+        </div>
     </div>
 
     <div class="card" style="max-width: 40rem;">
@@ -44,5 +47,34 @@
                 @endif
             </dd>
         </dl>
+    </div>
+
+    <h2 class="h6 mt-4 mb-3">{{ __('API設定') }}</h2>
+
+    <div class="card" style="max-width: 56rem;">
+        <table class="table table-hover mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th>{{ __('コンテンツ種別') }}</th>
+                    <th>{{ __('モデル名') }}</th>
+                    <th>{{ __('表示件数') }}</th>
+                    <th>{{ __('表示箇所') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($callContents as $callContent)
+                    <tr>
+                        <td>{{ $callContent->content_type->label() }}</td>
+                        <td>{{ $callContent->model_name }}</td>
+                        <td>{{ $callContent->view_count }}</td>
+                        <td>{{ $callContent->place->label() }}</td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 @endsection
