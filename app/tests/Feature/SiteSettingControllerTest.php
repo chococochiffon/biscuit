@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CallContentPlace;
+use App\Enums\CallContentType;
 use App\Models\Administrator;
+use App\Models\CallContent;
 use App\Models\SiteSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -77,6 +80,115 @@ class SiteSettingControllerTest extends TestCase
         Storage::disk('public')->assertExists($expectedImagePath);
     }
 
+    public function test_store_creates_call_contents_together_with_site_setting(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'content_type' => CallContentType::Article->value,
+                    'model_name' => 'article',
+                    'view_count' => 1,
+                    'place' => CallContentPlace::Top->value,
+                ],
+                [
+                    'content_type' => CallContentType::LinkList->value,
+                    'model_name' => 'article',
+                    'view_count' => 3,
+                    'place' => CallContentPlace::Inside->value,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseCount('call_contents', 2);
+        $this->assertDatabaseHas('call_contents', [
+            'content_type' => CallContentType::Article->value,
+            'model_name' => 'article',
+            'view_count' => 1,
+            'place' => CallContentPlace::Top->value,
+        ]);
+        $this->assertDatabaseHas('call_contents', [
+            'content_type' => CallContentType::LinkList->value,
+            'model_name' => 'article',
+            'view_count' => 3,
+            'place' => CallContentPlace::Inside->value,
+        ]);
+    }
+
+    public function test_update_syncs_call_contents_creating_updating_and_deleting_rows(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $kept = CallContent::factory()->create([
+            'content_type' => CallContentType::Article,
+            'model_name' => 'article',
+            'view_count' => 1,
+            'place' => CallContentPlace::Top,
+        ]);
+        $removed = CallContent::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'call_contents' => [
+                [
+                    'id' => $kept->id,
+                    'content_type' => CallContentType::Article->value,
+                    'model_name' => 'article',
+                    'view_count' => 5,
+                    'place' => CallContentPlace::Others->value,
+                ],
+                [
+                    'content_type' => CallContentType::SinglePage->value,
+                    'model_name' => 'single_page',
+                    'view_count' => 1,
+                    'place' => CallContentPlace::Inside->value,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect(route('admin.site-settings.show', $siteSetting));
+        $this->assertDatabaseHas('call_contents', [
+            'id' => $kept->id,
+            'view_count' => 5,
+            'place' => CallContentPlace::Others->value,
+        ]);
+        $this->assertDatabaseHas('call_contents', [
+            'model_name' => 'single_page',
+            'content_type' => CallContentType::SinglePage->value,
+        ]);
+        $this->assertSoftDeleted('call_contents', ['id' => $removed->id]);
+        $this->assertDatabaseCount('call_contents', 3);
+    }
+
+    public function test_update_removes_all_call_contents_when_none_are_submitted(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $existing = CallContent::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+        ]);
+
+        $response->assertRedirect(route('admin.site-settings.show', $siteSetting));
+        $this->assertSoftDeleted('call_contents', ['id' => $existing->id]);
+    }
+
+    public function test_edit_screen_displays_existing_call_contents(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        CallContent::factory()->create(['model_name' => '編集画面確認用モデル']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting));
+
+        $response->assertOk();
+        $response->assertSee('編集画面確認用モデル');
+    }
+
     public function test_show_displays_site_setting(): void
     {
         $actor = Administrator::factory()->create();
@@ -86,6 +198,25 @@ class SiteSettingControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSee('表示確認サイト');
+    }
+
+    public function test_show_displays_call_contents(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $callContent = CallContent::factory()->create([
+            'content_type' => CallContentType::Article,
+            'model_name' => '詳細確認用モデル',
+            'view_count' => 2,
+            'place' => CallContentPlace::Inside,
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting));
+
+        $response->assertOk();
+        $response->assertSee($callContent->content_type->label());
+        $response->assertSee('詳細確認用モデル');
+        $response->assertSee($callContent->place->label());
     }
 
     public function test_edit_screen_can_be_rendered(): void

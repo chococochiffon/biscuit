@@ -58,3 +58,61 @@
     @endisset
     <input id="site_image" type="file" name="site_image" accept="image/*" class="form-control">
 </div>
+
+@php
+    $oldCallContents = old('call_contents');
+
+    $callContentRows = $oldCallContents !== null
+        ? collect($oldCallContents)->values()->map(fn ($row, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $row['id'] ?? null,
+            'contentType' => isset($row['content_type']) && $row['content_type'] !== '' ? (int) $row['content_type'] : null,
+            'modelName' => $row['model_name'] ?? null,
+            'viewCount' => $row['view_count'] ?? 1,
+            'place' => isset($row['place']) && $row['place'] !== '' ? (int) $row['place'] : null,
+        ])
+        : ($callContents ?? collect())->values()->map(fn ($callContent, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $callContent->id,
+            'contentType' => $callContent->content_type->value,
+            'modelName' => $callContent->model_name,
+            'viewCount' => $callContent->view_count,
+            'place' => $callContent->place->value,
+        ]);
+@endphp
+
+<div class="mb-3">
+    <label class="form-label">{{ __('API設定') }}</label>
+
+    <div
+        id="call-content-rows"
+        data-content-model-relations="{{ ($contentModelRelations ?? collect())->map(fn ($relation) => ['content_type' => $relation->content_type->value, 'model_name' => $relation->model_name])->toJson() }}"
+        data-next-index="{{ $callContentRows->count() }}"
+    >
+        @foreach ($callContentRows as $row)
+            @include('admin.site_settings._call_content_row', [
+                'index' => $row->index,
+                'id' => $row->id,
+                'contentType' => $row->contentType,
+                'modelName' => $row->modelName,
+                'viewCount' => $row->viewCount,
+                'place' => $row->place,
+            ])
+        @endforeach
+    </div>
+
+    <button type="button" id="call-content-add" class="btn btn-outline-secondary btn-sm">
+        {{ __('+ 行を追加') }}
+    </button>
+
+    <template id="call-content-row-template">
+        @include('admin.site_settings._call_content_row', [
+            'index' => '__INDEX__',
+            'id' => null,
+            'contentType' => null,
+            'modelName' => null,
+            'viewCount' => 1,
+            'place' => null,
+        ])
+    </template>
+</div>

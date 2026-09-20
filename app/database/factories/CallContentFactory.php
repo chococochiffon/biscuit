@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\CallContentPlace;
 use App\Enums\CallContentType;
 use App\Models\CallContent;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -22,7 +23,7 @@ class CallContentFactory extends Factory
             'content_type' => fake()->randomElement(CallContentType::cases()),
             'model_name' => fake()->word(),
             'view_count' => 1,
-            'place' => fake()->word(),
+            'place' => fake()->randomElement(CallContentPlace::cases()),
         ];
     }
 }

@@ -4,6 +4,7 @@ import Quill from 'quill';
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
     initContentEditor();
+    initCallContentRows();
 });
 
 /**
@@ -208,5 +209,86 @@ function initContentEditor() {
 
     form.addEventListener('submit', () => {
         hiddenInput.value = quill.root.innerHTML;
+    });
+}
+
+/**
+ * 呼び出しコンテンツ(call_contents)の行入力UI(サイト設定の登録・編集フォーム)を初期化する。
+ * 「+」で行を追加、「−」で行を削除し、コンテンツ種別の選択に応じてモデル名の選択肢を絞り込む。
+ */
+function initCallContentRows() {
+    const container = document.getElementById('call-content-rows');
+
+    if (!container) {
+        return;
+    }
+
+    const addButton = document.getElementById('call-content-add');
+    const template = document.getElementById('call-content-row-template');
+
+    let relations = [];
+
+    try {
+        relations = JSON.parse(container.dataset.contentModelRelations || '[]');
+    } catch {
+        relations = [];
+    }
+
+    let nextIndex = Number(container.dataset.nextIndex || '0');
+
+    function populateModelNameOptions(row) {
+        const contentTypeSelect = row.querySelector('[data-role="content-type"]');
+        const modelNameSelect = row.querySelector('[data-role="model-name"]');
+        const currentValue = 'initialValue' in modelNameSelect.dataset ? modelNameSelect.dataset.initialValue : modelNameSelect.value;
+
+        modelNameSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '選択してください';
+        placeholder.disabled = true;
+        modelNameSelect.appendChild(placeholder);
+
+        const modelNames = new Set(
+            relations
+                .filter((relation) => String(relation.content_type) === contentTypeSelect.value)
+                .map((relation) => relation.model_name)
+        );
+
+        modelNames.forEach((modelName) => {
+            const option = document.createElement('option');
+            option.value = modelName;
+            option.textContent = modelName;
+            modelNameSelect.appendChild(option);
+        });
+
+        if (currentValue && modelNames.has(currentValue)) {
+            modelNameSelect.value = currentValue;
+        } else {
+            placeholder.selected = true;
+        }
+
+        delete modelNameSelect.dataset.initialValue;
+    }
+
+    function bindRow(row) {
+        const contentTypeSelect = row.querySelector('[data-role="content-type"]');
+        contentTypeSelect.addEventListener('change', () => populateModelNameOptions(row));
+        populateModelNameOptions(row);
+
+        row.querySelector('[data-role="remove-row"]').addEventListener('click', () => row.remove());
+    }
+
+    container.querySelectorAll('[data-role="call-content-row"]').forEach(bindRow);
+
+    addButton.addEventListener('click', () => {
+        const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex));
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html.trim();
+        const row = wrapper.firstElementChild;
+
+        container.appendChild(row);
+        bindRow(row);
+        nextIndex += 1;
     });
 }

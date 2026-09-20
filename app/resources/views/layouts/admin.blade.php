@@ -60,9 +60,6 @@
                             class="nav-link"
                         >{{ __('サイト設定') }}</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="{{ route('admin.content-model-relations.index') }}" class="nav-link">{{ __('データ種別紐付け一覧') }}</a>
-                    </li>
                 </ul>
             </div>
         </nav>
