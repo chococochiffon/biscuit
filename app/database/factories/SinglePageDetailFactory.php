@@ -22,6 +22,7 @@ class SinglePageDetailFactory extends Factory
             'single_page_id' => SinglePage::factory(),
             'sub_title' => fake()->sentence(),
             'contents' => fake()->paragraphs(3, true),
+            'sort_order' => 0,
         ];
     }
 }

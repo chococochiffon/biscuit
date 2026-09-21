@@ -26,6 +26,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.single-pages.index') }}" class="nav-link">
+                            <i class="bi bi-file-earmark-richtext"></i>{{ __('固定ページ一覧') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.users.index') }}" class="nav-link">
                             <i class="bi bi-people"></i>{{ __('ユーザー一覧') }}
                         </a>

@@ -164,3 +164,27 @@ main > form {
     border-radius: 0.75rem;
     box-shadow: 0 0.15rem 1.75rem rgba(13, 1, 22, 0.1);
 }
+
+/* 固定ページ詳細の並び替え可能な行 */
+.single-page-detail-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    flex-shrink: 0;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    background-color: #f1f5f9;
+    color: #334155;
+    cursor: grab;
+    align-self: stretch;
+}
+
+.single-page-detail-row.dragging {
+    opacity: 0.5;
+}
+
+.single-page-detail-editor {
+    height: 160px;
+    background-color: #fff;
+}

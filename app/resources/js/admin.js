@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTagManagerModal();
     initContentEditor();
     initCallContentRows();
+    initSinglePageDetailRows();
 });
 
 /**
@@ -498,4 +499,143 @@ function initCallContentRows() {
         bindRow(row);
         nextIndex += 1;
     });
+}
+
+/**
+ * 固定ページの詳細(single_page_details)の行入力UI(固定ページの登録・編集フォーム)を初期化する。
+ * 「+」で行を追加、「×」で行を削除し、左側のハンドルをドラッグして並び替えできる。
+ * 各行の本文はリッチテキストエディタ(Quill)で編集し、フォーム送信時に隠しtextareaへ反映する。
+ */
+function initSinglePageDetailRows() {
+    const container = document.getElementById('single-page-detail-rows');
+
+    if (!container) {
+        return;
+    }
+
+    const addButton = document.getElementById('single-page-detail-add');
+    const template = document.getElementById('single-page-detail-row-template');
+    const form = container.closest('form');
+
+    let nextIndex = Number(container.dataset.nextIndex || '0');
+    const editors = new Map();
+    let draggingRow = null;
+
+    function initEditor(row) {
+        const editorElement = row.querySelector('[data-role="content-editor"]');
+        const hiddenInput = row.querySelector('[data-role="content-input"]');
+
+        const quill = new Quill(editorElement, {
+            theme: 'snow',
+            modules: {
+                toolbar: [
+                    [{ header: [2, 3, false] }],
+                    ['bold', 'italic', 'underline', 'strike'],
+                    [{ list: 'ordered' }, { list: 'bullet' }],
+                    ['link'],
+                    ['clean'],
+                ],
+            },
+        });
+
+        if (hiddenInput.value) {
+            quill.clipboard.dangerouslyPasteHTML(hiddenInput.value);
+        }
+
+        editors.set(row, { quill, hiddenInput });
+    }
+
+    function updateSortOrders() {
+        container.querySelectorAll('[data-role="detail-row"]').forEach((row, index) => {
+            row.querySelector('[data-role="sort-order"]').value = String(index);
+        });
+    }
+
+    function getRowAfterElement(y) {
+        const rows = [...container.querySelectorAll('[data-role="detail-row"]:not(.dragging)')];
+
+        return rows.reduce(
+            (closest, row) => {
+                const box = row.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset, element: row };
+                }
+
+                return closest;
+            },
+            { offset: Number.NEGATIVE_INFINITY, element: null }
+        ).element;
+    }
+
+    function bindDragAndDrop(row) {
+        const handle = row.querySelector('[data-role="drag-handle"]');
+
+        handle.addEventListener('mousedown', () => {
+            row.draggable = true;
+        });
+
+        row.addEventListener('dragstart', () => {
+            draggingRow = row;
+            row.classList.add('dragging');
+        });
+
+        row.addEventListener('dragend', () => {
+            row.draggable = false;
+            row.classList.remove('dragging');
+            draggingRow = null;
+            updateSortOrders();
+        });
+    }
+
+    container.addEventListener('dragover', (event) => {
+        if (!draggingRow) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const afterElement = getRowAfterElement(event.clientY);
+
+        if (afterElement == null) {
+            container.appendChild(draggingRow);
+        } else {
+            container.insertBefore(draggingRow, afterElement);
+        }
+    });
+
+    function bindRow(row) {
+        initEditor(row);
+        bindDragAndDrop(row);
+
+        row.querySelector('[data-role="remove-detail"]').addEventListener('click', () => {
+            editors.delete(row);
+            row.remove();
+            updateSortOrders();
+        });
+    }
+
+    container.querySelectorAll('[data-role="detail-row"]').forEach(bindRow);
+
+    addButton.addEventListener('click', () => {
+        const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex));
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html.trim();
+        const row = wrapper.firstElementChild;
+
+        container.appendChild(row);
+        bindRow(row);
+        nextIndex += 1;
+        updateSortOrders();
+    });
+
+    form.addEventListener('submit', () => {
+        editors.forEach(({ quill, hiddenInput }) => {
+            hiddenInput.value = quill.root.innerHTML;
+        });
+        updateSortOrders();
+    });
+
+    updateSortOrders();
 }

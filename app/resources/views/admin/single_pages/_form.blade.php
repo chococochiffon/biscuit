@@ -1,0 +1,128 @@
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <ul class="mb-0 ps-3">
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+<div class="mb-3">
+    <label for="title" class="form-label">{{ __('タイトル') }}</label>
+    <input
+        id="title"
+        type="text"
+        name="title"
+        value="{{ old('title', $singlePage->title ?? '') }}"
+        required
+        class="form-control"
+    >
+</div>
+
+<div class="mb-3">
+    <label for="short_sentences" class="form-label">{{ __('概要') }}</label>
+    <input
+        id="short_sentences"
+        type="text"
+        name="short_sentences"
+        value="{{ old('short_sentences', $singlePage->short_sentences ?? '') }}"
+        required
+        maxlength="255"
+        class="form-control"
+    >
+</div>
+
+<div class="mb-3">
+    <label for="taxonomy" class="form-label">{{ __('タクソノミー') }}</label>
+    <input
+        id="taxonomy"
+        type="text"
+        name="taxonomy"
+        value="{{ old('taxonomy', $singlePage->taxonomy ?? '') }}"
+        class="form-control"
+    >
+</div>
+
+<div class="mb-3">
+    <label for="uri" class="form-label">{{ __('URI') }}</label>
+    <input
+        id="uri"
+        type="text"
+        name="uri"
+        value="{{ old('uri', $singlePage->uri ?? '') }}"
+        class="form-control"
+    >
+</div>
+
+<div class="mb-3">
+    <label class="form-label">{{ __('ヘッダー画像') }}</label>
+    @isset($singlePage)
+        @if ($singlePage->header_image)
+            <div class="mb-2">
+                <img
+                    src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($singlePage->header_image) }}"
+                    alt="{{ __('ヘッダー画像') }}"
+                    class="img-thumbnail"
+                    style="width: 240px; height: 160px; object-fit: cover;"
+                >
+            </div>
+        @endif
+    @endisset
+    <input id="header_image" type="file" name="header_image" accept="image/*" class="form-control">
+</div>
+
+<hr class="my-4">
+
+@php
+    $oldDetails = old('details');
+
+    $detailRows = $oldDetails !== null
+        ? collect($oldDetails)->values()->map(fn ($row, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $row['id'] ?? null,
+            'subTitle' => $row['sub_title'] ?? '',
+            'contents' => $row['contents'] ?? '',
+            'sortOrder' => $row['sort_order'] ?? $i,
+        ])
+        : ($singlePage->details ?? collect())->values()->map(fn ($detail, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $detail->id,
+            'subTitle' => $detail->sub_title,
+            'contents' => $detail->contents,
+            'sortOrder' => $detail->sort_order,
+        ]);
+@endphp
+
+<div class="mb-3">
+    <label class="form-label">{{ __('詳細') }}</label>
+
+    <div
+        id="single-page-detail-rows"
+        data-next-index="{{ $detailRows->count() }}"
+    >
+        @foreach ($detailRows as $row)
+            @include('admin.single_pages._detail_row', [
+                'index' => $row->index,
+                'id' => $row->id,
+                'subTitle' => $row->subTitle,
+                'contents' => $row->contents,
+                'sortOrder' => $row->sortOrder,
+            ])
+        @endforeach
+    </div>
+
+    <button type="button" id="single-page-detail-add" class="btn btn-outline-secondary btn-sm">
+        {{ __('+ 詳細を追加') }}
+    </button>
+
+    <template id="single-page-detail-row-template">
+        @include('admin.single_pages._detail_row', [
+            'index' => '__INDEX__',
+            'id' => null,
+            'subTitle' => '',
+            'contents' => '',
+            'sortOrder' => 0,
+        ])
+    </template>
+</div>

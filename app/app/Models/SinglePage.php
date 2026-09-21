@@ -39,6 +39,6 @@ class SinglePage extends Model
      */
     public function details(): HasMany
     {
-        return $this->hasMany(SinglePageDetail::class);
+        return $this->hasMany(SinglePageDetail::class)->orderBy('sort_order');
     }
 }

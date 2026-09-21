@@ -1,0 +1,133 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreSinglePageRequest;
+use App\Http\Requests\UpdateSinglePageRequest;
+use App\Models\SinglePage;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
+
+class SinglePageController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(): View
+    {
+        $singlePages = SinglePage::query()
+            ->orderBy('title')
+            ->paginate(20);
+
+        return view('admin.single_pages.index', compact('singlePages'));
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create(): View
+    {
+        return view('admin.single_pages.create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreSinglePageRequest $request): RedirectResponse
+    {
+        $singlePage = SinglePage::create([
+            'title' => $request->validated('title'),
+            'short_sentences' => $request->validated('short_sentences'),
+            'taxonomy' => $request->validated('taxonomy'),
+            'uri' => $request->validated('uri'),
+        ]);
+
+        if ($request->hasFile('header_image')) {
+            $singlePage->update(['header_image' => $singlePage->storeHeaderImage($request->file('header_image'))]);
+        }
+
+        $this->syncDetails($singlePage, $request->validated('details', []));
+
+        return redirect()->route('admin.single-pages.index')->with('status', '固定ページを登録しました。');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(SinglePage $singlePage): View
+    {
+        $singlePage->load('details');
+
+        return view('admin.single_pages.show', compact('singlePage'));
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(SinglePage $singlePage): View
+    {
+        $singlePage->load('details');
+
+        return view('admin.single_pages.edit', compact('singlePage'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateSinglePageRequest $request, SinglePage $singlePage): RedirectResponse
+    {
+        $singlePage->fill([
+            'title' => $request->validated('title'),
+            'short_sentences' => $request->validated('short_sentences'),
+            'taxonomy' => $request->validated('taxonomy'),
+            'uri' => $request->validated('uri'),
+        ]);
+
+        if ($request->hasFile('header_image')) {
+            $singlePage->header_image = $singlePage->storeHeaderImage($request->file('header_image'));
+        }
+
+        $singlePage->save();
+
+        $this->syncDetails($singlePage, $request->validated('details', []));
+
+        return redirect()->route('admin.single-pages.index')->with('status', '固定ページを更新しました。');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(SinglePage $singlePage): RedirectResponse
+    {
+        $singlePage->delete();
+
+        return redirect()->route('admin.single-pages.index')->with('status', '固定ページを削除しました。');
+    }
+
+    /**
+     * フォームから送信された詳細(single_page_details)の内容にデータベースを同期する。
+     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
+     *
+     * @param  array<int, array{id?: int|string|null, sub_title: string, contents?: string|null, sort_order?: int|string|null}>  $rows
+     */
+    private function syncDetails(SinglePage $singlePage, array $rows): void
+    {
+        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        $singlePage->details()->whereNotIn('id', $submittedIds)->delete();
+
+        foreach ($rows as $index => $row) {
+            $attributes = [
+                'sub_title' => $row['sub_title'],
+                'contents' => $row['contents'] ?? '',
+                'sort_order' => $row['sort_order'] ?? $index,
+            ];
+
+            if (! empty($row['id'])) {
+                $singlePage->details()->whereKey($row['id'])->update($attributes);
+            } else {
+                $singlePage->details()->create($attributes);
+            }
+        }
+    }
+}

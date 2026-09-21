@@ -5,6 +5,7 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\SinglePageController;
 use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\UserController;
@@ -58,6 +59,11 @@ Route::resource('admin/content-model-relations', ContentModelRelationController:
 
 Route::resource('admin/users', UserController::class)
     ->names('admin.users')
+    ->middleware('auth:admin');
+
+Route::resource('admin/single-pages', SinglePageController::class)
+    ->parameters(['single-pages' => 'singlePage'])
+    ->names('admin.single-pages')
     ->middleware('auth:admin');
 
 Route::resource('admin', AdministratorController::class)
