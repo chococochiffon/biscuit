@@ -18,7 +18,7 @@ class SiteSettingController extends Controller
     public function create(): View
     {
         $callContents = collect();
-        $contentModelRelations = ContentModelRelation::all(['content_type', 'model_name']);
+        $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
 
         return view('admin.site_settings.create', compact('callContents', 'contentModelRelations'));
     }
@@ -51,7 +51,7 @@ class SiteSettingController extends Controller
      */
     public function show(SiteSetting $siteSetting): View
     {
-        $callContents = CallContent::query()->orderBy('id')->get();
+        $callContents = CallContent::query()->with('contentModelRelation')->orderBy('id')->get();
 
         return view('admin.site_settings.show', compact('siteSetting', 'callContents'));
     }
@@ -62,7 +62,7 @@ class SiteSettingController extends Controller
     public function edit(SiteSetting $siteSetting): View
     {
         $callContents = CallContent::query()->orderBy('id')->get();
-        $contentModelRelations = ContentModelRelation::all(['content_type', 'model_name']);
+        $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
 
         return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'contentModelRelations'));
     }
@@ -96,7 +96,7 @@ class SiteSettingController extends Controller
      * フォームから送信された呼び出しコンテンツ(call_contents)の内容にデータベースを同期する。
      * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
      *
-     * @param  array<int, array{id?: int|string|null, content_type: int|string, model_name: string, view_count: int|string, place: int|string}>  $rows
+     * @param  array<int, array{id?: int|string|null, call_type: int|string, call_name: string, content_model_relation_id: int|string, view_count: int|string, place: int|string}>  $rows
      */
     private function syncCallContents(array $rows): void
     {
@@ -106,8 +106,9 @@ class SiteSettingController extends Controller
 
         foreach ($rows as $row) {
             $attributes = [
-                'content_type' => $row['content_type'],
-                'model_name' => $row['model_name'],
+                'call_type' => $row['call_type'],
+                'call_name' => $row['call_name'],
+                'content_model_relation_id' => $row['content_model_relation_id'],
                 'view_count' => $row['view_count'],
                 'place' => $row['place'],
             ];

@@ -3,14 +3,15 @@
 namespace App\Models;
 
 use App\Enums\CallContentPlace;
-use App\Enums\CallContentType;
+use App\Enums\CallType;
 use Database\Factories\CallContentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['content_type', 'model_name', 'view_count', 'place'])]
+#[Fillable(['call_type', 'call_name', 'content_model_relation_id', 'view_count', 'place'])]
 class CallContent extends Model
 {
     /** @use HasFactory<CallContentFactory> */
@@ -24,8 +25,16 @@ class CallContent extends Model
     protected function casts(): array
     {
         return [
-            'content_type' => CallContentType::class,
+            'call_type' => CallType::class,
             'place' => CallContentPlace::class,
         ];
+    }
+
+    /**
+     * 呼び出し元となるデータ種別の紐付けを取得する。
+     */
+    public function contentModelRelation(): BelongsTo
+    {
+        return $this->belongsTo(ContentModelRelation::class);
     }
 }

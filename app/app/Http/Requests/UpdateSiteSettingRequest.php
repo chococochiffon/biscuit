@@ -3,7 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\CallContentPlace;
-use App\Enums\CallContentType;
+use App\Enums\CallType;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -34,8 +34,9 @@ class UpdateSiteSettingRequest extends FormRequest
 
             'call_contents' => ['nullable', 'array'],
             'call_contents.*.id' => ['nullable', 'integer', Rule::exists('call_contents', 'id')],
-            'call_contents.*.content_type' => ['required', new Enum(CallContentType::class)],
-            'call_contents.*.model_name' => ['required', 'string', 'max:255'],
+            'call_contents.*.call_type' => ['required', new Enum(CallType::class)],
+            'call_contents.*.call_name' => ['required', 'string', 'max:255'],
+            'call_contents.*.content_model_relation_id' => ['required', 'integer', Rule::exists('content_model_relations', 'id')],
             'call_contents.*.view_count' => ['required', 'integer', 'min:1'],
             'call_contents.*.place' => ['required', new Enum(CallContentPlace::class)],
         ];

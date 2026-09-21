@@ -55,8 +55,9 @@
         <table class="table table-hover mb-0 align-middle">
             <thead>
                 <tr>
-                    <th>{{ __('コンテンツ種別') }}</th>
-                    <th>{{ __('モデル名') }}</th>
+                    <th>{{ __('呼び出し方') }}</th>
+                    <th>{{ __('呼び出し名') }}</th>
+                    <th>{{ __('データ種別') }}</th>
                     <th>{{ __('表示件数') }}</th>
                     <th>{{ __('表示箇所') }}</th>
                 </tr>
@@ -64,14 +65,15 @@
             <tbody>
                 @forelse ($callContents as $callContent)
                     <tr>
-                        <td>{{ $callContent->content_type->label() }}</td>
-                        <td>{{ $callContent->model_name }}</td>
+                        <td>{{ $callContent->call_type->label() }}</td>
+                        <td>{{ $callContent->call_name }}</td>
+                        <td>{{ $callContent->contentModelRelation->content_type->label() }} / {{ $callContent->contentModelRelation->model_name }}</td>
                         <td>{{ $callContent->view_count }}</td>
                         <td>{{ $callContent->place->label() }}</td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="4" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
+                        <td colspan="5" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
                     </tr>
                 @endforelse
             </tbody>
