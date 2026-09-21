@@ -32,7 +32,7 @@ class AdministratorSessionController extends Controller
             'last_login_at' => now(),
         ])->save();
 
-        return redirect()->route('admin.index');
+        return redirect()->route('admin.articles.index');
     }
 
     /**

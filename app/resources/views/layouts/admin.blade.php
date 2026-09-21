@@ -21,19 +21,25 @@
 
                 <ul class="nav flex-column admin-sidebar-nav">
                     <li class="nav-item">
-                        <a href="{{ route('admin.index') }}" class="nav-link">{{ __('管理者一覧') }}</a>
+                        <a href="{{ route('admin.articles.index') }}" class="nav-link">
+                            <i class="bi bi-file-earmark-text"></i>{{ __('記事一覧') }}
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('admin.users.index') }}" class="nav-link">{{ __('ユーザー一覧') }}</a>
+                        <a href="{{ route('admin.users.index') }}" class="nav-link">
+                            <i class="bi bi-people"></i>{{ __('ユーザー一覧') }}
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('admin.articles.index') }}" class="nav-link">{{ __('記事一覧') }}</a>
+                        <a href="{{ route('admin.index') }}" class="nav-link">
+                            <i class="bi bi-person-badge"></i>{{ __('管理者一覧') }}
+                        </a>
                     </li>
                     <li class="nav-item">
                         <a
                             href="{{ $currentSiteSetting ? route('admin.site-settings.show', $currentSiteSetting) : route('admin.site-settings.create') }}"
                             class="nav-link"
-                        >{{ __('サイト設定') }}</a>
+                        ><i class="bi bi-gear"></i>{{ __('サイト設定') }}</a>
                     </li>
                 </ul>
             </aside>
