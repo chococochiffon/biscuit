@@ -22,10 +22,9 @@ class CallContentController extends Controller
         tags: ['CallContents'],
         parameters: [
             new OA\Parameter(name: 'place', in: 'query', required: false, description: '設置場所(1:トップ, 2:本文内, 3:その他。未指定時は1)', schema: new OA\Schema(type: 'integer', default: 1)),
-            new OA\Parameter(name: 'page', in: 'query', required: false, description: 'ページ番号', schema: new OA\Schema(type: 'integer', default: 1)),
         ],
         responses: [
-            new OA\Response(response: 200, description: '呼び出しコンテンツ一覧(ページネーション)'),
+            new OA\Response(response: 200, description: '呼び出しコンテンツ一覧'),
             new OA\Response(response: 422, description: 'placeの値が不正'),
         ]
     )]
@@ -43,7 +42,7 @@ class CallContentController extends Controller
             ->with('contentModelRelation')
             ->where('place', $place)
             ->latest('created_at')
-            ->paginate(20);
+            ->get();
 
         return CallContentResource::collection($callContents);
     }
