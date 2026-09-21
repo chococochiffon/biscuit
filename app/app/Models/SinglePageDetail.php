@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['single_page_id', 'sub_title', 'contents'])]
+#[Fillable(['single_page_id', 'sub_title', 'contents', 'sort_order'])]
 class SinglePageDetail extends Model
 {
     /** @use HasFactory<SinglePageDetailFactory> */

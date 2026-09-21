@@ -1,0 +1,179 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Administrator;
+use App\Models\SinglePage;
+use App\Models\SinglePageDetail;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Tests\TestCase;
+
+class SinglePageControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_guests_are_redirected_from_single_page_pages(): void
+    {
+        $response = $this->get(route('admin.single-pages.index'));
+
+        $response->assertRedirect(route('admin.login'));
+    }
+
+    public function test_index_displays_single_pages(): void
+    {
+        $actor = Administrator::factory()->create();
+        $singlePage = SinglePage::factory()->create(['title' => '会社概要']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $response->assertSee($singlePage->title);
+    }
+
+    public function test_create_screen_can_be_rendered(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+
+        $response->assertOk();
+    }
+
+    public function test_store_creates_single_page_with_details(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'title' => '会社概要',
+            'short_sentences' => '会社の概要ページです',
+            'taxonomy' => 'company',
+            'uri' => 'about',
+            'details' => [
+                ['sub_title' => '沿革', 'contents' => '<p>沿革本文</p>', 'sort_order' => 0],
+                ['sub_title' => '事業内容', 'contents' => '<p>事業内容本文</p>', 'sort_order' => 1],
+            ],
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+
+        $singlePage = SinglePage::where('title', '会社概要')->firstOrFail();
+        $this->assertSame('company', $singlePage->taxonomy);
+        $this->assertSame('about', $singlePage->uri);
+        $this->assertCount(2, $singlePage->details);
+        $this->assertSame('沿革', $singlePage->details->first()->sub_title);
+        $this->assertSame(0, $singlePage->details->first()->sort_order);
+    }
+
+    public function test_store_uploads_header_image_with_expected_filename(): void
+    {
+        $this->freezeTime();
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+        $file = UploadedFile::fake()->image('header.jpg');
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'title' => 'ヘッダー画像記事',
+            'short_sentences' => '概要',
+            'header_image' => $file,
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+
+        $singlePage = SinglePage::where('title', 'ヘッダー画像記事')->firstOrFail();
+        $expectedPath = 'image/header_image/'.now()->format('YmdHis').'_single_pages_'.$singlePage->id.'.jpg';
+        $this->assertSame($expectedPath, $singlePage->header_image);
+        Storage::disk('public')->assertExists($expectedPath);
+    }
+
+    public function test_store_fails_validation_with_missing_fields(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), []);
+
+        $response->assertSessionHasErrors(['title', 'short_sentences']);
+    }
+
+    public function test_show_displays_single_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+        SinglePageDetail::factory()->create(['single_page_id' => $target->id, 'sub_title' => '沿革']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.show', $target));
+
+        $response->assertOk();
+        $response->assertSee($target->title);
+        $response->assertSee('沿革');
+    }
+
+    public function test_edit_screen_can_be_rendered(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.edit', $target));
+
+        $response->assertOk();
+    }
+
+    public function test_update_modifies_single_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'title' => '更新後タイトル',
+            'short_sentences' => '更新後概要',
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+        $this->assertSame('更新後タイトル', $target->fresh()->title);
+    }
+
+    public function test_update_syncs_details_creating_updating_and_deleting(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+        $kept = SinglePageDetail::factory()->create([
+            'single_page_id' => $target->id,
+            'sub_title' => '既存(更新前)',
+            'sort_order' => 0,
+        ]);
+        $removed = SinglePageDetail::factory()->create([
+            'single_page_id' => $target->id,
+            'sub_title' => '削除される',
+            'sort_order' => 1,
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'title' => $target->title,
+            'short_sentences' => $target->short_sentences,
+            'details' => [
+                ['id' => $kept->id, 'sub_title' => '既存(更新後)', 'contents' => '<p>更新</p>', 'sort_order' => 0],
+                ['sub_title' => '新規追加', 'contents' => '<p>新規</p>', 'sort_order' => 1],
+            ],
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+
+        $target->refresh();
+        $this->assertCount(2, $target->details);
+        $this->assertSame('既存(更新後)', $kept->fresh()->sub_title);
+        $this->assertSoftDeleted('single_page_details', ['id' => $removed->id]);
+        $this->assertDatabaseHas('single_page_details', ['single_page_id' => $target->id, 'sub_title' => '新規追加']);
+    }
+
+    public function test_destroy_deletes_single_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->delete(route('admin.single-pages.destroy', $target));
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+        $this->assertSoftDeleted('single_pages', ['id' => $target->id]);
+    }
+}
