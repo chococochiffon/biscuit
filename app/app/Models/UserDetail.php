@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Enums\UserDetailNameSetting;
 use Database\Factories\UserDetailFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'user_id',
@@ -26,6 +29,11 @@ class UserDetail extends Model
     use HasFactory, SoftDeletes;
 
     /**
+     * ユーザー画像の保存先ディレクトリ(公開ディスク基準)。
+     */
+    public const USER_IMAGE_DIRECTORY = 'image/user';
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -35,7 +43,7 @@ class UserDetail extends Model
         return [
             'birthday' => 'date',
             'view_flag' => 'boolean',
-            'name_settings' => 'integer',
+            'name_settings' => UserDetailNameSetting::class,
         ];
     }
 
@@ -45,5 +53,17 @@ class UserDetail extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * ユーザー画像を保存し、公開ディスク基準の保存パスを返す。
+     */
+    public function storeUserImage(UploadedFile $file): string
+    {
+        Storage::disk('public')->makeDirectory(self::USER_IMAGE_DIRECTORY);
+
+        $filename = now()->format('YmdHis').'_'.$this->getTable().'_'.$this->id.'.'.$file->extension();
+
+        return $file->storeAs(self::USER_IMAGE_DIRECTORY, $filename, 'public');
     }
 }
