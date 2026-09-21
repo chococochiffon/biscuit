@@ -49,6 +49,9 @@
                         <a href="{{ route('admin.index') }}" class="nav-link">{{ __('管理者一覧') }}</a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.users.index') }}" class="nav-link">{{ __('ユーザー一覧') }}</a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.articles.index') }}" class="nav-link">{{ __('記事一覧') }}</a>
                     </li>
                     <li class="nav-item">

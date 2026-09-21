@@ -7,6 +7,7 @@ use App\Http\Controllers\ContentModelRelationController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -53,6 +54,10 @@ Route::resource('admin/site-settings', SiteSettingController::class)
 Route::resource('admin/content-model-relations', ContentModelRelationController::class)
     ->parameters(['content-model-relations' => 'contentModelRelation'])
     ->names('admin.content-model-relations')
+    ->middleware('auth:admin');
+
+Route::resource('admin/users', UserController::class)
+    ->names('admin.users')
     ->middleware('auth:admin');
 
 Route::resource('admin', AdministratorController::class)
