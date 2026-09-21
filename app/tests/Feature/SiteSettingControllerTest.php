@@ -3,9 +3,10 @@
 namespace Tests\Feature;
 
 use App\Enums\CallContentPlace;
-use App\Enums\CallContentType;
+use App\Enums\CallType;
 use App\Models\Administrator;
 use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -83,19 +84,22 @@ class SiteSettingControllerTest extends TestCase
     public function test_store_creates_call_contents_together_with_site_setting(): void
     {
         $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create();
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
-                    'content_type' => CallContentType::Article->value,
-                    'model_name' => 'article',
+                    'call_type' => CallType::OriginalText->value,
+                    'call_name' => '記事詳細',
+                    'content_model_relation_id' => $relation->id,
                     'view_count' => 1,
                     'place' => CallContentPlace::Top->value,
                 ],
                 [
-                    'content_type' => CallContentType::LinkList->value,
-                    'model_name' => 'article',
+                    'call_type' => CallType::LinkList->value,
+                    'call_name' => '記事一覧',
+                    'content_model_relation_id' => $relation->id,
                     'view_count' => 3,
                     'place' => CallContentPlace::Inside->value,
                 ],
@@ -105,14 +109,16 @@ class SiteSettingControllerTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseCount('call_contents', 2);
         $this->assertDatabaseHas('call_contents', [
-            'content_type' => CallContentType::Article->value,
-            'model_name' => 'article',
+            'call_type' => CallType::OriginalText->value,
+            'call_name' => '記事詳細',
+            'content_model_relation_id' => $relation->id,
             'view_count' => 1,
             'place' => CallContentPlace::Top->value,
         ]);
         $this->assertDatabaseHas('call_contents', [
-            'content_type' => CallContentType::LinkList->value,
-            'model_name' => 'article',
+            'call_type' => CallType::LinkList->value,
+            'call_name' => '記事一覧',
+            'content_model_relation_id' => $relation->id,
             'view_count' => 3,
             'place' => CallContentPlace::Inside->value,
         ]);
@@ -122,9 +128,11 @@ class SiteSettingControllerTest extends TestCase
     {
         $actor = Administrator::factory()->create();
         $siteSetting = SiteSetting::factory()->create();
+        $relation = ContentModelRelation::factory()->create();
+        $otherRelation = ContentModelRelation::factory()->create();
         $kept = CallContent::factory()->create([
-            'content_type' => CallContentType::Article,
-            'model_name' => 'article',
+            'call_type' => CallType::OriginalText,
+            'content_model_relation_id' => $relation->id,
             'view_count' => 1,
             'place' => CallContentPlace::Top,
         ]);
@@ -135,14 +143,16 @@ class SiteSettingControllerTest extends TestCase
             'call_contents' => [
                 [
                     'id' => $kept->id,
-                    'content_type' => CallContentType::Article->value,
-                    'model_name' => 'article',
+                    'call_type' => CallType::OriginalText->value,
+                    'call_name' => $kept->call_name,
+                    'content_model_relation_id' => $relation->id,
                     'view_count' => 5,
                     'place' => CallContentPlace::Others->value,
                 ],
                 [
-                    'content_type' => CallContentType::SinglePage->value,
-                    'model_name' => 'single_page',
+                    'call_type' => CallType::Link->value,
+                    'call_name' => '固定ページリンク',
+                    'content_model_relation_id' => $otherRelation->id,
                     'view_count' => 1,
                     'place' => CallContentPlace::Inside->value,
                 ],
@@ -156,8 +166,9 @@ class SiteSettingControllerTest extends TestCase
             'place' => CallContentPlace::Others->value,
         ]);
         $this->assertDatabaseHas('call_contents', [
-            'model_name' => 'single_page',
-            'content_type' => CallContentType::SinglePage->value,
+            'call_name' => '固定ページリンク',
+            'call_type' => CallType::Link->value,
+            'content_model_relation_id' => $otherRelation->id,
         ]);
         $this->assertSoftDeleted('call_contents', ['id' => $removed->id]);
         $this->assertDatabaseCount('call_contents', 3);
@@ -181,7 +192,7 @@ class SiteSettingControllerTest extends TestCase
     {
         $actor = Administrator::factory()->create();
         $siteSetting = SiteSetting::factory()->create();
-        CallContent::factory()->create(['model_name' => '編集画面確認用モデル']);
+        CallContent::factory()->create(['call_name' => '編集画面確認用モデル']);
 
         $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting));
 
@@ -205,8 +216,8 @@ class SiteSettingControllerTest extends TestCase
         $actor = Administrator::factory()->create();
         $siteSetting = SiteSetting::factory()->create();
         $callContent = CallContent::factory()->create([
-            'content_type' => CallContentType::Article,
-            'model_name' => '詳細確認用モデル',
+            'call_type' => CallType::OriginalText,
+            'call_name' => '詳細確認用モデル',
             'view_count' => 2,
             'place' => CallContentPlace::Inside,
         ]);
@@ -214,7 +225,7 @@ class SiteSettingControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting));
 
         $response->assertOk();
-        $response->assertSee($callContent->content_type->label());
+        $response->assertSee($callContent->call_type->label());
         $response->assertSee('詳細確認用モデル');
         $response->assertSee($callContent->place->label());
     }

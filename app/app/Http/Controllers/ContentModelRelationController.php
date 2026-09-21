@@ -84,8 +84,7 @@ class ContentModelRelationController extends Controller
     public function destroy(ContentModelRelation $contentModelRelation): RedirectResponse
     {
         $isInUseByCallContent = CallContent::query()
-            ->where('content_type', $contentModelRelation->content_type)
-            ->where('model_name', $contentModelRelation->model_name)
+            ->where('content_model_relation_id', $contentModelRelation->id)
             ->exists();
 
         if ($isInUseByCallContent) {

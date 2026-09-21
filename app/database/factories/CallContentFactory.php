@@ -3,8 +3,9 @@
 namespace Database\Factories;
 
 use App\Enums\CallContentPlace;
-use App\Enums\CallContentType;
+use App\Enums\CallType;
 use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -20,8 +21,9 @@ class CallContentFactory extends Factory
     public function definition(): array
     {
         return [
-            'content_type' => fake()->randomElement(CallContentType::cases()),
-            'model_name' => fake()->word(),
+            'call_type' => fake()->randomElement(CallType::cases()),
+            'call_name' => fake()->word(),
+            'content_model_relation_id' => ContentModelRelation::factory(),
             'view_count' => 1,
             'place' => fake()->randomElement(CallContentPlace::cases()),
         ];

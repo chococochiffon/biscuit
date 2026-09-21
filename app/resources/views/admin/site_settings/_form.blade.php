@@ -66,16 +66,18 @@
         ? collect($oldCallContents)->values()->map(fn ($row, $i) => (object) [
             'index' => (string) $i,
             'id' => $row['id'] ?? null,
-            'contentType' => isset($row['content_type']) && $row['content_type'] !== '' ? (int) $row['content_type'] : null,
-            'modelName' => $row['model_name'] ?? null,
+            'callType' => isset($row['call_type']) && $row['call_type'] !== '' ? (int) $row['call_type'] : null,
+            'callName' => $row['call_name'] ?? null,
+            'contentModelRelationId' => isset($row['content_model_relation_id']) && $row['content_model_relation_id'] !== '' ? (int) $row['content_model_relation_id'] : null,
             'viewCount' => $row['view_count'] ?? 1,
             'place' => isset($row['place']) && $row['place'] !== '' ? (int) $row['place'] : null,
         ])
         : ($callContents ?? collect())->values()->map(fn ($callContent, $i) => (object) [
             'index' => (string) $i,
             'id' => $callContent->id,
-            'contentType' => $callContent->content_type->value,
-            'modelName' => $callContent->model_name,
+            'callType' => $callContent->call_type->value,
+            'callName' => $callContent->call_name,
+            'contentModelRelationId' => $callContent->content_model_relation_id,
             'viewCount' => $callContent->view_count,
             'place' => $callContent->place->value,
         ]);
@@ -86,17 +88,18 @@
 
     <div
         id="call-content-rows"
-        data-content-model-relations="{{ ($contentModelRelations ?? collect())->map(fn ($relation) => ['content_type' => $relation->content_type->value, 'model_name' => $relation->model_name])->toJson() }}"
         data-next-index="{{ $callContentRows->count() }}"
     >
         @foreach ($callContentRows as $row)
             @include('admin.site_settings._call_content_row', [
                 'index' => $row->index,
                 'id' => $row->id,
-                'contentType' => $row->contentType,
-                'modelName' => $row->modelName,
+                'callType' => $row->callType,
+                'callName' => $row->callName,
+                'contentModelRelationId' => $row->contentModelRelationId,
                 'viewCount' => $row->viewCount,
                 'place' => $row->place,
+                'contentModelRelations' => $contentModelRelations ?? collect(),
             ])
         @endforeach
     </div>
@@ -109,10 +112,12 @@
         @include('admin.site_settings._call_content_row', [
             'index' => '__INDEX__',
             'id' => null,
-            'contentType' => null,
-            'modelName' => null,
+            'callType' => null,
+            'callName' => null,
+            'contentModelRelationId' => null,
             'viewCount' => 1,
             'place' => null,
+            'contentModelRelations' => $contentModelRelations ?? collect(),
         ])
     </template>
 </div>

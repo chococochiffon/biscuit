@@ -234,14 +234,8 @@ class ContentModelRelationControllerTest extends TestCase
     public function test_destroy_is_blocked_when_used_by_call_content(): void
     {
         $actor = Administrator::factory()->create();
-        $target = ContentModelRelation::factory()->create([
-            'content_type' => CallContentType::Article,
-            'model_name' => 'article',
-        ]);
-        CallContent::factory()->create([
-            'content_type' => CallContentType::Article,
-            'model_name' => 'article',
-        ]);
+        $target = ContentModelRelation::factory()->create();
+        CallContent::factory()->create(['content_model_relation_id' => $target->id]);
 
         $response = $this->actingAs($actor, 'admin')->delete(route('admin.content-model-relations.destroy', $target));
 

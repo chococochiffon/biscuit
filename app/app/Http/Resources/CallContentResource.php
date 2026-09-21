@@ -16,8 +16,9 @@ class CallContentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'content_type' => $this->content_type->value,
-            'model_name' => $this->model_name,
+            'call_type' => $this->call_type->value,
+            'call_name' => $this->call_name,
+            'content_model_relation_id' => $this->content_model_relation_id,
             'view_count' => $this->view_count,
             'place' => $this->place->value,
         ];
