@@ -51,12 +51,12 @@
 
     <h2 class="h6 mt-4 mb-3">{{ __('API設定') }}</h2>
 
-    <div class="card" style="max-width: 56rem;">
+    <div class="card" style="max-width: 80rem;">
         <table class="table table-hover mb-0 align-middle">
             <thead>
                 <tr>
-                    <th>{{ __('呼び出し方') }}</th>
                     <th>{{ __('呼び出し名') }}</th>
+                    <th>{{ __('呼び出し方') }}</th>
                     <th>{{ __('データ種別') }}</th>
                     <th>{{ __('表示件数') }}</th>
                     <th>{{ __('表示箇所') }}</th>
@@ -65,8 +65,8 @@
             <tbody>
                 @forelse ($callContents as $callContent)
                     <tr>
-                        <td>{{ $callContent->call_type->label() }}</td>
                         <td>{{ $callContent->call_name }}</td>
+                        <td>{{ $callContent->call_type->label() }}</td>
                         <td>{{ $callContent->contentModelRelation->content_type->label() }} / {{ $callContent->contentModelRelation->model_name }}</td>
                         <td>{{ $callContent->view_count }}</td>
                         <td>{{ $callContent->place->label() }}</td>

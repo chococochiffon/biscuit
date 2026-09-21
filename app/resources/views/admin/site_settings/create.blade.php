@@ -12,7 +12,7 @@
         method="POST"
         action="{{ route('admin.site-settings.store') }}"
         enctype="multipart/form-data"
-        style="max-width: 56rem;"
+        style="max-width: 80rem;"
     >
         @csrf
 
