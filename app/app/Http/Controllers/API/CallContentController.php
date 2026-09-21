@@ -40,6 +40,7 @@ class CallContentController extends Controller
             : CallContentPlace::Top;
 
         $callContents = CallContent::query()
+            ->with('contentModelRelation')
             ->where('place', $place)
             ->latest('created_at')
             ->paginate(20);
