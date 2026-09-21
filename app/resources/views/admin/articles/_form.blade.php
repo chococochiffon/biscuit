@@ -35,10 +35,15 @@
 </div>
 
 <div class="mb-3">
-    <label for="tag-input" class="form-label">{{ __('タグ') }}</label>
+    <div class="d-flex align-items-center justify-content-between">
+        <label for="tag-input" class="form-label mb-0">{{ __('タグ') }}</label>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#tag-manager-modal">
+            {{ __('タグ管理') }}
+        </button>
+    </div>
     <div
         id="tag-selector"
-        class="position-relative"
+        class="position-relative mt-2"
         data-search-url="{{ route('admin.tags.search') }}"
         data-initial-tags="{{ ($article->tags ?? collect())->pluck('tag_name')->toJson() }}"
     >
@@ -48,6 +53,8 @@
         <div id="tag-suggestions" class="list-group position-absolute w-100" style="z-index: 1000;"></div>
     </div>
 </div>
+
+@include('admin.tags._manager_modal')
 
 @isset($article)
     <div class="mb-3">
