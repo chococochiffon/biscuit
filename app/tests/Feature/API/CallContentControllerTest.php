@@ -4,6 +4,7 @@ namespace Tests\Feature\API;
 
 use App\Enums\CallContentPlace;
 use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -40,5 +41,24 @@ class CallContentControllerTest extends TestCase
         $response = $this->getJson(route('call-contents.index', ['place' => 999]));
 
         $response->assertStatus(422);
+    }
+
+    public function test_index_includes_content_model_relation(): void
+    {
+        $relation = ContentModelRelation::factory()->create([
+            'model_name' => 'Article',
+            'table_name' => 'articles',
+        ]);
+        CallContent::factory()->create([
+            'place' => CallContentPlace::Top,
+            'content_model_relation_id' => $relation->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.content_model_relation.id', $relation->id);
+        $response->assertJsonPath('data.0.content_model_relation.model_name', 'Article');
+        $response->assertJsonPath('data.0.content_model_relation.table_name', 'articles');
     }
 }
