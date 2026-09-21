@@ -35,4 +35,4 @@ WORKDIR /var/www/app
 
 #RUN composer global require "laravel/installer"
 
-ENTRYPOINT [ "bash", "-c", "composer install; exec php-fpm" ]
+ENTRYPOINT [ "bash", "-c", "composer install; php artisan view:clear || true; exec php-fpm" ]
