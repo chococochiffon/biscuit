@@ -1,4 +1,5 @@
 @import 'bootstrap/dist/css/bootstrap.min.css';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
 @import 'quill/dist/quill.snow.css';
 
 :root {
@@ -54,10 +55,11 @@
 }
 
 .admin-sidebar-nav .nav-link {
+    display: flex;
+    align-items: center;
     color: rgba(255, 255, 255, 0.85);
     font-weight: 700;
     font-size: 0.85rem;
-    text-align: center;
     border-radius: 0.5rem;
     padding: 0.65rem 0.75rem;
     margin-bottom: 0.15rem;
@@ -66,6 +68,13 @@
 .admin-sidebar-nav .nav-link:hover {
     color: #fff;
     background-color: rgba(255, 255, 255, 0.1);
+}
+
+.admin-sidebar-nav .nav-link i {
+    width: 1.25rem;
+    margin-right: 0.6rem;
+    text-align: center;
+    font-size: 1rem;
 }
 
 .admin-topbar {
