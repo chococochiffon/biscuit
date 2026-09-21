@@ -25,38 +25,52 @@
     <textarea id="description" name="description" rows="4" class="form-control">{{ old('description', $siteSetting->description ?? '') }}</textarea>
 </div>
 
+@php
+    $existingSiteIconUrl = isset($siteSetting) && $siteSetting->site_icon
+        ? Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_icon)
+        : null;
+
+    $existingSiteImageUrl = isset($siteSetting) && $siteSetting->site_image
+        ? Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_image)
+        : null;
+@endphp
+
 <div class="mb-3">
-    <label for="site_icon" class="form-label">{{ __('サイトアイコン') }}</label>
-    @isset($siteSetting)
-        @if ($siteSetting->site_icon)
-            <div class="mb-2">
-                <img
-                    src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_icon) }}"
-                    alt="{{ __('サイトアイコン') }}"
-                    class="img-thumbnail"
-                    style="width: 96px; height: 96px; object-fit: cover;"
-                >
-            </div>
-        @endif
-    @endisset
-    <input id="site_icon" type="file" name="site_icon" accept="image/*" class="form-control">
+    <label class="form-label">{{ __('サイトアイコン') }}</label>
+    <div class="image-dropzone image-dropzone--icon" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('サイトアイコンを選択') }}">
+        <input id="site_icon" type="file" name="site_icon" accept="image/*" class="d-none" data-role="image-dropzone-input">
+
+        <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingSiteIconUrl) style="display: none;" @endif>
+            <img src="{{ $existingSiteIconUrl }}" alt="{{ __('サイトアイコン') }}" data-role="image-dropzone-image">
+            <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingSiteIconUrl) style="display: none;" @endif>
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
+        </div>
+    </div>
 </div>
 
 <div class="mb-3">
-    <label for="site_image" class="form-label">{{ __('サイト画像') }}</label>
-    @isset($siteSetting)
-        @if ($siteSetting->site_image)
-            <div class="mb-2">
-                <img
-                    src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_image) }}"
-                    alt="{{ __('サイト画像') }}"
-                    class="img-thumbnail"
-                    style="width: 240px; height: 160px; object-fit: cover;"
-                >
-            </div>
-        @endif
-    @endisset
-    <input id="site_image" type="file" name="site_image" accept="image/*" class="form-control">
+    <label class="form-label">{{ __('サイト画像') }}</label>
+    <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('サイト画像を選択') }}">
+        <input id="site_image" type="file" name="site_image" accept="image/*" class="d-none" data-role="image-dropzone-input">
+
+        <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingSiteImageUrl) style="display: none;" @endif>
+            <img src="{{ $existingSiteImageUrl }}" alt="{{ __('サイト画像') }}" data-role="image-dropzone-image">
+            <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingSiteImageUrl) style="display: none;" @endif>
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
+        </div>
+    </div>
 </div>
 
 @php

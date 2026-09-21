@@ -22,9 +22,19 @@ class SiteSetting extends Model
     public const SITE_ICON_DIRECTORY = 'image/site_icon';
 
     /**
+     * サイトアイコン未設定の場合に使用するデフォルト画像の(公開ディスク基準の)パス。
+     */
+    public const DEFAULT_SITE_ICON_PATH = 'image/favicon-32x32.png';
+
+    /**
      * サイト画像の保存先ディレクトリ(公開ディスク基準)。
      */
     public const SITE_IMAGE_DIRECTORY = 'image/site_image';
+
+    /**
+     * サイト画像未設定の場合に使用するデフォルト画像の(公開ディスク基準の)パス。
+     */
+    public const DEFAULT_SITE_IMAGE_PATH = 'image/biscuit-og-image-1200x630.png';
 
     /**
      * サイトアイコンを保存し、公開ディスク基準の保存パスを返す。
