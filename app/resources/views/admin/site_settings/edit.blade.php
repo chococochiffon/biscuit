@@ -9,7 +9,7 @@
         method="POST"
         action="{{ route('admin.site-settings.update', $siteSetting) }}"
         enctype="multipart/form-data"
-        style="max-width: 56rem;"
+        style="max-width: 80rem;"
     >
         @csrf
         @method('PUT')

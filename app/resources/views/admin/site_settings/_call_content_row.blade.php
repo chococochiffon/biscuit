@@ -17,16 +17,6 @@
     @endif
 
     <div class="col-md-2">
-        <label class="form-label small">{{ __('呼び出し方') }}</label>
-        <select name="call_contents[{{ $index }}][call_type]" class="form-select form-select-sm" required>
-            <option value="" disabled @selected(! $callType)>{{ __('選択してください') }}</option>
-            @foreach (\App\Enums\CallType::cases() as $type)
-                <option value="{{ $type->value }}" @selected($callType === $type->value)>{{ $type->label() }}</option>
-            @endforeach
-        </select>
-    </div>
-
-    <div class="col-md-2">
         <label class="form-label small">{{ __('呼び出し名') }}</label>
         <input
             type="text"
@@ -35,6 +25,16 @@
             class="form-control form-control-sm"
             required
         >
+    </div>
+
+    <div class="col-md-2">
+        <label class="form-label small">{{ __('呼び出し方') }}</label>
+        <select name="call_contents[{{ $index }}][call_type]" class="form-select form-select-sm" required>
+            <option value="" disabled @selected(! $callType)>{{ __('選択してください') }}</option>
+            @foreach (\App\Enums\CallType::cases() as $type)
+                <option value="{{ $type->value }}" @selected($callType === $type->value)>{{ $type->label() }}</option>
+            @endforeach
+        </select>
     </div>
 
     <div class="col-md-3">
