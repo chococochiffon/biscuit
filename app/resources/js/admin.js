@@ -3,6 +3,7 @@ import Quill from 'quill';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
+    initTagManagerModal();
     initContentEditor();
     initCallContentRows();
 });
@@ -132,7 +133,213 @@ function initTagSelector() {
         }
     });
 
+    document.addEventListener('tag:deleted', (event) => {
+        const deletedName = event.detail?.name;
+
+        if (!deletedName || !selected.includes(deletedName)) {
+            return;
+        }
+
+        selected = selected.filter((name) => name !== deletedName);
+        render();
+    });
+
+    document.addEventListener('tag:renamed', (event) => {
+        const { previousName, name } = event.detail ?? {};
+
+        if (!previousName || !name) {
+            return;
+        }
+
+        const index = selected.indexOf(previousName);
+
+        if (index === -1) {
+            return;
+        }
+
+        if (selected.includes(name)) {
+            selected.splice(index, 1);
+        } else {
+            selected[index] = name;
+        }
+
+        render();
+    });
+
     render();
+}
+
+/**
+ * タグ管理モーダル(記事の作成・編集フォーム)を初期化する。
+ * タグの新規登録・編集・削除をモーダル内で完結させる。
+ */
+function initTagManagerModal() {
+    const modal = document.getElementById('tag-manager-modal');
+
+    if (!modal) {
+        return;
+    }
+
+    const listContainer = document.getElementById('tag-manager-list');
+    const input = document.getElementById('tag-manager-input');
+    const submitButton = document.getElementById('tag-manager-submit');
+    const errorBox = document.getElementById('tag-manager-error');
+    const indexUrl = listContainer.dataset.indexUrl;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    let editingTagId = null;
+    let editingTagName = null;
+
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.remove('d-none');
+    }
+
+    function clearError() {
+        errorBox.classList.add('d-none');
+        errorBox.textContent = '';
+    }
+
+    function resetForm() {
+        editingTagId = null;
+        editingTagName = null;
+        input.value = '';
+        submitButton.textContent = '登録';
+    }
+
+    function renderTags(tags) {
+        listContainer.innerHTML = '';
+
+        tags.forEach((tag) => {
+            const chip = document.createElement('span');
+            chip.className = 'badge text-bg-light border text-dark d-inline-flex align-items-center gap-2 p-2';
+            chip.setAttribute('role', 'button');
+
+            const name = document.createElement('span');
+            name.textContent = tag.tag_name;
+            chip.appendChild(name);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn-close';
+            deleteButton.style.fontSize = '0.6rem';
+            deleteButton.setAttribute('aria-label', 'タグを削除');
+            chip.appendChild(deleteButton);
+
+            chip.addEventListener('click', () => {
+                editingTagId = tag.id;
+                editingTagName = tag.tag_name;
+                input.value = tag.tag_name;
+                submitButton.textContent = '更新';
+                clearError();
+                input.focus();
+            });
+
+            deleteButton.addEventListener('click', async (event) => {
+                event.stopPropagation();
+
+                if (!window.confirm(`「${tag.tag_name}」を削除してよろしいですか?`)) {
+                    return;
+                }
+
+                await deleteTag(tag.id, tag.tag_name);
+            });
+
+            listContainer.appendChild(chip);
+        });
+    }
+
+    async function fetchTags() {
+        const response = await fetch(indexUrl, {
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        renderTags(await response.json());
+    }
+
+    async function deleteTag(id, name) {
+        const response = await fetch(`${indexUrl}/${id}`, {
+            method: 'DELETE',
+            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        });
+
+        if (!response.ok) {
+            showError('タグの削除に失敗しました。');
+
+            return;
+        }
+
+        if (editingTagId === id) {
+            resetForm();
+        }
+
+        document.dispatchEvent(new CustomEvent('tag:deleted', { detail: { name } }));
+
+        await fetchTags();
+    }
+
+    async function submitTag() {
+        const name = input.value.trim();
+
+        if (name === '') {
+            return;
+        }
+
+        clearError();
+
+        const isEditing = editingTagId !== null;
+        const previousName = editingTagName;
+        const url = isEditing ? `${indexUrl}/${editingTagId}` : indexUrl;
+        const method = isEditing ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ tag_name: name }),
+        });
+
+        if (!response.ok) {
+            if (response.status === 422) {
+                const data = await response.json();
+                showError(Object.values(data.errors ?? {}).flat().join(' '));
+            } else {
+                showError('タグの保存に失敗しました。');
+            }
+
+            return;
+        }
+
+        if (isEditing && previousName !== name) {
+            document.dispatchEvent(new CustomEvent('tag:renamed', { detail: { previousName, name } }));
+        }
+
+        resetForm();
+        await fetchTags();
+    }
+
+    submitButton.addEventListener('click', submitTag);
+
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            submitTag();
+        }
+    });
+
+    modal.addEventListener('show.bs.modal', () => {
+        clearError();
+        fetchTags();
+    });
+
+    modal.addEventListener('hidden.bs.modal', resetForm);
 }
 
 /**

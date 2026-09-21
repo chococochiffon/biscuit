@@ -15,8 +15,14 @@ class TagController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(): View
+    public function index(Request $request): View|JsonResponse
     {
+        if ($request->wantsJson()) {
+            $tags = Tag::query()->orderBy('tag_name')->get(['id', 'tag_name']);
+
+            return response()->json($tags);
+        }
+
         $tags = Tag::query()
             ->orderBy('tag_name')
             ->paginate(20);
@@ -51,9 +57,13 @@ class TagController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTagRequest $request): RedirectResponse
+    public function store(StoreTagRequest $request): RedirectResponse|JsonResponse
     {
-        Tag::create($request->validated());
+        $tag = Tag::create($request->validated());
+
+        if ($request->wantsJson()) {
+            return response()->json($tag, 201);
+        }
 
         return redirect()->route('admin.tags.index')->with('status', 'タグを登録しました。');
     }
@@ -77,9 +87,13 @@ class TagController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTagRequest $request, Tag $tag): RedirectResponse
+    public function update(UpdateTagRequest $request, Tag $tag): RedirectResponse|JsonResponse
     {
         $tag->update($request->validated());
+
+        if ($request->wantsJson()) {
+            return response()->json($tag);
+        }
 
         return redirect()->route('admin.tags.index')->with('status', 'タグを更新しました。');
     }
@@ -87,9 +101,13 @@ class TagController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Tag $tag): RedirectResponse
+    public function destroy(Request $request, Tag $tag): RedirectResponse|JsonResponse
     {
         $tag->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(status: 204);
+        }
 
         return redirect()->route('admin.tags.index')->with('status', 'タグを削除しました。');
     }
