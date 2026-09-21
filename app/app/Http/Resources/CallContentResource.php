@@ -15,13 +15,11 @@ class CallContentResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->id,
             'call_type' => $this->call_type->value,
-            'call_name' => $this->call_name,
-            'content_model_relation_id' => $this->content_model_relation_id,
-            'content_model_relation' => new ContentModelRelationResource($this->whenLoaded('contentModelRelation')),
             'view_count' => $this->view_count,
-            'place' => $this->place->value,
+            'model_name' => $this->contentModelRelation->model_name,
+            'table_name' => $this->contentModelRelation->table_name,
+            'content_type' => $this->contentModelRelation->content_type->value,
         ];
     }
 }
