@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $middleware->redirectUsersTo(
-            fn (Request $request) => $request->is('admin*') ? route('admin.index') : '/',
+            fn (Request $request) => $request->is('admin*') ? route('admin.articles.index') : '/',
         );
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -25,7 +25,7 @@ class AdministratorSessionControllerTest extends TestCase
 
         $response = $this->actingAs($administrator, 'admin')->get(route('admin.login'));
 
-        $response->assertRedirect(route('admin.index'));
+        $response->assertRedirect(route('admin.articles.index'));
     }
 
     public function test_administrators_can_authenticate_using_the_login_screen(): void
@@ -40,7 +40,7 @@ class AdministratorSessionControllerTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($administrator, 'admin');
-        $response->assertRedirect(route('admin.index'));
+        $response->assertRedirect(route('admin.articles.index'));
     }
 
     public function test_login_updates_last_login_at(): void
