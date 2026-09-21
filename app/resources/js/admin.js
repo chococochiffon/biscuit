@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initContentEditor();
     initCallContentRows();
     initSinglePageDetailRows();
+    initImageDropzones();
 });
 
 /**
@@ -591,4 +592,88 @@ function initSinglePageDetailRows() {
     });
 
     updateSortOrders();
+}
+
+/**
+ * 画像アップロード用のドロップゾーンUI(サイトアイコン・サイト画像などのフォーム)を初期化する。
+ * クリックでのファイル選択、ドラッグ&ドロップ、選択直後のプレビュー表示、選択解除に対応する。
+ */
+function initImageDropzones() {
+    document.querySelectorAll('[data-role="image-dropzone"]').forEach(bindImageDropzone);
+}
+
+function bindImageDropzone(dropzone) {
+    const input = dropzone.querySelector('[data-role="image-dropzone-input"]');
+    const preview = dropzone.querySelector('[data-role="image-dropzone-preview"]');
+    const previewImage = dropzone.querySelector('[data-role="image-dropzone-image"]');
+    const placeholder = dropzone.querySelector('[data-role="image-dropzone-placeholder"]');
+    const removeButton = dropzone.querySelector('[data-role="image-dropzone-remove"]');
+
+    function showPreview(src) {
+        previewImage.src = src;
+        preview.style.display = '';
+        placeholder.style.display = 'none';
+    }
+
+    function showPlaceholder() {
+        previewImage.src = '';
+        preview.style.display = 'none';
+        placeholder.style.display = '';
+    }
+
+    function handleFiles(files) {
+        const file = files?.[0];
+
+        if (!file || !file.type.startsWith('image/')) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => showPreview(reader.result);
+        reader.readAsDataURL(file);
+    }
+
+    dropzone.addEventListener('click', (event) => {
+        if (event.target.closest('[data-role="image-dropzone-remove"]')) {
+            return;
+        }
+
+        input.click();
+    });
+
+    dropzone.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            input.click();
+        }
+    });
+
+    input.addEventListener('change', () => handleFiles(input.files));
+
+    dropzone.addEventListener('dragover', (event) => {
+        event.preventDefault();
+        dropzone.classList.add('is-dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('is-dragover');
+    });
+
+    dropzone.addEventListener('drop', (event) => {
+        event.preventDefault();
+        dropzone.classList.remove('is-dragover');
+
+        const files = event.dataTransfer.files;
+
+        if (files.length) {
+            input.files = files;
+            handleFiles(files);
+        }
+    });
+
+    removeButton?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        input.value = '';
+        showPlaceholder();
+    });
 }
