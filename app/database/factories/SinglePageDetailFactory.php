@@ -3,12 +3,13 @@
 namespace Database\Factories;
 
 use App\Models\SinglePage;
+use App\Models\SinglePageDetail;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<SinglePage>
+ * @extends Factory<SinglePageDetail>
  */
-class SinglePageFactory extends Factory
+class SinglePageDetailFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -18,11 +19,9 @@ class SinglePageFactory extends Factory
     public function definition(): array
     {
         return [
-            'title' => fake()->sentence(),
-            'short_sentences' => fake()->sentence(),
-            'header_image' => null,
-            'taxonomy' => fake()->word(),
-            'uri' => fake()->slug(),
+            'single_page_id' => SinglePage::factory(),
+            'sub_title' => fake()->sentence(),
+            'contents' => fake()->paragraphs(3, true),
         ];
     }
 }
