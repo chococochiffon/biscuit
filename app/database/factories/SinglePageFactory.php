@@ -23,6 +23,8 @@ class SinglePageFactory extends Factory
             'header_image' => null,
             'taxonomy' => fake()->word(),
             'uri' => fake()->slug(),
+            'top_page_view' => fake()->boolean(),
+            'link_list_view' => fake()->boolean(),
         ];
     }
 }

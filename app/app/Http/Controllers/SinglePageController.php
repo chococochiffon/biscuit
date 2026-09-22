@@ -6,6 +6,8 @@ use App\Http\Requests\StoreSinglePageRequest;
 use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SinglePageController extends Controller
@@ -16,7 +18,8 @@ class SinglePageController extends Controller
     public function index(): View
     {
         $singlePages = SinglePage::query()
-            ->orderBy('title')
+            ->orderBy('sort_order')
+            ->orderBy('id')
             ->paginate(20);
 
         return view('admin.single_pages.index', compact('singlePages'));
@@ -40,6 +43,9 @@ class SinglePageController extends Controller
             'short_sentences' => $request->validated('short_sentences'),
             'taxonomy' => $request->validated('taxonomy'),
             'uri' => $request->validated('uri'),
+            'top_page_view' => $request->boolean('top_page_view'),
+            'link_list_view' => $request->boolean('link_list_view'),
+            'sort_order' => (SinglePage::max('sort_order') ?? -1) + 1,
         ]);
 
         if ($request->hasFile('header_image')) {
@@ -81,6 +87,8 @@ class SinglePageController extends Controller
             'short_sentences' => $request->validated('short_sentences'),
             'taxonomy' => $request->validated('taxonomy'),
             'uri' => $request->validated('uri'),
+            'top_page_view' => $request->boolean('top_page_view'),
+            'link_list_view' => $request->boolean('link_list_view'),
         ]);
 
         if ($request->hasFile('header_image')) {
@@ -102,6 +110,27 @@ class SinglePageController extends Controller
         $singlePage->delete();
 
         return redirect()->route('admin.single-pages.index')->with('status', '固定ページを削除しました。');
+    }
+
+    /**
+     * ドラッグ&ドロップで並び替えた固定ページの表示順(sort_order)を保存する。
+     * 一覧はページネーションされているため、送信されたidの並びに現在のページの開始位置(offset)を加えて連番を振る。
+     */
+    public function reorder(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*' => ['integer', Rule::exists('single_pages', 'id')],
+            'offset' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $offset = (int) ($validated['offset'] ?? 0);
+
+        foreach (array_values($validated['order']) as $index => $id) {
+            SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
+        }
+
+        return redirect()->route('admin.single-pages.index')->with('status', '並び替えを保存しました。');
     }
 
     /**

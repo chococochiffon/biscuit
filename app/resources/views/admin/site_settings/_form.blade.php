@@ -103,6 +103,7 @@
     <div
         id="call-content-rows"
         data-next-index="{{ $callContentRows->count() }}"
+        data-call-type-constraints="{{ json_encode(\App\Enums\CallType::jsConstraintsMap()) }}"
     >
         @foreach ($callContentRows as $row)
             @include('admin.site_settings._call_content_row', [

@@ -28,6 +28,8 @@ class UpdateSinglePageRequest extends FormRequest
             'short_sentences' => ['required', 'string', 'max:255'],
             'taxonomy' => ['nullable', 'string', 'max:255'],
             'uri' => ['nullable', 'string', 'max:255'],
+            'top_page_view' => ['nullable', 'boolean'],
+            'link_list_view' => ['nullable', 'boolean'],
             'header_image' => ['nullable', 'image', 'max:10240'],
 
             'details' => ['nullable', 'array'],

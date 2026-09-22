@@ -16,7 +16,7 @@ class ContentModelRelationSeeder extends Seeder
         $relations = [
             ['content_type' => CallContentType::Article, 'model_name' => 'Article', 'table_name' => 'articles'],
             ['content_type' => CallContentType::SinglePage, 'model_name' => 'SinglePage', 'table_name' => 'single_pages'],
-            ['content_type' => CallContentType::LinkList, 'model_name' => 'UserDetail', 'table_name' => 'user_details'],
+            ['content_type' => CallContentType::Custom, 'model_name' => 'UserDetail', 'table_name' => 'user_details'],
         ];
 
         foreach ($relations as $relation) {

@@ -32,6 +32,21 @@ class SinglePageControllerTest extends TestCase
         $response->assertSee($singlePage->title);
     }
 
+    public function test_index_orders_single_pages_by_sort_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        $second = SinglePage::factory()->create(['title' => '2番目', 'sort_order' => 1]);
+        $first = SinglePage::factory()->create(['title' => '1番目', 'sort_order' => 0]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $this->assertSame(
+            [$first->id, $second->id],
+            $response->viewData('singlePages')->pluck('id')->all()
+        );
+    }
+
     public function test_create_screen_can_be_rendered(): void
     {
         $actor = Administrator::factory()->create();
@@ -87,6 +102,26 @@ class SinglePageControllerTest extends TestCase
         Storage::disk('public')->assertExists($expectedPath);
     }
 
+    public function test_store_persists_top_page_view_link_list_view_and_assigns_next_sort_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create(['sort_order' => 3]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'title' => '新着情報',
+            'short_sentences' => '新着情報ページです',
+            'top_page_view' => '1',
+            'link_list_view' => '0',
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+
+        $singlePage = SinglePage::where('title', '新着情報')->firstOrFail();
+        $this->assertTrue($singlePage->top_page_view);
+        $this->assertFalse($singlePage->link_list_view);
+        $this->assertSame(4, $singlePage->sort_order);
+    }
+
     public function test_store_fails_validation_with_missing_fields(): void
     {
         $actor = Administrator::factory()->create();
@@ -133,6 +168,24 @@ class SinglePageControllerTest extends TestCase
         $this->assertSame('更新後タイトル', $target->fresh()->title);
     }
 
+    public function test_update_modifies_top_page_view_and_link_list_view(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create(['top_page_view' => false, 'link_list_view' => false]);
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'title' => $target->title,
+            'short_sentences' => $target->short_sentences,
+            'top_page_view' => '1',
+            'link_list_view' => '1',
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+        $target->refresh();
+        $this->assertTrue($target->top_page_view);
+        $this->assertTrue($target->link_list_view);
+    }
+
     public function test_update_syncs_details_creating_updating_and_deleting(): void
     {
         $actor = Administrator::factory()->create();
@@ -175,5 +228,60 @@ class SinglePageControllerTest extends TestCase
 
         $response->assertRedirect(route('admin.single-pages.index'));
         $this->assertSoftDeleted('single_pages', ['id' => $target->id]);
+    }
+
+    public function test_guests_are_redirected_from_reorder(): void
+    {
+        $singlePage = SinglePage::factory()->create();
+
+        $response = $this->patch(route('admin.single-pages.reorder'), [
+            'order' => [$singlePage->id],
+        ]);
+
+        $response->assertRedirect(route('admin.login'));
+    }
+
+    public function test_reorder_persists_the_submitted_order_as_sort_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        $a = SinglePage::factory()->create(['sort_order' => 0]);
+        $b = SinglePage::factory()->create(['sort_order' => 1]);
+        $c = SinglePage::factory()->create(['sort_order' => 2]);
+
+        $response = $this->actingAs($actor, 'admin')->patch(route('admin.single-pages.reorder'), [
+            'order' => [$c->id, $a->id, $b->id],
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+        $this->assertSame(0, $c->fresh()->sort_order);
+        $this->assertSame(1, $a->fresh()->sort_order);
+        $this->assertSame(2, $b->fresh()->sort_order);
+    }
+
+    public function test_reorder_applies_offset_for_the_current_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        $a = SinglePage::factory()->create(['sort_order' => 20]);
+        $b = SinglePage::factory()->create(['sort_order' => 21]);
+
+        $response = $this->actingAs($actor, 'admin')->patch(route('admin.single-pages.reorder'), [
+            'order' => [$b->id, $a->id],
+            'offset' => 20,
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+        $this->assertSame(20, $b->fresh()->sort_order);
+        $this->assertSame(21, $a->fresh()->sort_order);
+    }
+
+    public function test_reorder_fails_validation_for_an_unknown_id(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->patch(route('admin.single-pages.reorder'), [
+            'order' => [999999],
+        ]);
+
+        $response->assertSessionHasErrors(['order.0']);
     }
 }

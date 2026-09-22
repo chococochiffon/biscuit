@@ -184,6 +184,15 @@ main > form {
     opacity: 0.5;
 }
 
+/* 固定ページ一覧の並び替え可能な行 */
+.single-page-reorder-handle-cell {
+    width: 2.75rem;
+}
+
+#single-page-reorder-rows tbody tr.dragging {
+    opacity: 0.5;
+}
+
 .single-page-detail-editor {
     height: 160px;
     background-color: #fff;

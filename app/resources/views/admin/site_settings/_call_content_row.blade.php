@@ -29,7 +29,7 @@
 
     <div class="col-md-2">
         <label class="form-label small">{{ __('呼び出し方') }}</label>
-        <select name="call_contents[{{ $index }}][call_type]" class="form-select form-select-sm" required>
+        <select name="call_contents[{{ $index }}][call_type]" class="form-select form-select-sm" data-role="call-type-select" required>
             <option value="" disabled @selected(! $callType)>{{ __('選択してください') }}</option>
             @foreach (\App\Enums\CallType::cases() as $type)
                 <option value="{{ $type->value }}" @selected($callType === $type->value)>{{ $type->label() }}</option>
@@ -39,10 +39,15 @@
 
     <div class="col-md-3">
         <label class="form-label small">{{ __('データ種別') }}</label>
-        <select name="call_contents[{{ $index }}][content_model_relation_id]" class="form-select form-select-sm" required>
+        <select name="call_contents[{{ $index }}][content_model_relation_id]" class="form-select form-select-sm" data-role="content-model-relation-select" required>
             <option value="" disabled @selected(! $contentModelRelationId)>{{ __('選択してください') }}</option>
             @foreach ($contentModelRelations as $relation)
-                <option value="{{ $relation->id }}" @selected($contentModelRelationId === $relation->id)>
+                <option
+                    value="{{ $relation->id }}"
+                    data-content-type="{{ $relation->content_type->value }}"
+                    data-model-name="{{ $relation->model_name }}"
+                    @selected($contentModelRelationId === $relation->id)
+                >
                     {{ $relation->content_type->label() }} / {{ $relation->model_name }}
                 </option>
             @endforeach
@@ -57,13 +62,14 @@
             value="{{ $viewCount }}"
             min="1"
             class="form-control form-control-sm"
+            data-role="view-count-input"
             required
         >
     </div>
 
     <div class="col-md-2">
         <label class="form-label small">{{ __('表示箇所') }}</label>
-        <select name="call_contents[{{ $index }}][place]" class="form-select form-select-sm" required>
+        <select name="call_contents[{{ $index }}][place]" class="form-select form-select-sm" data-role="place-select" required>
             <option value="" disabled @selected(! $place)>{{ __('選択してください') }}</option>
             @foreach (\App\Enums\CallContentPlace::cases() as $placeOption)
                 <option value="{{ $placeOption->value }}" @selected($place === $placeOption->value)>{{ $placeOption->label() }}</option>

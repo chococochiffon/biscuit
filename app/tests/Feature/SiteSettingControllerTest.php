@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\CallContentPlace;
+use App\Enums\CallContentType;
 use App\Enums\CallType;
 use App\Models\Administrator;
 use App\Models\CallContent;
@@ -84,7 +85,7 @@ class SiteSettingControllerTest extends TestCase
     public function test_store_creates_call_contents_together_with_site_setting(): void
     {
         $actor = Administrator::factory()->create();
-        $relation = ContentModelRelation::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article]);
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
@@ -124,14 +125,161 @@ class SiteSettingControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_fails_when_content_model_relation_content_type_is_not_allowed_for_call_type(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::ShortSentence->value,
+                    'call_name' => '短文',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 1,
+                    'place' => CallContentPlace::Top->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['call_contents.0.content_model_relation_id']);
+    }
+
+    public function test_store_fails_when_place_is_not_allowed_for_call_type(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::SinglePage]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::ShortSentence->value,
+                    'call_name' => '短文',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 1,
+                    'place' => CallContentPlace::Others->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['call_contents.0.place']);
+    }
+
+    public function test_store_fails_when_view_count_is_not_fixed_to_one_for_call_type(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::Link->value,
+                    'call_name' => 'リンク',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 3,
+                    'place' => CallContentPlace::Top->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['call_contents.0.view_count']);
+    }
+
+    public function test_store_fails_when_skill_list_call_type_uses_a_relation_other_than_user_detail(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Custom,
+            'model_name' => 'Recipe',
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::SkillList->value,
+                    'call_name' => 'スキル一覧',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 1,
+                    'place' => CallContentPlace::Top->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['call_contents.0.content_model_relation_id']);
+    }
+
+    public function test_store_creates_call_content_with_skill_list_call_type_and_user_detail_relation(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Custom,
+            'model_name' => 'UserDetail',
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::SkillList->value,
+                    'call_name' => 'スキル一覧',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 3,
+                    'place' => CallContentPlace::Inside->value,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('call_contents', [
+            'call_type' => CallType::SkillList->value,
+            'content_model_relation_id' => $relation->id,
+            'view_count' => 3,
+            'place' => CallContentPlace::Inside->value,
+        ]);
+    }
+
+    public function test_store_creates_call_content_with_archive_call_type_and_custom_relation(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Custom,
+            'model_name' => 'Recipe',
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::Archive->value,
+                    'call_name' => 'レシピアーカイブ',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 5,
+                    'place' => CallContentPlace::Others->value,
+                ],
+            ],
+        ]);
+
+        $response->assertRedirect();
+        $this->assertDatabaseHas('call_contents', [
+            'call_type' => CallType::Archive->value,
+            'content_model_relation_id' => $relation->id,
+            'view_count' => 5,
+            'place' => CallContentPlace::Others->value,
+        ]);
+    }
+
     public function test_update_syncs_call_contents_creating_updating_and_deleting_rows(): void
     {
         $actor = Administrator::factory()->create();
         $siteSetting = SiteSetting::factory()->create();
-        $relation = ContentModelRelation::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article]);
         $otherRelation = ContentModelRelation::factory()->create();
         $kept = CallContent::factory()->create([
-            'call_type' => CallType::OriginalText,
+            'call_type' => CallType::LinkList,
             'content_model_relation_id' => $relation->id,
             'view_count' => 1,
             'place' => CallContentPlace::Top,
@@ -143,7 +291,7 @@ class SiteSettingControllerTest extends TestCase
             'call_contents' => [
                 [
                     'id' => $kept->id,
-                    'call_type' => CallType::OriginalText->value,
+                    'call_type' => CallType::LinkList->value,
                     'call_name' => $kept->call_name,
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 5,
