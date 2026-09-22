@@ -16,18 +16,14 @@ class CallContentResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
+     * table_name(例: articles/single_pages/user_details)をキーに、解決済みの実データのみを返す。
      *
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
         return [
-            'call_type' => $this->call_type->value,
-            'view_count' => $this->view_count,
-            'model_name' => $this->contentModelRelation->model_name,
-            'table_name' => $this->contentModelRelation->table_name,
-            'content_type' => $this->contentModelRelation->content_type->value,
-            'resolved_data' => $this->resolveData(),
+            $this->contentModelRelation->table_name => $this->resolveData(),
         ];
     }
 
