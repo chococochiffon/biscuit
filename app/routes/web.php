@@ -61,6 +61,10 @@ Route::resource('admin/users', UserController::class)
     ->names('admin.users')
     ->middleware('auth:admin');
 
+Route::patch('admin/single-pages/reorder', [SinglePageController::class, 'reorder'])
+    ->name('admin.single-pages.reorder')
+    ->middleware('auth:admin');
+
 Route::resource('admin/single-pages', SinglePageController::class)
     ->parameters(['single-pages' => 'singlePage'])
     ->names('admin.single-pages')

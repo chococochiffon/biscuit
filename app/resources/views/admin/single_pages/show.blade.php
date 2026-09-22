@@ -22,6 +22,12 @@
             <dt class="col-4 text-muted fw-normal">{{ __('URI') }}</dt>
             <dd class="col-8">{{ $singlePage->uri ?? __('未設定') }}</dd>
 
+            <dt class="col-4 text-muted fw-normal">{{ __('Topページへ表示する') }}</dt>
+            <dd class="col-8">{{ $singlePage->top_page_view ? __('表示する') : __('表示しない') }}</dd>
+
+            <dt class="col-4 text-muted fw-normal">{{ __('リンクリストへ表示する') }}</dt>
+            <dd class="col-8">{{ $singlePage->link_list_view ? __('表示する') : __('表示しない') }}</dd>
+
             <dt class="col-4 text-muted fw-normal">{{ __('ヘッダー画像') }}</dt>
             <dd class="col-8 mb-0">
                 @if ($singlePage->header_image)

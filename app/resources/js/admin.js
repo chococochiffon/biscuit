@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initContentEditor();
     initCallContentRows();
     initSinglePageDetailRows();
+    initSinglePageReorder();
     initImageDropzones();
 });
 
@@ -653,6 +654,75 @@ function initSinglePageDetailRows() {
     });
 
     updateSortOrders();
+}
+
+/**
+ * 固定ページ一覧(single_pages)の並び替えUIを初期化する。
+ * ハンドルをドラッグして行を並び替えると、隠しinput(order[])のDOM順が変わり、
+ * 「並び替えを保存」ボタンで並び替え用フォーム(single-page-reorder-form)に送信される。
+ */
+function initSinglePageReorder() {
+    const table = document.getElementById('single-page-reorder-rows');
+
+    if (!table) {
+        return;
+    }
+
+    const tbody = table.querySelector('tbody');
+    let draggingRow = null;
+
+    function getRowAfterElement(y) {
+        const rows = [...tbody.querySelectorAll('[data-role="single-page-row"]:not(.dragging)')];
+
+        return rows.reduce(
+            (closest, row) => {
+                const box = row.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset, element: row };
+                }
+
+                return closest;
+            },
+            { offset: Number.NEGATIVE_INFINITY, element: null }
+        ).element;
+    }
+
+    tbody.querySelectorAll('[data-role="single-page-row"]').forEach((row) => {
+        const handle = row.querySelector('[data-role="drag-handle"]');
+
+        handle.addEventListener('mousedown', () => {
+            row.draggable = true;
+        });
+
+        row.addEventListener('dragstart', () => {
+            draggingRow = row;
+            row.classList.add('dragging');
+        });
+
+        row.addEventListener('dragend', () => {
+            row.draggable = false;
+            row.classList.remove('dragging');
+            draggingRow = null;
+        });
+    });
+
+    tbody.addEventListener('dragover', (event) => {
+        if (!draggingRow) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const afterElement = getRowAfterElement(event.clientY);
+
+        if (afterElement == null) {
+            tbody.appendChild(draggingRow);
+        } else {
+            tbody.insertBefore(draggingRow, afterElement);
+        }
+    });
 }
 
 /**

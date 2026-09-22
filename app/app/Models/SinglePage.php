@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'short_sentences', 'header_image', 'taxonomy', 'uri'])]
+#[Fillable(['title', 'short_sentences', 'header_image', 'taxonomy', 'uri', 'top_page_view', 'link_list_view', 'sort_order'])]
 class SinglePage extends Model
 {
     /** @use HasFactory<SinglePageFactory> */
@@ -21,6 +21,19 @@ class SinglePage extends Model
      * ヘッダー画像の保存先ディレクトリ(公開ディスク基準)。
      */
     public const HEADER_IMAGE_DIRECTORY = 'image/header_image';
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'top_page_view' => 'boolean',
+            'link_list_view' => 'boolean',
+        ];
+    }
 
     /**
      * ヘッダー画像を保存し、公開ディスク基準の保存パスを返す。
