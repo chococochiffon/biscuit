@@ -112,7 +112,7 @@ class ContentModelRelationControllerTest extends TestCase
         $actor = Administrator::factory()->create();
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.content-model-relations.store'), [
-            'content_type' => CallContentType::LinkList->value,
+            'content_type' => CallContentType::Custom->value,
             'model_name' => 'user_made_list',
             'table_name' => 'user_make_recipes',
         ]);

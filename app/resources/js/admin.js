@@ -434,11 +434,16 @@ function initCallContentRows() {
 
     const addButton = document.getElementById('call-content-add');
     const template = document.getElementById('call-content-row-template');
+    const constraints = JSON.parse(container.dataset.callTypeConstraints || '{}');
 
     let nextIndex = Number(container.dataset.nextIndex || '0');
 
     function bindRow(row) {
         row.querySelector('[data-role="remove-row"]').addEventListener('click', () => row.remove());
+
+        const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+        callTypeSelect.addEventListener('change', () => applyCallTypeConstraints(row, constraints));
+        applyCallTypeConstraints(row, constraints);
     }
 
     container.querySelectorAll('[data-role="call-content-row"]').forEach(bindRow);
@@ -453,6 +458,62 @@ function initCallContentRows() {
         bindRow(row);
         nextIndex += 1;
     });
+}
+
+/**
+ * 呼び出し方(call_type)の選択に応じて、同じ行のデータ種別/表示箇所の選択肢を絞り込み、
+ * 表示件数を固定(読み取り専用・値1)にするかどうかを切り替える。
+ */
+function applyCallTypeConstraints(row, constraints) {
+    const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+    const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
+    const placeSelect = row.querySelector('[data-role="place-select"]');
+    const viewCountInput = row.querySelector('[data-role="view-count-input"]');
+
+    const rule = constraints[callTypeSelect.value];
+
+    if (!rule) {
+        return;
+    }
+
+    Array.from(relationSelect.options).forEach((option) => {
+        if (!option.value) {
+            return;
+        }
+
+        const allowed = rule.contentTypes.includes(Number(option.dataset.contentType))
+            && (!rule.modelName || option.dataset.modelName === rule.modelName);
+        option.hidden = !allowed;
+        option.disabled = !allowed;
+    });
+
+    if (relationSelect.selectedOptions[0]?.hidden) {
+        relationSelect.value = '';
+    }
+
+    Array.from(placeSelect.options).forEach((option) => {
+        if (!option.value) {
+            return;
+        }
+
+        const allowed = rule.places.includes(Number(option.value));
+        option.hidden = !allowed;
+        option.disabled = !allowed;
+    });
+
+    if (placeSelect.selectedOptions[0]?.hidden) {
+        placeSelect.value = '';
+    }
+
+    if (rule.fixedViewCount) {
+        viewCountInput.value = '1';
+        viewCountInput.readOnly = true;
+    } else {
+        viewCountInput.readOnly = false;
+        if (!viewCountInput.value) {
+            viewCountInput.value = '1';
+        }
+    }
 }
 
 /**
