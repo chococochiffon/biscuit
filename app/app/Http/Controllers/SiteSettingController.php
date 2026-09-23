@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateSiteSettingRequest;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
+use App\Rules\AllowedTableName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -19,8 +20,9 @@ class SiteSettingController extends Controller
     {
         $callContents = collect();
         $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
+        $tableNames = AllowedTableName::availableTables();
 
-        return view('admin.site_settings.create', compact('callContents', 'contentModelRelations'));
+        return view('admin.site_settings.create', compact('callContents', 'contentModelRelations', 'tableNames'));
     }
 
     /**
@@ -63,8 +65,9 @@ class SiteSettingController extends Controller
     {
         $callContents = CallContent::query()->orderBy('id')->get();
         $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
+        $tableNames = AllowedTableName::availableTables();
 
-        return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'contentModelRelations'));
+        return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'contentModelRelations', 'tableNames'));
     }
 
     /**
