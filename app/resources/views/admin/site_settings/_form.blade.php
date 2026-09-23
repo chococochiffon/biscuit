@@ -98,7 +98,12 @@
 @endphp
 
 <div class="mb-3">
-    <label class="form-label">{{ __('API設定') }}</label>
+    <div class="d-flex align-items-center justify-content-between">
+        <label class="form-label mb-0">{{ __('API設定') }}</label>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#content-model-relation-manager-modal">
+            {{ __('データ種別紐付け管理') }}
+        </button>
+    </div>
 
     <div
         id="call-content-rows"
@@ -136,3 +141,5 @@
         ])
     </template>
 </div>
+
+@include('admin.content_model_relations._manager_modal', ['tableNames' => $tableNames ?? []])

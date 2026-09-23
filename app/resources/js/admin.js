@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTagManagerModal();
     initContentEditor();
     initCallContentRows();
+    initContentModelRelationManagerModal();
     initSinglePageDetailRows();
     initSinglePageReorder();
     initImageDropzones();
@@ -565,6 +566,267 @@ function setFieldError(select, errorElement, message) {
     select.classList.toggle('is-invalid', Boolean(message));
     errorElement.textContent = message ?? '';
     errorElement.hidden = !message;
+}
+
+/**
+ * ページ内のすべての「データ種別」セレクト(呼び出しコンテンツの行テンプレート含む)に対してコールバックを実行する。
+ */
+function forEachContentModelRelationSelect(callback) {
+    document.querySelectorAll('[data-role="content-model-relation-select"]').forEach(callback);
+
+    const template = document.getElementById('call-content-row-template');
+    template?.content.querySelectorAll('[data-role="content-model-relation-select"]').forEach(callback);
+}
+
+/**
+ * データ種別紐付けの作成/更新結果を、ページ内のすべての「データ種別」セレクトの選択肢へ反映する。
+ */
+function upsertContentModelRelationOption(relation) {
+    forEachContentModelRelationSelect((select) => {
+        let option = select.querySelector(`option[value="${relation.id}"]`);
+
+        if (!option) {
+            option = document.createElement('option');
+            option.value = String(relation.id);
+            select.appendChild(option);
+        }
+
+        option.dataset.contentType = String(relation.content_type);
+        option.dataset.modelName = relation.model_name;
+        option.textContent = `${relation.content_type_label} / ${relation.model_name}`;
+    });
+
+    reapplyAllCallContentConstraints();
+}
+
+/**
+ * 削除されたデータ種別紐付けを、ページ内のすべての「データ種別」セレクトの選択肢から取り除く。
+ * 選択中だった行はいったん未選択に戻す。
+ */
+function removeContentModelRelationOption(id) {
+    forEachContentModelRelationSelect((select) => {
+        const option = select.querySelector(`option[value="${id}"]`);
+
+        if (!option) {
+            return;
+        }
+
+        if (select.value === String(id)) {
+            select.value = '';
+        }
+
+        option.remove();
+    });
+}
+
+/**
+ * 既存の呼び出しコンテンツ行すべてに、呼び出し方(call_type)による選択肢の絞り込みを再適用する。
+ * データ種別紐付けをその場で追加/更新した直後に、絞り込み状態を最新化するために呼び出す。
+ */
+function reapplyAllCallContentConstraints() {
+    const container = document.getElementById('call-content-rows');
+
+    if (!container) {
+        return;
+    }
+
+    const constraints = JSON.parse(container.dataset.callTypeConstraints || '{}');
+    container.querySelectorAll('[data-role="call-content-row"]').forEach((row) => applyCallTypeConstraints(row, constraints));
+}
+
+/**
+ * データ種別紐付け(ContentModelRelation)の管理モーダル(サイト設定フォーム)を初期化する。
+ * 一覧取得・登録・更新・削除をAjaxで行い、呼び出しコンテンツ行の「データ種別」セレクトへ即時反映する。
+ */
+function initContentModelRelationManagerModal() {
+    const modal = document.getElementById('content-model-relation-manager-modal');
+
+    if (!modal) {
+        return;
+    }
+
+    const listContainer = document.getElementById('content-model-relation-manager-list');
+    const contentTypeSelect = document.getElementById('content-model-relation-manager-content-type');
+    const modelNameInput = document.getElementById('content-model-relation-manager-model-name');
+    const tableNameSelect = document.getElementById('content-model-relation-manager-table-name');
+    const submitButton = document.getElementById('content-model-relation-manager-submit');
+    const errorBox = document.getElementById('content-model-relation-manager-error');
+    const indexUrl = listContainer.dataset.indexUrl;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+    let editingId = null;
+
+    function showError(message) {
+        errorBox.textContent = message;
+        errorBox.classList.remove('d-none');
+    }
+
+    function clearError() {
+        errorBox.classList.add('d-none');
+        errorBox.textContent = '';
+    }
+
+    function resetForm() {
+        editingId = null;
+        contentTypeSelect.selectedIndex = 0;
+        modelNameInput.value = '';
+        tableNameSelect.value = '';
+        submitButton.textContent = '登録';
+    }
+
+    function ensureTableNameOption(tableName) {
+        if (!tableName || tableNameSelect.querySelector(`option[value="${tableName}"]`)) {
+            return;
+        }
+
+        const option = document.createElement('option');
+        option.value = tableName;
+        option.textContent = tableName;
+        tableNameSelect.appendChild(option);
+    }
+
+    function renderList(relations) {
+        listContainer.innerHTML = '';
+
+        relations.forEach((relation) => {
+            const item = document.createElement('div');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center';
+
+            const label = document.createElement('span');
+            label.textContent = `${relation.content_type_label} / ${relation.model_name} `;
+
+            const tableNameBadge = document.createElement('span');
+            tableNameBadge.className = 'text-muted small';
+            tableNameBadge.textContent = `(${relation.table_name})`;
+            label.appendChild(tableNameBadge);
+            item.appendChild(label);
+
+            const actions = document.createElement('div');
+            actions.className = 'd-flex gap-2';
+
+            const editButton = document.createElement('button');
+            editButton.type = 'button';
+            editButton.className = 'btn btn-sm btn-outline-secondary';
+            editButton.innerHTML = '<i class="bi bi-pencil"></i>';
+            editButton.setAttribute('aria-label', '編集');
+            editButton.addEventListener('click', () => {
+                editingId = relation.id;
+                contentTypeSelect.value = String(relation.content_type);
+                modelNameInput.value = relation.model_name;
+                ensureTableNameOption(relation.table_name);
+                tableNameSelect.value = relation.table_name;
+                submitButton.textContent = '更新';
+                clearError();
+                modelNameInput.focus();
+            });
+            actions.appendChild(editButton);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn btn-sm btn-outline-danger';
+            deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
+            deleteButton.setAttribute('aria-label', '削除');
+            deleteButton.addEventListener('click', async () => {
+                if (!window.confirm(`「${relation.content_type_label} / ${relation.model_name}」を削除してよろしいですか?`)) {
+                    return;
+                }
+
+                await deleteRelation(relation);
+            });
+            actions.appendChild(deleteButton);
+
+            item.appendChild(actions);
+            listContainer.appendChild(item);
+        });
+    }
+
+    async function fetchList() {
+        const response = await fetch(indexUrl, {
+            headers: { Accept: 'application/json' },
+        });
+
+        if (!response.ok) {
+            return;
+        }
+
+        renderList(await response.json());
+    }
+
+    async function deleteRelation(relation) {
+        const response = await fetch(`${indexUrl}/${relation.id}`, {
+            method: 'DELETE',
+            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken },
+        });
+
+        if (!response.ok) {
+            if (response.status === 422) {
+                const data = await response.json();
+                showError(data.message ?? 'このデータ種別の紐付けは使用されているため削除できません。');
+            } else {
+                showError('データ種別の紐付けの削除に失敗しました。');
+            }
+
+            return;
+        }
+
+        if (editingId === relation.id) {
+            resetForm();
+        }
+
+        removeContentModelRelationOption(relation.id);
+        await fetchList();
+    }
+
+    async function submitRelation() {
+        const contentType = contentTypeSelect.value;
+        const modelName = modelNameInput.value.trim();
+        const tableName = tableNameSelect.value;
+
+        if (modelName === '' || tableName === '') {
+            return;
+        }
+
+        clearError();
+
+        const isEditing = editingId !== null;
+        const url = isEditing ? `${indexUrl}/${editingId}` : indexUrl;
+        const method = isEditing ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method,
+            headers: {
+                Accept: 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
+            body: JSON.stringify({ content_type: contentType, model_name: modelName, table_name: tableName }),
+        });
+
+        if (!response.ok) {
+            if (response.status === 422) {
+                const data = await response.json();
+                showError(Object.values(data.errors ?? {}).flat().join(' '));
+            } else {
+                showError('データ種別の紐付けの保存に失敗しました。');
+            }
+
+            return;
+        }
+
+        const saved = await response.json();
+        upsertContentModelRelationOption(saved);
+        resetForm();
+        await fetchList();
+    }
+
+    submitButton.addEventListener('click', submitRelation);
+
+    modal.addEventListener('show.bs.modal', () => {
+        clearError();
+        fetchList();
+    });
+
+    modal.addEventListener('hidden.bs.modal', resetForm);
 }
 
 /**
