@@ -65,6 +65,7 @@ class SinglePageControllerTest extends TestCase
             'short_sentences' => '会社の概要ページです',
             'taxonomy' => 'company',
             'uri' => 'about',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
             'details' => [
                 ['sub_title' => '沿革', 'contents' => '<p>沿革本文</p>', 'sort_order' => 0],
                 ['sub_title' => '事業内容', 'contents' => '<p>事業内容本文</p>', 'sort_order' => 1],
@@ -92,6 +93,7 @@ class SinglePageControllerTest extends TestCase
             'title' => 'ヘッダー画像記事',
             'short_sentences' => '概要',
             'header_image' => $file,
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.single-pages.index'));
@@ -112,6 +114,7 @@ class SinglePageControllerTest extends TestCase
             'short_sentences' => '新着情報ページです',
             'top_page_view' => '1',
             'link_list_view' => '0',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.single-pages.index'));
@@ -128,7 +131,39 @@ class SinglePageControllerTest extends TestCase
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), []);
 
-        $response->assertSessionHasErrors(['title', 'short_sentences']);
+        $response->assertSessionHasErrors(['title', 'short_sentences', 'publication_start_datetime']);
+    }
+
+    public function test_store_persists_publication_start_and_end_datetimes(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'title' => '公開期間付きページ',
+            'short_sentences' => '概要',
+            'publication_start_datetime' => '2026-10-01 09:00',
+            'publication_end_datetime' => '2026-10-31 23:59',
+        ]);
+
+        $response->assertRedirect(route('admin.single-pages.index'));
+
+        $singlePage = SinglePage::where('title', '公開期間付きページ')->firstOrFail();
+        $this->assertSame('2026-10-01 09:00', $singlePage->publication_start_datetime->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-31 23:59', $singlePage->publication_end_datetime->format('Y-m-d H:i'));
+    }
+
+    public function test_store_fails_validation_when_publication_end_datetime_is_before_start(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'title' => '公開期間逆転ページ',
+            'short_sentences' => '概要',
+            'publication_start_datetime' => '2026-10-10 00:00',
+            'publication_end_datetime' => '2026-10-01 00:00',
+        ]);
+
+        $response->assertSessionHasErrors(['publication_end_datetime']);
     }
 
     public function test_show_displays_single_page(): void
@@ -162,6 +197,7 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
             'title' => '更新後タイトル',
             'short_sentences' => '更新後概要',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.single-pages.index'));
@@ -178,6 +214,7 @@ class SinglePageControllerTest extends TestCase
             'short_sentences' => $target->short_sentences,
             'top_page_view' => '1',
             'link_list_view' => '1',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.single-pages.index'));
@@ -204,6 +241,7 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
             'title' => $target->title,
             'short_sentences' => $target->short_sentences,
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
             'details' => [
                 ['id' => $kept->id, 'sub_title' => '既存(更新後)', 'contents' => '<p>更新</p>', 'sort_order' => 0],
                 ['sub_title' => '新規追加', 'contents' => '<p>新規</p>', 'sort_order' => 1],

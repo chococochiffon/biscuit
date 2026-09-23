@@ -63,6 +63,7 @@ class ArticleControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
             'title' => '新しい記事',
             'content' => '<p>本文です</p>',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.articles.index'));
@@ -93,6 +94,7 @@ class ArticleControllerTest extends TestCase
             'title' => 'サムネイル記事',
             'content' => '<p>本文</p>',
             'thumbnail' => $file,
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.articles.index'));
@@ -112,6 +114,7 @@ class ArticleControllerTest extends TestCase
             'title' => 'タグ記事',
             'content' => '<p>本文</p>',
             'tags' => ['Laravel', 'NewTag'],
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.articles.index'));
@@ -155,6 +158,7 @@ class ArticleControllerTest extends TestCase
             'title' => '更新後のタイトル',
             'content' => '<p>更新後の本文</p>',
             'approval' => ArticleApprovalStatus::Published->value,
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.articles.index'));
@@ -178,6 +182,7 @@ class ArticleControllerTest extends TestCase
             'content' => $target->content,
             'approval' => $target->approval->value,
             'thumbnail' => $file,
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.articles.index'));
@@ -200,12 +205,113 @@ class ArticleControllerTest extends TestCase
             'content' => $target->content,
             'approval' => $target->approval->value,
             'tags' => ['Kept', 'Added'],
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ]);
 
         $response->assertRedirect(route('admin.articles.index'));
 
         $tagNames = $target->fresh()->tags->pluck('tag_name')->sort()->values()->all();
         $this->assertSame(['Added', 'Kept'], $tagNames);
+    }
+
+    public function test_store_persists_publication_start_and_end_datetimes(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+            'title' => '公開期間付き記事',
+            'content' => '<p>本文</p>',
+            'publication_start_datetime' => '2026-10-01 09:00',
+            'publication_end_datetime' => '2026-10-31 23:59',
+        ]);
+
+        $response->assertRedirect(route('admin.articles.index'));
+
+        $article = Article::where('title', '公開期間付き記事')->firstOrFail();
+        $this->assertSame('2026-10-01 09:00', $article->publication_start_datetime->format('Y-m-d H:i'));
+        $this->assertSame('2026-10-31 23:59', $article->publication_end_datetime->format('Y-m-d H:i'));
+    }
+
+    public function test_store_fails_validation_without_publication_start_datetime(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+            'title' => '公開開始日時なし記事',
+            'content' => '<p>本文</p>',
+        ]);
+
+        $response->assertSessionHasErrors(['publication_start_datetime']);
+    }
+
+    public function test_store_fails_validation_when_publication_end_datetime_is_before_start(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+            'title' => '公開期間逆転記事',
+            'content' => '<p>本文</p>',
+            'publication_start_datetime' => '2026-10-10 00:00',
+            'publication_end_datetime' => '2026-10-01 00:00',
+        ]);
+
+        $response->assertSessionHasErrors(['publication_end_datetime']);
+    }
+
+    public function test_guests_are_redirected_from_approval_update(): void
+    {
+        $target = Article::factory()->create();
+
+        $response = $this->patch(route('admin.articles.approval', $target), [
+            'approval' => ArticleApprovalStatus::Published->value,
+        ]);
+
+        $response->assertRedirect(route('admin.login'));
+    }
+
+    public function test_approval_update_changes_only_the_approval_of_the_target_article(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft, 'title' => '対象記事']);
+        $other = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft]);
+
+        $response = $this->actingAs($actor, 'admin')->patch(route('admin.articles.approval', $target), [
+            'approval' => ArticleApprovalStatus::Published->value,
+        ]);
+
+        $response->assertRedirect();
+        $this->assertSame(ArticleApprovalStatus::Published, $target->fresh()->approval);
+        $this->assertSame(ArticleApprovalStatus::Draft, $other->fresh()->approval);
+        $this->assertSame('対象記事', $target->fresh()->title);
+    }
+
+    public function test_bulk_approval_update_changes_only_the_selected_articles(): void
+    {
+        $actor = Administrator::factory()->create();
+        $selected = Article::factory()->count(2)->create(['approval' => ArticleApprovalStatus::Draft]);
+        $notSelected = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft]);
+
+        $response = $this->actingAs($actor, 'admin')->patch(route('admin.articles.bulk-approval'), [
+            'article_ids' => $selected->pluck('id')->all(),
+            'approval' => ArticleApprovalStatus::Published->value,
+        ]);
+
+        $response->assertRedirect();
+        foreach ($selected as $article) {
+            $this->assertSame(ArticleApprovalStatus::Published, $article->fresh()->approval);
+        }
+        $this->assertSame(ArticleApprovalStatus::Draft, $notSelected->fresh()->approval);
+    }
+
+    public function test_bulk_approval_update_fails_validation_without_article_ids(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->patch(route('admin.articles.bulk-approval'), [
+            'approval' => ArticleApprovalStatus::Published->value,
+        ]);
+
+        $response->assertSessionHasErrors(['article_ids']);
     }
 
     public function test_destroy_deletes_article(): void

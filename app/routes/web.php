@@ -42,6 +42,14 @@ Route::resource('admin/tags', TagController::class)
     ->names('admin.tags')
     ->middleware('auth:admin');
 
+Route::patch('admin/articles/bulk-approval', [ArticleController::class, 'bulkUpdateApproval'])
+    ->name('admin.articles.bulk-approval')
+    ->middleware('auth:admin');
+
+Route::patch('admin/articles/{article}/approval', [ArticleController::class, 'updateApproval'])
+    ->name('admin.articles.approval')
+    ->middleware('auth:admin');
+
 Route::resource('admin/articles', ArticleController::class)
     ->names('admin.articles')
     ->middleware('auth:admin');

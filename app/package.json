@@ -19,6 +19,7 @@
     },
     "dependencies": {
         "bootstrap-icons": "^1.13.1",
+        "flatpickr": "^4.6.13",
         "quill": "^2.0.3"
     }
 }

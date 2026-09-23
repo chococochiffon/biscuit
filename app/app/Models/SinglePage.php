@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'short_sentences', 'header_image', 'taxonomy', 'uri', 'top_page_view', 'link_list_view', 'sort_order'])]
+#[Fillable(['title', 'short_sentences', 'header_image', 'taxonomy', 'uri', 'top_page_view', 'link_list_view', 'sort_order', 'publication_start_datetime', 'publication_end_datetime'])]
 class SinglePage extends Model
 {
     /** @use HasFactory<SinglePageFactory> */
@@ -32,6 +32,8 @@ class SinglePage extends Model
         return [
             'top_page_view' => 'boolean',
             'link_list_view' => 'boolean',
+            'publication_start_datetime' => 'datetime',
+            'publication_end_datetime' => 'datetime',
         ];
     }
 

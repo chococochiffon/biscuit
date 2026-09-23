@@ -26,6 +26,8 @@ class StoreArticleRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
             'thumbnail' => ['nullable', 'image', 'max:10240'],
+            'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
+            'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:255'],
         ];

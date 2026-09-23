@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'content', 'thumbnail', 'user_id', 'approval'])]
+#[Fillable(['title', 'content', 'thumbnail', 'user_id', 'approval', 'publication_start_datetime', 'publication_end_datetime'])]
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
@@ -33,6 +33,8 @@ class Article extends Model
     {
         return [
             'approval' => ArticleApprovalStatus::class,
+            'publication_start_datetime' => 'datetime',
+            'publication_end_datetime' => 'datetime',
         ];
     }
 
