@@ -116,19 +116,29 @@
     >
 </div>
 
+@php
+    $existingUserImageUrl = ($user->detail->user_image ?? null)
+        ? Illuminate\Support\Facades\Storage::disk('public')->url($user->detail->user_image)
+        : null;
+@endphp
+
 <div class="mb-3">
     <label class="form-label">{{ __('ユーザー画像') }}</label>
-    @if (($user->detail->user_image ?? null))
-        <div class="mb-2">
-            <img
-                src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($user->detail->user_image) }}"
-                alt="{{ __('ユーザー画像') }}"
-                class="img-thumbnail"
-                style="width: 160px; height: 160px; object-fit: cover;"
-            >
+    <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('ユーザー画像を選択') }}">
+        <input id="user_detail_user_image" type="file" name="user_detail[user_image]" accept="image/*" class="d-none" data-role="image-dropzone-input">
+
+        <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingUserImageUrl) style="display: none;" @endif>
+            <img src="{{ $existingUserImageUrl }}" alt="{{ __('ユーザー画像') }}" data-role="image-dropzone-image">
+            <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
+                <i class="bi bi-x-lg"></i>
+            </button>
         </div>
-    @endif
-    <input id="user_detail_user_image" type="file" name="user_detail[user_image]" accept="image/*" class="form-control">
+
+        <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingUserImageUrl) style="display: none;" @endif>
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
+        </div>
+    </div>
 </div>
 
 <div class="mb-3">
