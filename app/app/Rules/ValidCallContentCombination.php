@@ -46,12 +46,16 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
 
         match ($this->check) {
             'content_model_relation_id' => $this->checkContentModelRelation($callType, $value, $fail),
-            'place' => $this->checkPlace($callType, $value, $fail),
+            'place' => $this->checkPlace($callType, $row, $value, $fail),
             'view_count' => $this->checkViewCount($callType, $value, $fail),
             default => null,
         };
     }
 
+    /**
+     * content_model_relation_idは、呼び出し方(call_type)で選択可能なモデル名(表示箇所を問わない和集合)かどうかのみを検証する。
+     * 表示箇所との組み合わせの厳密な検証は表示箇所(place)側で行う。
+     */
     private function checkContentModelRelation(CallType $callType, mixed $value, Closure $fail): void
     {
         if (! is_numeric($value)) {
@@ -64,24 +68,36 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
             return;
         }
 
-        if (! in_array($relation->content_type, $callType->allowedContentTypes(), true)) {
+        if (! in_array($relation->model_name, $callType->allowedModelNames(), true)) {
             $fail(__('選択した呼び出し方ではこのデータ種別は選択できません。'));
+        }
+    }
+
+    /**
+     * 表示箇所(place)は、呼び出し方(call_type)・データ種別(モデル名)との厳密な組み合わせを検証する。
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function checkPlace(CallType $callType, array $row, mixed $value, Closure $fail): void
+    {
+        $place = CallContentPlace::tryFrom((int) $value);
+
+        if (! $place) {
+            return;
+        }
+
+        $relationId = $row['content_model_relation_id'] ?? null;
+        $relation = is_numeric($relationId) ? ContentModelRelation::find($relationId) : null;
+
+        if ($relation) {
+            if (! $callType->supports($relation->model_name, $place)) {
+                $fail(__('選択した呼び出し方・データ種別ではこの表示箇所は選択できません。'));
+            }
 
             return;
         }
 
-        $requiredModelName = $callType->requiredModelName();
-
-        if ($requiredModelName !== null && $relation->model_name !== $requiredModelName) {
-            $fail(__('選択した呼び出し方ではこのモデルは選択できません。'));
-        }
-    }
-
-    private function checkPlace(CallType $callType, mixed $value, Closure $fail): void
-    {
-        $place = CallContentPlace::tryFrom((int) $value);
-
-        if ($place && ! in_array($place, $callType->allowedPlaces(), true)) {
+        if (! in_array($place, $callType->allowedPlaces(), true)) {
             $fail(__('選択した呼び出し方ではこの表示箇所は選択できません。'));
         }
     }

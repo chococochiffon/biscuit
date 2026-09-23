@@ -52,6 +52,7 @@
                 </option>
             @endforeach
         </select>
+        <div class="invalid-feedback" data-role="content-model-relation-error" hidden></div>
     </div>
 
     <div class="col-md-2">
@@ -75,6 +76,7 @@
                 <option value="{{ $placeOption->value }}" @selected($place === $placeOption->value)>{{ $placeOption->label() }}</option>
             @endforeach
         </select>
+        <div class="invalid-feedback" data-role="place-error" hidden></div>
     </div>
 
     <div class="col-md-1">

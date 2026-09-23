@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Enums\CallContentPlace;
 use App\Models\Article;
 use App\Models\SinglePage;
 use App\Models\UserDetail;
@@ -29,14 +28,9 @@ class CallContentResource extends JsonResource
 
     /**
      * call_type/model_name/placeを元にArticle/SinglePage/UserDetailの実データを解決し、整形する。
-     * 設置場所(place)がTop以外の場合は取得ルールが未定(検討中)のため、resolveせずnullを返す。
      */
     private function resolveData(): mixed
     {
-        if ($this->place !== CallContentPlace::Top) {
-            return null;
-        }
-
         $resolved = (new CallContentResolver)->resolve($this->resource);
 
         return match (true) {

@@ -443,7 +443,17 @@ function initCallContentRows() {
         row.querySelector('[data-role="remove-row"]').addEventListener('click', () => row.remove());
 
         const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+        const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
+        const relationError = row.querySelector('[data-role="content-model-relation-error"]');
+        const placeSelect = row.querySelector('[data-role="place-select"]');
+        const placeError = row.querySelector('[data-role="place-error"]');
+
         callTypeSelect.addEventListener('change', () => applyCallTypeConstraints(row, constraints));
+        relationSelect.addEventListener('change', () => {
+            setFieldError(relationSelect, relationError, null);
+            applyPlaceConstraints(row, constraints[callTypeSelect.value]);
+        });
+        placeSelect.addEventListener('change', () => setFieldError(placeSelect, placeError, null));
         applyCallTypeConstraints(row, constraints);
     }
 
@@ -462,13 +472,14 @@ function initCallContentRows() {
 }
 
 /**
- * 呼び出し方(call_type)の選択に応じて、同じ行のデータ種別/表示箇所の選択肢を絞り込み、
+ * 呼び出し方(call_type)の選択に応じて、同じ行のデータ種別(モデル名)/表示箇所の選択肢を絞り込み、
  * 表示件数を固定(読み取り専用・値1)にするかどうかを切り替える。
+ * 既存の選択値が新しい呼び出し方では選択できなくなった場合は、値をクリアした上でその行にエラーを表示する。
  */
 function applyCallTypeConstraints(row, constraints) {
     const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
     const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
-    const placeSelect = row.querySelector('[data-role="place-select"]');
+    const relationError = row.querySelector('[data-role="content-model-relation-error"]');
     const viewCountInput = row.querySelector('[data-role="view-count-input"]');
 
     const rule = constraints[callTypeSelect.value];
@@ -477,34 +488,26 @@ function applyCallTypeConstraints(row, constraints) {
         return;
     }
 
+    const previousRelationValue = relationSelect.value;
+
     Array.from(relationSelect.options).forEach((option) => {
         if (!option.value) {
             return;
         }
 
-        const allowed = rule.contentTypes.includes(Number(option.dataset.contentType))
-            && (!rule.modelName || option.dataset.modelName === rule.modelName);
+        const allowed = rule.modelNames.includes(option.dataset.modelName);
         option.hidden = !allowed;
         option.disabled = !allowed;
     });
 
-    if (relationSelect.selectedOptions[0]?.hidden) {
+    if (previousRelationValue && relationSelect.selectedOptions[0]?.hidden) {
         relationSelect.value = '';
+        setFieldError(relationSelect, relationError, '選択した呼び出し方ではこのデータ種別は選択できなくなりました。データ種別を選び直してください。');
+    } else {
+        setFieldError(relationSelect, relationError, null);
     }
 
-    Array.from(placeSelect.options).forEach((option) => {
-        if (!option.value) {
-            return;
-        }
-
-        const allowed = rule.places.includes(Number(option.value));
-        option.hidden = !allowed;
-        option.disabled = !allowed;
-    });
-
-    if (placeSelect.selectedOptions[0]?.hidden) {
-        placeSelect.value = '';
-    }
+    applyPlaceConstraints(row, rule);
 
     if (rule.fixedViewCount) {
         viewCountInput.value = '1';
@@ -515,6 +518,53 @@ function applyCallTypeConstraints(row, constraints) {
             viewCountInput.value = '1';
         }
     }
+}
+
+/**
+ * 表示箇所(place)の選択肢を絞り込む。データ種別(モデル名)が選択済みの場合は
+ * 呼び出し方(call_type)・モデル名の組み合わせで許可された表示箇所に限定し、
+ * 未選択の場合は呼び出し方で選択可能な表示箇所の和集合を候補にする。
+ * 既存の選択値が選択できなくなった場合は、値をクリアした上でその行にエラーを表示する。
+ */
+function applyPlaceConstraints(row, rule) {
+    const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
+    const placeSelect = row.querySelector('[data-role="place-select"]');
+    const placeError = row.querySelector('[data-role="place-error"]');
+
+    if (!rule) {
+        return;
+    }
+
+    const selectedModelName = relationSelect.selectedOptions[0]?.dataset.modelName;
+    const allowedPlaces = selectedModelName ? (rule.placesByModelName[selectedModelName] ?? []) : rule.places;
+    const previousPlaceValue = placeSelect.value;
+
+    Array.from(placeSelect.options).forEach((option) => {
+        if (!option.value) {
+            return;
+        }
+
+        const allowed = allowedPlaces.includes(Number(option.value));
+        option.hidden = !allowed;
+        option.disabled = !allowed;
+    });
+
+    if (previousPlaceValue && placeSelect.selectedOptions[0]?.hidden) {
+        placeSelect.value = '';
+        setFieldError(placeSelect, placeError, '選択した呼び出し方・データ種別ではこの表示箇所は選択できなくなりました。表示箇所を選び直してください。');
+    } else {
+        setFieldError(placeSelect, placeError, null);
+    }
+}
+
+/**
+ * セレクトボックスにバリデーションエラー表示(赤枠+メッセージ)を設定/解除する。
+ * messageがnullの場合はエラー表示を解除する。
+ */
+function setFieldError(select, errorElement, message) {
+    select.classList.toggle('is-invalid', Boolean(message));
+    errorElement.textContent = message ?? '';
+    errorElement.hidden = !message;
 }
 
 /**

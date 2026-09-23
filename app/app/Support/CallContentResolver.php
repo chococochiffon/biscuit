@@ -2,7 +2,6 @@
 
 namespace App\Support;
 
-use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use App\Models\CallContent;
 use App\Support\CallContent\ArticleContentSource;
@@ -16,7 +15,8 @@ use InvalidArgumentException;
 /**
  * 呼び出しコンテンツ(CallContent)のmodel_name/call_type/placeから、
  * 実際に表示するArticle/SinglePage/UserDetailのデータを解決する。
- * 設置場所(place)ごとに取得ルールが異なり、現時点ではTop(place=1)のみ対応している。
+ * 設置場所(place)ごとにモデルごとの許可されたcall_typeが異なり(CallType::supports()で判定)、
+ * 許可されていない組み合わせが渡された場合は例外を投げる。
  */
 class CallContentResolver
 {
@@ -48,8 +48,6 @@ class CallContentResolver
     {
         $callContent->loadMissing('contentModelRelation');
 
-        $this->assertPlaceIsSupported($callContent->place);
-
         return match ($callContent->contentModelRelation->model_name) {
             'Article' => $this->resolveArticle($callContent),
             'SinglePage' => $this->resolveSinglePage($callContent),
@@ -62,6 +60,8 @@ class CallContentResolver
 
     private function resolveArticle(CallContent $callContent): Model|EloquentCollection|null
     {
+        $this->assertSupported($callContent, 'Article');
+
         return match ($callContent->call_type) {
             CallType::OriginalText => $this->articleContentSource->getOriginalText(),
             CallType::LinkList => $this->articleContentSource->getLinkList($callContent->view_count),
@@ -73,6 +73,8 @@ class CallContentResolver
 
     private function resolveSinglePage(CallContent $callContent): Model|EloquentCollection|null
     {
+        $this->assertSupported($callContent, 'SinglePage');
+
         return match ($callContent->call_type) {
             CallType::ShortSentence => $this->singlePageContentSource->getShortSentence(),
             CallType::OriginalText => $this->singlePageContentSource->getOriginalText(),
@@ -84,21 +86,24 @@ class CallContentResolver
 
     private function resolveUserDetail(CallContent $callContent): EloquentCollection
     {
+        $this->assertSupported($callContent, 'UserDetail');
+
         return match ($callContent->call_type) {
             CallType::LinkList => $this->userDetailContentSource->getLinkList($callContent->view_count),
-            CallType::Archive => $this->userDetailContentSource->getArchive($callContent->view_count),
             CallType::SkillList => $this->userDetailContentSource->getSkillList($callContent->view_count),
             default => throw $this->unsupportedCallType($callContent, 'UserDetail'),
         };
     }
 
     /**
-     * 現在対応している設置場所(Top)以外が指定された場合はエラーとする(Inside/Othersのルールは検討中)。
+     * 表示箇所(place)・モデル名・呼び出し方(call_type)の組み合わせが許可されているかを検証する。
      */
-    private function assertPlaceIsSupported(CallContentPlace $place): void
+    private function assertSupported(CallContent $callContent, string $modelName): void
     {
-        if ($place !== CallContentPlace::Top) {
-            throw new InvalidArgumentException("place={$place->name} の取得ルールは未対応です(検討中)");
+        if (! $callContent->call_type->supports($modelName, $callContent->place)) {
+            throw new InvalidArgumentException(
+                "{$modelName}のplace={$callContent->place->name}ではcall_type={$callContent->call_type->name}は許可されていません"
+            );
         }
     }
 

@@ -27,32 +27,78 @@ enum CallType: int
     }
 
     /**
-     * この呼び出し方(call_type)で選択可能なデータ種別(ContentModelRelationのcontent_type)を取得する。
+     * 表示箇所(place)・モデル名(ContentModelRelationのmodel_name)ごとに、
+     * 選択可能な呼び出し方(call_type)を定義したマトリクス。
      *
-     * @return array<int, CallContentType>
+     * @return array<int, array<string, array<int, self>>>
      */
-    public function allowedContentTypes(): array
+    private static function combinationMatrix(): array
     {
-        return match ($this) {
-            self::ShortSentence => [CallContentType::SinglePage],
-            self::OriginalText => [CallContentType::Article, CallContentType::SinglePage],
-            self::LinkList, self::Link => [CallContentType::Article, CallContentType::SinglePage, CallContentType::Custom],
-            self::Archive => [CallContentType::Article, CallContentType::Custom],
-            self::SkillList => [CallContentType::Custom],
-        };
+        return [
+            CallContentPlace::Top->value => [
+                'Article' => [self::Link, self::Archive],
+                'SinglePage' => [self::ShortSentence, self::LinkList, self::Link],
+                'UserDetail' => [self::LinkList, self::SkillList],
+            ],
+            CallContentPlace::Inside->value => [
+                'Article' => [self::OriginalText],
+                'SinglePage' => [self::OriginalText],
+                'UserDetail' => [self::LinkList, self::SkillList],
+            ],
+            CallContentPlace::Others->value => [
+                'Article' => [self::LinkList, self::Link, self::Archive],
+                'SinglePage' => [self::LinkList],
+                'UserDetail' => [self::LinkList],
+            ],
+        ];
+    }
+
+    /**
+     * このcall_typeが、指定したモデル名(model_name)・表示箇所(place)の組み合わせで選択可能かどうか。
+     */
+    public function supports(string $modelName, CallContentPlace $place): bool
+    {
+        $callTypes = self::combinationMatrix()[$place->value][$modelName] ?? [];
+
+        return in_array($this, $callTypes, true);
+    }
+
+    /**
+     * この呼び出し方(call_type)で選択可能なモデル名(ContentModelRelationのmodel_name)を取得する。
+     * $placeを指定した場合はその表示箇所限定、未指定の場合は全表示箇所の和集合を返す。
+     *
+     * @return array<int, string>
+     */
+    public function allowedModelNames(?CallContentPlace $place = null): array
+    {
+        $places = $place ? [$place] : CallContentPlace::cases();
+
+        return collect($places)
+            ->flatMap(fn (CallContentPlace $p) => collect(self::combinationMatrix()[$p->value] ?? [])
+                ->filter(fn (array $callTypes) => in_array($this, $callTypes, true))
+                ->keys())
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
      * この呼び出し方(call_type)で選択可能な表示箇所(place)を取得する。
+     * $modelNameを指定した場合はそのモデル限定、未指定の場合は全モデルの和集合を返す。
      *
      * @return array<int, CallContentPlace>
      */
-    public function allowedPlaces(): array
+    public function allowedPlaces(?string $modelName = null): array
     {
-        return match ($this) {
-            self::ShortSentence, self::OriginalText, self::SkillList => [CallContentPlace::Top, CallContentPlace::Inside],
-            self::LinkList, self::Link, self::Archive => [CallContentPlace::Top, CallContentPlace::Inside, CallContentPlace::Others],
-        };
+        return collect(self::combinationMatrix())
+            ->filter(function (array $byModelName) use ($modelName) {
+                $callTypes = $modelName ? ($byModelName[$modelName] ?? []) : collect($byModelName)->flatten()->all();
+
+                return in_array($this, $callTypes, true);
+            })
+            ->keys()
+            ->map(fn (int $value) => CallContentPlace::from($value))
+            ->all();
     }
 
     /**
@@ -67,27 +113,23 @@ enum CallType: int
     }
 
     /**
-     * データ種別に加えてモデル名の指定が必須な場合、そのモデル名を取得する(スキルリストはUserDetail固定)。
-     */
-    public function requiredModelName(): ?string
-    {
-        return $this === self::SkillList ? 'UserDetail' : null;
-    }
-
-    /**
      * フロントエンド(admin.js)へ渡す、call_typeごとの選択肢制御情報をvalueをキーにしたマップで取得する。
      *
-     * @return array<int, array{contentTypes: array<int, int>, places: array<int, int>, fixedViewCount: bool, modelName: string|null}>
+     * @return array<int, array{modelNames: array<int, string>, places: array<int, int>, placesByModelName: array<string, array<int, int>>, fixedViewCount: bool}>
      */
     public static function jsConstraintsMap(): array
     {
         return collect(self::cases())
             ->mapWithKeys(fn (self $case) => [
                 $case->value => [
-                    'contentTypes' => array_map(fn (CallContentType $type) => $type->value, $case->allowedContentTypes()),
+                    'modelNames' => $case->allowedModelNames(),
                     'places' => array_map(fn (CallContentPlace $place) => $place->value, $case->allowedPlaces()),
+                    'placesByModelName' => collect($case->allowedModelNames())
+                        ->mapWithKeys(fn (string $modelName) => [
+                            $modelName => array_map(fn (CallContentPlace $place) => $place->value, $case->allowedPlaces($modelName)),
+                        ])
+                        ->all(),
                     'fixedViewCount' => $case->hasFixedViewCount(),
-                    'modelName' => $case->requiredModelName(),
                 ],
             ])
             ->all();
