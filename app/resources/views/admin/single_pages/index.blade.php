@@ -6,9 +6,17 @@
     <div class="mb-4 d-flex align-items-center justify-content-between">
         <h1 class="h5 mb-0">{{ __('固定ページ一覧') }}</h1>
 
-        <a href="{{ route('admin.single-pages.create') }}" class="btn btn-primary">
-            {{ __('新規登録') }}
-        </a>
+        <div class="d-flex align-items-center gap-2">
+            @if ($singlePages->isNotEmpty())
+                <button type="submit" form="single-page-reorder-form" class="btn btn-outline-secondary btn-sm">
+                    {{ __('並び替えを保存') }}
+                </button>
+            @endif
+
+            <a href="{{ route('admin.single-pages.create') }}" class="btn btn-primary">
+                {{ __('新規登録') }}
+            </a>
+        </div>
     </div>
 
     @if ($singlePages->isNotEmpty())
@@ -71,14 +79,6 @@
             </tbody>
         </table>
     </div>
-
-    @if ($singlePages->isNotEmpty())
-        <div class="mt-3">
-            <button type="submit" form="single-page-reorder-form" class="btn btn-outline-secondary btn-sm">
-                {{ __('並び替えを保存') }}
-            </button>
-        </div>
-    @endif
 
     <div class="mt-3">
         {{ $singlePages->links() }}
