@@ -22,16 +22,6 @@ class UserDetailContentSource
     }
 
     /**
-     * アーカイブ表示用に、表示対象(view_flag=true)のユーザー詳細を指定件数取得する。
-     *
-     * @return Collection<int, UserDetail>
-     */
-    public function getArchive(int $count): Collection
-    {
-        return $this->viewableQuery()->take($count)->get();
-    }
-
-    /**
      * スキルリスト表示用に、表示対象(view_flag=true)のユーザー詳細を指定件数取得する。
      *
      * @return Collection<int, UserDetail>

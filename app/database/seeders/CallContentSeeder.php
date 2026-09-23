@@ -20,7 +20,7 @@ class CallContentSeeder extends Seeder
                 'call_type' => CallType::LinkList,
                 'content_model_relation_id' => 1,
                 'view_count' => 6,
-                'place' => CallContentPlace::Top,
+                'place' => CallContentPlace::Others,
             ],
             [
                 'call_name' => 'SinglePage',

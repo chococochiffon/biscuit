@@ -35,7 +35,7 @@ class CallContentResolverTest extends TestCase
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::OriginalText,
             'content_model_relation_id' => $this->relation('Article')->id,
-            'place' => CallContentPlace::Top,
+            'place' => CallContentPlace::Inside,
         ]);
 
         $result = (new CallContentResolver)->resolve($callContent);
@@ -51,7 +51,7 @@ class CallContentResolverTest extends TestCase
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::LinkList,
             'content_model_relation_id' => $this->relation('Article')->id,
-            'place' => CallContentPlace::Top,
+            'place' => CallContentPlace::Others,
             'view_count' => 2,
         ]);
 
@@ -123,7 +123,7 @@ class CallContentResolverTest extends TestCase
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::OriginalText,
             'content_model_relation_id' => $this->relation('SinglePage')->id,
-            'place' => CallContentPlace::Top,
+            'place' => CallContentPlace::Inside,
         ]);
 
         $result = (new CallContentResolver)->resolve($callContent);
@@ -187,7 +187,7 @@ class CallContentResolverTest extends TestCase
         $this->assertTrue($result->every(fn (UserDetail $detail) => $detail->view_flag));
     }
 
-    public function test_user_detail_archive_resolves_viewable_details_up_to_view_count(): void
+    public function test_user_detail_archive_is_no_longer_supported(): void
     {
         UserDetail::factory()->count(3)->create(['view_flag' => true]);
         $callContent = CallContent::factory()->create([
@@ -197,10 +197,9 @@ class CallContentResolverTest extends TestCase
             'view_count' => 2,
         ]);
 
-        $result = (new CallContentResolver)->resolve($callContent);
+        $this->expectException(InvalidArgumentException::class);
 
-        $this->assertInstanceOf(EloquentCollection::class, $result);
-        $this->assertCount(2, $result);
+        (new CallContentResolver)->resolve($callContent);
     }
 
     public function test_user_detail_skill_list_resolves_viewable_details_up_to_view_count(): void
@@ -247,10 +246,11 @@ class CallContentResolverTest extends TestCase
         (new CallContentResolver)->resolve($callContent);
     }
 
-    public function test_resolve_throws_for_an_unsupported_place(): void
+    public function test_resolve_throws_for_a_call_type_not_supported_at_the_given_place(): void
     {
+        // LinkはTop/Othersでのみ許可され、Inside(本文内)ではどのモデルでも許可されない。
         $callContent = CallContent::factory()->create([
-            'call_type' => CallType::OriginalText,
+            'call_type' => CallType::Link,
             'content_model_relation_id' => $this->relation('Article')->id,
             'place' => CallContentPlace::Inside,
         ]);
@@ -269,7 +269,7 @@ class CallContentResolverTest extends TestCase
         $articleCallContent = CallContent::factory()->create([
             'call_type' => CallType::OriginalText,
             'content_model_relation_id' => $this->relation('Article')->id,
-            'place' => CallContentPlace::Top,
+            'place' => CallContentPlace::Inside,
         ]);
         $singlePageCallContent = CallContent::factory()->create([
             'call_type' => CallType::Link,

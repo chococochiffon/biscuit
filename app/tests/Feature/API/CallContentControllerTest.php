@@ -62,8 +62,9 @@ class CallContentControllerTest extends TestCase
             'place' => CallContentPlace::Top,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
+        $insideArticle = Article::factory()->published()->create();
         CallContent::factory()->create([
-            'call_type' => CallType::Link,
+            'call_type' => CallType::OriginalText,
             'place' => CallContentPlace::Inside,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
@@ -72,7 +73,7 @@ class CallContentControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonCount(1, 'data');
-        $response->assertJsonPath('data.0.articles', null);
+        $response->assertJsonPath('data.0.articles.id', $insideArticle->id);
     }
 
     public function test_index_returns_422_for_invalid_place(): void
@@ -102,12 +103,12 @@ class CallContentControllerTest extends TestCase
         Article::factory()->published()->count(3)->create();
         CallContent::factory()->create([
             'call_type' => CallType::LinkList,
-            'place' => CallContentPlace::Top,
+            'place' => CallContentPlace::Others,
             'view_count' => 2,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
 
-        $response = $this->getJson(route('call-contents.index'));
+        $response = $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Others->value]));
 
         $response->assertOk();
         $response->assertJsonCount(2, 'data.0.articles');
@@ -148,18 +149,18 @@ class CallContentControllerTest extends TestCase
         $response->assertJsonPath('data.0.user_details.0.id', $visible->id);
     }
 
-    public function test_index_returns_null_for_a_place_without_defined_rules(): void
+    public function test_index_fails_when_the_stored_combination_has_no_defined_rule(): void
     {
+        // OriginalTextはOthers(その他)では、どのモデルに対しても許可されていない組み合わせ。
         CallContent::factory()->create([
-            'call_type' => CallType::LinkList,
+            'call_type' => CallType::OriginalText,
             'place' => CallContentPlace::Others,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
 
         $response = $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Others->value]));
 
-        $response->assertOk();
-        $response->assertJsonPath('data.0.articles', null);
+        $response->assertStatus(500);
     }
 
     public function test_index_fails_when_model_name_is_unrecognized_at_top_place(): void
