@@ -127,6 +127,20 @@ a:hover {
     color: #0d0116;
 }
 
+/*
+ * 必須項目のラベルに赤い*を表示する。
+ * 対応するinput/select/textareaにrequired属性があれば自動的に表示されるため、
+ * 編集時のみ必須が外れるパスワード欄などにも追従する。
+ * required属性を付けられない項目(隠しtextareaと連動するリッチテキストエディタ等)は
+ * ラベルに直接 is-required クラスを付与する。
+ */
+label.form-label:has(+ input[required], + select[required], + textarea[required])::after,
+label.form-label.is-required::after {
+    content: "*";
+    color: #dc2626;
+    margin-left: 0.25rem;
+}
+
 .form-control,
 .form-select {
     border-radius: 0.5rem;

@@ -76,21 +76,29 @@
     </select>
 </div>
 
+@php
+    $existingHeaderImageUrl = isset($singlePage) && $singlePage->header_image
+        ? Illuminate\Support\Facades\Storage::disk('public')->url($singlePage->header_image)
+        : null;
+@endphp
+
 <div class="mb-3">
     <label class="form-label">{{ __('ヘッダー画像') }}</label>
-    @isset($singlePage)
-        @if ($singlePage->header_image)
-            <div class="mb-2">
-                <img
-                    src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($singlePage->header_image) }}"
-                    alt="{{ __('ヘッダー画像') }}"
-                    class="img-thumbnail"
-                    style="width: 240px; height: 160px; object-fit: cover;"
-                >
-            </div>
-        @endif
-    @endisset
-    <input id="header_image" type="file" name="header_image" accept="image/*" class="form-control">
+    <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('ヘッダー画像を選択') }}">
+        <input id="header_image" type="file" name="header_image" accept="image/*" class="d-none" data-role="image-dropzone-input">
+
+        <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingHeaderImageUrl) style="display: none;" @endif>
+            <img src="{{ $existingHeaderImageUrl }}" alt="{{ __('ヘッダー画像') }}" data-role="image-dropzone-image">
+            <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingHeaderImageUrl) style="display: none;" @endif>
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
+        </div>
+    </div>
 </div>
 
 <hr class="my-4">

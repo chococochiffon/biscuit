@@ -20,17 +20,27 @@
     >
 </div>
 
+@php
+    $thumbnailUrl = $article->thumbnail_url ?? Illuminate\Support\Facades\Storage::disk('public')->url(\App\Models\Article::DEFAULT_THUMBNAIL_PATH);
+@endphp
+
 <div class="mb-3">
     <label class="form-label">{{ __('サムネイル画像') }}</label>
-    <div class="mb-2">
-        <img
-            src="{{ $article->thumbnail_url ?? Illuminate\Support\Facades\Storage::disk('public')->url(\App\Models\Article::DEFAULT_THUMBNAIL_PATH) }}"
-            alt="{{ __('サムネイル') }}"
-            class="img-thumbnail"
-            style="width: 160px; height: 160px; object-fit: cover;"
-        >
+    <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('サムネイル画像を選択') }}">
+        <input id="thumbnail" type="file" name="thumbnail" accept="image/*" class="d-none" data-role="image-dropzone-input">
+
+        <div class="image-dropzone-preview" data-role="image-dropzone-preview">
+            <img src="{{ $thumbnailUrl }}" alt="{{ __('サムネイル') }}" data-role="image-dropzone-image">
+            <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+
+        <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" style="display: none;">
+            <i class="bi bi-cloud-arrow-up"></i>
+            <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
+        </div>
     </div>
-    <input id="thumbnail" type="file" name="thumbnail" accept="image/*" class="form-control">
     <div class="form-text">{{ __('未指定の場合はデフォルト画像が使用されます。') }}</div>
 </div>
 
@@ -73,7 +83,7 @@
 @endisset
 
 <div class="mb-3">
-    <label class="form-label">{{ __('本文') }}</label>
+    <label class="form-label is-required">{{ __('本文') }}</label>
     <div
         id="content-editor"
         data-upload-url="{{ route('admin.articles.content-images') }}"
