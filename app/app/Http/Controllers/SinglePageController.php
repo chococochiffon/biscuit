@@ -46,6 +46,8 @@ class SinglePageController extends Controller
             'top_page_view' => $request->boolean('top_page_view'),
             'link_list_view' => $request->boolean('link_list_view'),
             'sort_order' => (SinglePage::max('sort_order') ?? -1) + 1,
+            'publication_start_datetime' => $request->validated('publication_start_datetime'),
+            'publication_end_datetime' => $request->validated('publication_end_datetime'),
         ]);
 
         if ($request->hasFile('header_image')) {
@@ -89,6 +91,8 @@ class SinglePageController extends Controller
             'uri' => $request->validated('uri'),
             'top_page_view' => $request->boolean('top_page_view'),
             'link_list_view' => $request->boolean('link_list_view'),
+            'publication_start_datetime' => $request->validated('publication_start_datetime'),
+            'publication_end_datetime' => $request->validated('publication_end_datetime'),
         ]);
 
         if ($request->hasFile('header_image')) {

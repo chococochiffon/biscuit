@@ -28,6 +28,12 @@
             <dt class="col-4 text-muted fw-normal">{{ __('リンクリストへ表示する') }}</dt>
             <dd class="col-8">{{ $singlePage->link_list_view ? __('表示する') : __('表示しない') }}</dd>
 
+            <dt class="col-4 text-muted fw-normal">{{ __('公開開始日時') }}</dt>
+            <dd class="col-8">{{ $singlePage->publication_start_datetime->format('Y-m-d H:i') }}</dd>
+
+            <dt class="col-4 text-muted fw-normal">{{ __('公開終了日時') }}</dt>
+            <dd class="col-8">{{ optional($singlePage->publication_end_datetime)->format('Y-m-d H:i') ?? __('未設定') }}</dd>
+
             <dt class="col-4 text-muted fw-normal">{{ __('ヘッダー画像') }}</dt>
             <dd class="col-8 mb-0">
                 @if ($singlePage->header_image)

@@ -82,6 +82,36 @@
     </div>
 @endisset
 
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label for="publication_start_datetime" class="form-label">{{ __('公開開始日時') }}</label>
+        <input
+            id="publication_start_datetime"
+            type="text"
+            name="publication_start_datetime"
+            value="{{ old('publication_start_datetime', optional($article->publication_start_datetime ?? now())->format('Y-m-d H:i')) }}"
+            required
+            class="form-control"
+            data-role="datetime-picker"
+            autocomplete="off"
+        >
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <label for="publication_end_datetime" class="form-label">{{ __('公開終了日時') }}</label>
+        <input
+            id="publication_end_datetime"
+            type="text"
+            name="publication_end_datetime"
+            value="{{ old('publication_end_datetime', optional($article->publication_end_datetime ?? null)->format('Y-m-d H:i')) }}"
+            class="form-control"
+            data-role="datetime-picker"
+            autocomplete="off"
+        >
+        <div class="form-text">{{ __('未指定の場合は終了日時を設定しません。') }}</div>
+    </div>
+</div>
+
 <div class="mb-3">
     <label class="form-label is-required">{{ __('本文') }}</label>
     <div

@@ -383,6 +383,17 @@ class SiteSettingControllerTest extends TestCase
         $response->assertSee('表示確認サイト');
     }
 
+    public function test_show_does_not_display_the_content_model_relations_link(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting));
+
+        $response->assertOk();
+        $response->assertDontSee(route('admin.content-model-relations.index'), false);
+    }
+
     public function test_show_displays_call_contents(): void
     {
         $actor = Administrator::factory()->create();

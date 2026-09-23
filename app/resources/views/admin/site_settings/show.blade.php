@@ -6,7 +6,6 @@
     <div class="mb-4 d-flex align-items-center justify-content-between">
         <h1 class="h5 mb-0">{{ __('サイト設定詳細') }}</h1>
         <div class="d-flex align-items-center gap-3">
-            <a href="{{ route('admin.content-model-relations.index') }}" class="link-secondary">{{ __('データ種別紐付け一覧') }}</a>
             <a href="{{ route('admin.site-settings.edit', $siteSetting) }}" class="link-primary">{{ __('編集する') }}</a>
         </div>
     </div>

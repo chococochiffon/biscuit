@@ -12,6 +12,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class ArticleController extends Controller
@@ -48,6 +50,8 @@ class ArticleController extends Controller
             'thumbnail' => Article::DEFAULT_THUMBNAIL_PATH,
             'user_id' => null,
             'approval' => ArticleApprovalStatus::Published,
+            'publication_start_datetime' => $request->validated('publication_start_datetime'),
+            'publication_end_datetime' => $request->validated('publication_end_datetime'),
         ]);
 
         if ($request->hasFile('thumbnail')) {
@@ -88,6 +92,8 @@ class ArticleController extends Controller
             'title' => $request->validated('title'),
             'content' => $request->validated('content'),
             'approval' => $request->validated('approval'),
+            'publication_start_datetime' => $request->validated('publication_start_datetime'),
+            'publication_end_datetime' => $request->validated('publication_end_datetime'),
         ]);
 
         if ($request->hasFile('thumbnail')) {
@@ -109,6 +115,36 @@ class ArticleController extends Controller
         $article->delete();
 
         return redirect()->route('admin.articles.index')->with('status', '記事を削除しました。');
+    }
+
+    /**
+     * 記事一覧から公開ステータス(approval)のみを更新する。
+     */
+    public function updateApproval(Request $request, Article $article): RedirectResponse
+    {
+        $validated = $request->validate([
+            'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
+        ]);
+
+        $article->update(['approval' => $validated['approval']]);
+
+        return back()->with('status', '公開設定を更新しました。');
+    }
+
+    /**
+     * 記事一覧でチェックボックスにより選択した複数の記事の公開ステータス(approval)を一括更新する。
+     */
+    public function bulkUpdateApproval(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'article_ids' => ['required', 'array'],
+            'article_ids.*' => ['integer', Rule::exists('articles', 'id')],
+            'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
+        ]);
+
+        Article::query()->whereIn('id', $validated['article_ids'])->update(['approval' => $validated['approval']]);
+
+        return back()->with('status', '選択した記事の公開設定を一括更新しました。');
     }
 
     /**
