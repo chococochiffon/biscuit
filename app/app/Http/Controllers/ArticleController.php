@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
@@ -19,16 +20,43 @@ use Illuminate\View\View;
 class ArticleController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * 一覧のデフォルトの並び順(更新日時の新しい順)。
      */
-    public function index(): View
+    private const DEFAULT_SORT = 'updated_at_desc';
+
+    /**
+     * Display a listing of the resource.
+     * タイトル(部分一致)・公開開始/公開終了(日付の範囲)・ステータスで検索し、選択した並び順(デフォルトは更新日時の新しい順)で表示する。
+     */
+    public function index(Request $request): View
     {
+        $sortOptions = $this->sortOptions();
+
+        // 不正な検索条件でリダイレクトを繰り返さないよう、妥当な値だけを採用して残りは無視する
+        $filters = Validator::make($request->query(), [
+            'title' => ['nullable', 'string', 'max:255'],
+            'publication_start_from' => ['nullable', 'date_format:Y-m-d'],
+            'publication_start_to' => ['nullable', 'date_format:Y-m-d'],
+            'publication_end_from' => ['nullable', 'date_format:Y-m-d'],
+            'publication_end_to' => ['nullable', 'date_format:Y-m-d'],
+            'approval' => ['nullable', new Enum(ArticleApprovalStatus::class)],
+            'sort' => ['nullable', Rule::in(array_keys($sortOptions))],
+        ])->valid();
+
+        $sort = $filters['sort'] ?? self::DEFAULT_SORT;
+        ['column' => $column, 'direction' => $direction] = $sortOptions[$sort];
+
         $articles = Article::query()
             ->with('user')
-            ->latest('updated_at')
-            ->paginate(20);
+            ->when(filled($filters['title'] ?? null), fn ($query) => $query->where('title', 'like', '%'.$filters['title'].'%'))
+            ->when(filled($filters['approval'] ?? null), fn ($query) => $query->where('approval', $filters['approval']))
+            ->filterPublicationPeriod($filters)
+            ->orderBy($column, $direction)
+            ->orderBy('id', $direction)
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('admin.articles.index', compact('articles'));
+        return view('admin.articles.index', compact('articles', 'filters', 'sort', 'sortOptions'));
     }
 
     /**
@@ -186,5 +214,26 @@ class ArticleController extends Controller
             ->all();
 
         $article->tags()->sync($tagIds);
+    }
+
+    /**
+     * 一覧で選択可能な並び順(キー → 表示名・並び替えるカラム・方向)。
+     *
+     * @return array<string, array{label: string, column: string, direction: string}>
+     */
+    private function sortOptions(): array
+    {
+        return [
+            'updated_at_desc' => ['label' => __('更新日時の新しい順'), 'column' => 'updated_at', 'direction' => 'desc'],
+            'updated_at_asc' => ['label' => __('更新日時の古い順'), 'column' => 'updated_at', 'direction' => 'asc'],
+            'title_asc' => ['label' => __('タイトルの昇順'), 'column' => 'title', 'direction' => 'asc'],
+            'title_desc' => ['label' => __('タイトルの降順'), 'column' => 'title', 'direction' => 'desc'],
+            'publication_start_desc' => ['label' => __('公開開始の新しい順'), 'column' => 'publication_start_datetime', 'direction' => 'desc'],
+            'publication_start_asc' => ['label' => __('公開開始の古い順'), 'column' => 'publication_start_datetime', 'direction' => 'asc'],
+            'publication_end_desc' => ['label' => __('公開終了の新しい順'), 'column' => 'publication_end_datetime', 'direction' => 'desc'],
+            'publication_end_asc' => ['label' => __('公開終了の古い順'), 'column' => 'publication_end_datetime', 'direction' => 'asc'],
+            'approval_asc' => ['label' => __('ステータス順(下書き→公開)'), 'column' => 'approval', 'direction' => 'asc'],
+            'approval_desc' => ['label' => __('ステータス順(公開→下書き)'), 'column' => 'approval', 'direction' => 'desc'],
+        ];
     }
 }

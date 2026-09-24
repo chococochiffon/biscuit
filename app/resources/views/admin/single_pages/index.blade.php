@@ -7,7 +7,7 @@
         <h1 class="h5 mb-0">{{ __('固定ページ一覧') }}</h1>
 
         <div class="d-flex align-items-center gap-2">
-            @if ($singlePages->isNotEmpty())
+            @if ($canReorder && $singlePages->isNotEmpty())
                 <button type="submit" form="single-page-reorder-form" class="btn btn-outline-secondary btn-sm">
                     {{ __('並び替えを保存') }}
                 </button>
@@ -19,21 +19,56 @@
         </div>
     </div>
 
-    @if ($singlePages->isNotEmpty())
+    <form method="GET" action="{{ route('admin.single-pages.index') }}" class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="search-title" class="form-label small">{{ __('タイトル') }}</label>
+                    <input id="search-title" type="text" name="title" value="{{ $filters['title'] ?? '' }}" class="form-control form-control-sm">
+                </div>
+
+                <div class="col-md-auto">
+                    <label for="search-sort" class="form-label small">{{ __('並び順') }}</label>
+                    <select id="search-sort" name="sort" class="form-select form-select-sm form-select-auto" data-role="auto-submit">
+                        @foreach ($sortOptions as $key => $option)
+                            <option value="{{ $key }}" @selected($sort === $key)>{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end mt-0">
+                @include('admin.partials._publication_period_search', ['filters' => $filters])
+
+                <div class="col-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary">{{ __('検索') }}</button>
+                    <a href="{{ route('admin.single-pages.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    @if ($canReorder && $singlePages->isNotEmpty())
         <form id="single-page-reorder-form" method="POST" action="{{ route('admin.single-pages.reorder') }}">
             @csrf
             @method('PATCH')
             <input type="hidden" name="offset" value="{{ $singlePages->firstItem() ? $singlePages->firstItem() - 1 : 0 }}">
         </form>
+    @elseif ($singlePages->isNotEmpty())
+        <p class="small text-muted mb-2">{{ __('ドラッグで並び替えるには、検索条件をクリアして並び順を「表示順」にしてください。') }}</p>
     @endif
 
     <div class="card">
-        <table class="table table-hover mb-0 align-middle" id="single-page-reorder-rows">
+        <table class="table table-hover mb-0 align-middle" @if ($canReorder) id="single-page-reorder-rows" @endif>
             <thead>
                 <tr>
-                    <th></th>
+                    @if ($canReorder)
+                        <th></th>
+                    @endif
                     <th>{{ __('タイトル') }}</th>
                     <th>{{ __('概要') }}</th>
+                    <th>{{ __('公開開始') }}</th>
+                    <th>{{ __('公開終了') }}</th>
                     <th>{{ __('Topページへ表示する') }}</th>
                     <th>{{ __('リンクリストへ表示する') }}</th>
                     <th></th>
@@ -42,18 +77,22 @@
             <tbody>
                 @forelse ($singlePages as $singlePage)
                     <tr data-role="single-page-row">
-                        <td class="single-page-reorder-handle-cell">
-                            <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
-                                <i class="bi bi-grip-vertical"></i>
-                            </span>
-                            <input type="hidden" form="single-page-reorder-form" name="order[]" value="{{ $singlePage->id }}">
-                        </td>
+                        @if ($canReorder)
+                            <td class="single-page-reorder-handle-cell">
+                                <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
+                                    <i class="bi bi-grip-vertical"></i>
+                                </span>
+                                <input type="hidden" form="single-page-reorder-form" name="order[]" value="{{ $singlePage->id }}">
+                            </td>
+                        @endif
                         <td>
                             <a href="{{ route('admin.single-pages.show', $singlePage) }}">
                                 {{ $singlePage->title }}
                             </a>
                         </td>
                         <td>{{ $singlePage->short_sentences }}</td>
+                        <td>{{ $singlePage->publication_start_datetime?->format('Y/m/d H:i') }}</td>
+                        <td>{{ $singlePage->publication_end_datetime?->format('Y/m/d H:i') ?? __('未設定') }}</td>
                         <td>{{ $singlePage->top_page_view ? __('表示する') : __('表示しない') }}</td>
                         <td>{{ $singlePage->link_list_view ? __('表示する') : __('表示しない') }}</td>
                         <td class="text-end">
@@ -73,7 +112,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">{{ __('固定ページが登録されていません。') }}</td>
+                        <td colspan="{{ $canReorder ? 8 : 7 }}" class="text-center text-muted py-4">{{ __('該当する固定ページがありません。') }}</td>
                     </tr>
                 @endforelse
             </tbody>

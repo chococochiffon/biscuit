@@ -60,25 +60,27 @@
     $linkListView = (int) old('link_list_view', (int) ($singlePage->link_list_view ?? false));
 @endphp
 
-<div class="mb-3">
-    <label for="top_page_view" class="form-label">{{ __('Topページへ表示する') }}</label>
-    <select id="top_page_view" name="top_page_view" class="form-select">
-        <option value="0" @selected($topPageView === 0)>{{ __('表示しない') }}</option>
-        <option value="1" @selected($topPageView === 1)>{{ __('表示する') }}</option>
-    </select>
-</div>
+<div class="row">
+    <div class="col-md-6 mb-3">
+        <label for="top_page_view" class="form-label">{{ __('Topページへ表示する') }}</label>
+        <select id="top_page_view" name="top_page_view" class="form-select">
+            <option value="0" @selected($topPageView === 0)>{{ __('表示しない') }}</option>
+            <option value="1" @selected($topPageView === 1)>{{ __('表示する') }}</option>
+        </select>
+    </div>
 
-<div class="mb-3">
-    <label for="link_list_view" class="form-label">{{ __('リンクリストへ表示する') }}</label>
-    <select id="link_list_view" name="link_list_view" class="form-select">
-        <option value="0" @selected($linkListView === 0)>{{ __('表示しない') }}</option>
-        <option value="1" @selected($linkListView === 1)>{{ __('表示する') }}</option>
-    </select>
+    <div class="col-md-6 mb-3">
+        <label for="link_list_view" class="form-label">{{ __('リンクリストへ表示する') }}</label>
+        <select id="link_list_view" name="link_list_view" class="form-select">
+            <option value="0" @selected($linkListView === 0)>{{ __('表示しない') }}</option>
+            <option value="1" @selected($linkListView === 1)>{{ __('表示する') }}</option>
+        </select>
+    </div>
 </div>
 
 <div class="row">
     <div class="col-md-6 mb-3">
-        <label for="publication_start_datetime" class="form-label">{{ __('公開開始日時') }}</label>
+        <label for="publication_start_datetime" class="form-label">{{ __('公開開始') }}</label>
         <input
             id="publication_start_datetime"
             type="text"
@@ -92,7 +94,7 @@
     </div>
 
     <div class="col-md-6 mb-3">
-        <label for="publication_end_datetime" class="form-label">{{ __('公開終了日時') }}</label>
+        <label for="publication_end_datetime" class="form-label">{{ __('公開終了') }}</label>
         <input
             id="publication_end_datetime"
             type="text"

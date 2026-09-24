@@ -83,22 +83,15 @@ enum CallType: int
     }
 
     /**
-     * この呼び出し方(call_type)で選択可能な表示箇所(place)を取得する。
-     * $modelNameを指定した場合はそのモデル限定、未指定の場合は全モデルの和集合を返す。
+     * 指定した表示箇所(place)で選択可能な呼び出し方(call_type)を取得する(全モデルの和集合)。
      *
-     * @return array<int, CallContentPlace>
+     * @return array<int, self>
      */
-    public function allowedPlaces(?string $modelName = null): array
+    public static function allowedForPlace(CallContentPlace $place): array
     {
-        return collect(self::combinationMatrix())
-            ->filter(function (array $byModelName) use ($modelName) {
-                $callTypes = $modelName ? ($byModelName[$modelName] ?? []) : collect($byModelName)->flatten()->all();
+        $callTypes = collect(self::combinationMatrix()[$place->value] ?? [])->flatten()->all();
 
-                return in_array($this, $callTypes, true);
-            })
-            ->keys()
-            ->map(fn (int $value) => CallContentPlace::from($value))
-            ->all();
+        return array_values(array_filter(self::cases(), fn (self $case) => in_array($case, $callTypes, true)));
     }
 
     /**
@@ -113,25 +106,33 @@ enum CallType: int
     }
 
     /**
-     * フロントエンド(admin.js)へ渡す、call_typeごとの選択肢制御情報をvalueをキーにしたマップで取得する。
+     * フロントエンド(admin.js)へ渡す選択肢制御情報を取得する。
+     * 入力は 表示箇所(place) → 呼び出し方(call_type) → データ種別(モデル名) → 表示件数 の順に絞り込む。
+     * - places: 表示箇所ごとに選択可能な呼び出し方と、呼び出し方ごとに選択可能なモデル名
+     * - modelNamesByCallType: 表示箇所が未選択の場合に使う、呼び出し方ごとのモデル名(全表示箇所の和集合)
+     * - fixedViewCount: 呼び出し方ごとの表示件数1固定可否
      *
-     * @return array<int, array{modelNames: array<int, string>, places: array<int, int>, placesByModelName: array<string, array<int, int>>, fixedViewCount: bool}>
+     * @return array{places: array<int, array{callTypes: array<int, int>, modelNamesByCallType: array<int, array<int, string>>}>, modelNamesByCallType: array<int, array<int, string>>, fixedViewCount: array<int, bool>}
      */
     public static function jsConstraintsMap(): array
     {
-        return collect(self::cases())
-            ->mapWithKeys(fn (self $case) => [
-                $case->value => [
-                    'modelNames' => $case->allowedModelNames(),
-                    'places' => array_map(fn (CallContentPlace $place) => $place->value, $case->allowedPlaces()),
-                    'placesByModelName' => collect($case->allowedModelNames())
-                        ->mapWithKeys(fn (string $modelName) => [
-                            $modelName => array_map(fn (CallContentPlace $place) => $place->value, $case->allowedPlaces($modelName)),
-                        ])
-                        ->all(),
-                    'fixedViewCount' => $case->hasFixedViewCount(),
-                ],
-            ])
-            ->all();
+        return [
+            'places' => collect(CallContentPlace::cases())
+                ->mapWithKeys(fn (CallContentPlace $place) => [
+                    $place->value => [
+                        'callTypes' => array_map(fn (self $case) => $case->value, self::allowedForPlace($place)),
+                        'modelNamesByCallType' => collect(self::allowedForPlace($place))
+                            ->mapWithKeys(fn (self $case) => [$case->value => $case->allowedModelNames($place)])
+                            ->all(),
+                    ],
+                ])
+                ->all(),
+            'modelNamesByCallType' => collect(self::cases())
+                ->mapWithKeys(fn (self $case) => [$case->value => $case->allowedModelNames()])
+                ->all(),
+            'fixedViewCount' => collect(self::cases())
+                ->mapWithKeys(fn (self $case) => [$case->value => $case->hasFixedViewCount()])
+                ->all(),
+        ];
     }
 }

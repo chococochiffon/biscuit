@@ -10,9 +10,9 @@ use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * call_contentsの1行が、呼び出し方(call_type)ごとに許可された
- * データ種別・表示箇所・表示件数の組み合わせになっているかを検証する。
- * $checkで対象フィールド(content_model_relation_id/place/view_count)を切り替える。
+ * call_contentsの1行が、表示箇所(place) → 呼び出し方(call_type) → データ種別(モデル名) → 表示件数 の順に
+ * 許可された組み合わせになっているかを検証する。
+ * $checkで対象フィールド(call_type/content_model_relation_id/view_count)を切り替える。
  */
 class ValidCallContentCombination implements DataAwareRule, ValidationRule
 {
@@ -44,19 +44,36 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
             return;
         }
 
+        $place = CallContentPlace::tryFrom((int) ($row['place'] ?? 0));
+
         match ($this->check) {
-            'content_model_relation_id' => $this->checkContentModelRelation($callType, $value, $fail),
-            'place' => $this->checkPlace($callType, $row, $value, $fail),
+            'call_type' => $this->checkCallType($callType, $place, $fail),
+            'content_model_relation_id' => $this->checkContentModelRelation($callType, $place, $value, $fail),
             'view_count' => $this->checkViewCount($callType, $value, $fail),
             default => null,
         };
     }
 
     /**
-     * content_model_relation_idは、呼び出し方(call_type)で選択可能なモデル名(表示箇所を問わない和集合)かどうかのみを検証する。
-     * 表示箇所との組み合わせの厳密な検証は表示箇所(place)側で行う。
+     * 呼び出し方(call_type)は、表示箇所(place)で選択可能なものかどうかを検証する。
      */
-    private function checkContentModelRelation(CallType $callType, mixed $value, Closure $fail): void
+    private function checkCallType(CallType $callType, ?CallContentPlace $place, Closure $fail): void
+    {
+        if (! $place) {
+            return;
+        }
+
+        if (! in_array($callType, CallType::allowedForPlace($place), true)) {
+            $fail(__('選択した表示箇所ではこの呼び出し方は選択できません。'));
+        }
+    }
+
+    /**
+     * データ種別(content_model_relation_id)は、表示箇所(place)・呼び出し方(call_type)との厳密な組み合わせを検証する。
+     * 表示箇所が不正な場合は呼び出し方で選択可能なモデル名(全表示箇所の和集合)かどうかのみを検証し、
+     * 呼び出し方自体が表示箇所で選択できない場合は呼び出し方側のエラーに任せる。
+     */
+    private function checkContentModelRelation(CallType $callType, ?CallContentPlace $place, mixed $value, Closure $fail): void
     {
         if (! is_numeric($value)) {
             return;
@@ -68,37 +85,20 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
             return;
         }
 
-        if (! in_array($relation->model_name, $callType->allowedModelNames(), true)) {
-            $fail(__('選択した呼び出し方ではこのデータ種別は選択できません。'));
-        }
-    }
-
-    /**
-     * 表示箇所(place)は、呼び出し方(call_type)・データ種別(モデル名)との厳密な組み合わせを検証する。
-     *
-     * @param  array<string, mixed>  $row
-     */
-    private function checkPlace(CallType $callType, array $row, mixed $value, Closure $fail): void
-    {
-        $place = CallContentPlace::tryFrom((int) $value);
-
         if (! $place) {
-            return;
-        }
-
-        $relationId = $row['content_model_relation_id'] ?? null;
-        $relation = is_numeric($relationId) ? ContentModelRelation::find($relationId) : null;
-
-        if ($relation) {
-            if (! $callType->supports($relation->model_name, $place)) {
-                $fail(__('選択した呼び出し方・データ種別ではこの表示箇所は選択できません。'));
+            if (! in_array($relation->model_name, $callType->allowedModelNames(), true)) {
+                $fail(__('選択した呼び出し方ではこのデータ種別は選択できません。'));
             }
 
             return;
         }
 
-        if (! in_array($place, $callType->allowedPlaces(), true)) {
-            $fail(__('選択した呼び出し方ではこの表示箇所は選択できません。'));
+        if (! in_array($callType, CallType::allowedForPlace($place), true)) {
+            return;
+        }
+
+        if (! $callType->supports($relation->model_name, $place)) {
+            $fail(__('選択した表示箇所・呼び出し方ではこのデータ種別は選択できません。'));
         }
     }
 

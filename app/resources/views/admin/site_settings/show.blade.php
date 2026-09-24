@@ -47,20 +47,20 @@
             <thead>
                 <tr>
                     <th>{{ __('呼び出し名') }}</th>
+                    <th>{{ __('表示箇所') }}</th>
                     <th>{{ __('呼び出し方') }}</th>
                     <th>{{ __('データ種別') }}</th>
                     <th>{{ __('表示件数') }}</th>
-                    <th>{{ __('表示箇所') }}</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($callContents as $callContent)
                     <tr>
                         <td>{{ $callContent->call_name }}</td>
+                        <td>{{ $callContent->place->label() }}</td>
                         <td>{{ $callContent->call_type->label() }}</td>
                         <td>{{ $callContent->contentModelRelation->content_type->label() }} / {{ $callContent->contentModelRelation->model_name }}</td>
                         <td>{{ $callContent->view_count }}</td>
-                        <td>{{ $callContent->place->label() }}</td>
                     </tr>
                 @empty
                     <tr>

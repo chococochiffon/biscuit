@@ -84,7 +84,7 @@
 
 <div class="row">
     <div class="col-md-6 mb-3">
-        <label for="publication_start_datetime" class="form-label">{{ __('公開開始日時') }}</label>
+        <label for="publication_start_datetime" class="form-label">{{ __('公開開始') }}</label>
         <input
             id="publication_start_datetime"
             type="text"
@@ -98,7 +98,7 @@
     </div>
 
     <div class="col-md-6 mb-3">
-        <label for="publication_end_datetime" class="form-label">{{ __('公開終了日時') }}</label>
+        <label for="publication_end_datetime" class="form-label">{{ __('公開終了') }}</label>
         <input
             id="publication_end_datetime"
             type="text"

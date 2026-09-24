@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Models\Concerns\HasPublicationPeriod;
 use Database\Factories\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -17,7 +18,7 @@ use Illuminate\Support\Facades\Storage;
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicationPeriod, SoftDeletes;
 
     /**
      * サムネイル未指定の場合に使用するデフォルト画像の(publicディスク基準の)パス。

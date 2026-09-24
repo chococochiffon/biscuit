@@ -33,7 +33,7 @@
                         <td>{{ $administrator->email }}</td>
                         <td>{{ $administrator->role->label() }}</td>
                         <td>
-                            {{ $administrator->last_login_at?->format('Y-m-d H:i') ?? __('未ログイン') }}
+                            {{ $administrator->last_login_at?->format('Y/m/d H:i') ?? __('未ログイン') }}
                         </td>
                         <td class="text-end">
                             <a href="{{ route('admin.edit', $administrator) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>

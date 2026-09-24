@@ -7,22 +7,56 @@ use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SinglePageController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * 一覧のデフォルトの並び順(更新日時の新しい順)。
      */
-    public function index(): View
-    {
-        $singlePages = SinglePage::query()
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->paginate(20);
+    private const DEFAULT_SORT = 'updated_at_desc';
 
-        return view('admin.single_pages.index', compact('singlePages'));
+    /**
+     * ドラッグでの並び替えを有効にする並び順(表示順)。
+     */
+    private const REORDERABLE_SORT = 'sort_order';
+
+    /**
+     * Display a listing of the resource.
+     * タイトル(部分一致)・公開開始/公開終了(日付の範囲)で検索し、選択した並び順(デフォルトは更新日時の新しい順)で表示する。
+     * ドラッグでの並び替え(表示順の保存)は、並び順が「表示順」かつ検索条件なしの場合のみ有効にする。
+     */
+    public function index(Request $request): View
+    {
+        $sortOptions = $this->sortOptions();
+
+        // 不正な検索条件でリダイレクトを繰り返さないよう、妥当な値だけを採用して残りは無視する
+        $filters = Validator::make($request->query(), [
+            'title' => ['nullable', 'string', 'max:255'],
+            'publication_start_from' => ['nullable', 'date_format:Y-m-d'],
+            'publication_start_to' => ['nullable', 'date_format:Y-m-d'],
+            'publication_end_from' => ['nullable', 'date_format:Y-m-d'],
+            'publication_end_to' => ['nullable', 'date_format:Y-m-d'],
+            'sort' => ['nullable', Rule::in(array_keys($sortOptions))],
+        ])->valid();
+
+        $sort = $filters['sort'] ?? self::DEFAULT_SORT;
+        ['column' => $column, 'direction' => $direction] = $sortOptions[$sort];
+
+        $singlePages = SinglePage::query()
+            ->when(filled($filters['title'] ?? null), fn ($query) => $query->where('title', 'like', '%'.$filters['title'].'%'))
+            ->filterPublicationPeriod($filters)
+            ->orderBy($column, $direction)
+            ->orderBy('id', $direction)
+            ->paginate(20)
+            ->withQueryString();
+
+        $isSearching = collect($filters)->except('sort')->filter(fn ($value) => filled($value))->isNotEmpty();
+        $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
+
+        return view('admin.single_pages.index', compact('singlePages', 'filters', 'sort', 'sortOptions', 'canReorder'));
     }
 
     /**
@@ -134,7 +168,7 @@ class SinglePageController extends Controller
             SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
         }
 
-        return redirect()->route('admin.single-pages.index')->with('status', '並び替えを保存しました。');
+        return redirect()->route('admin.single-pages.index', ['sort' => self::REORDERABLE_SORT])->with('status', '並び替えを保存しました。');
     }
 
     /**
@@ -162,5 +196,25 @@ class SinglePageController extends Controller
                 $singlePage->details()->create($attributes);
             }
         }
+    }
+
+    /**
+     * 一覧で選択可能な並び順(キー → 表示名・並び替えるカラム・方向)。
+     *
+     * @return array<string, array{label: string, column: string, direction: string}>
+     */
+    private function sortOptions(): array
+    {
+        return [
+            'updated_at_desc' => ['label' => __('更新日時の新しい順'), 'column' => 'updated_at', 'direction' => 'desc'],
+            'updated_at_asc' => ['label' => __('更新日時の古い順'), 'column' => 'updated_at', 'direction' => 'asc'],
+            'title_asc' => ['label' => __('タイトルの昇順'), 'column' => 'title', 'direction' => 'asc'],
+            'title_desc' => ['label' => __('タイトルの降順'), 'column' => 'title', 'direction' => 'desc'],
+            'publication_start_desc' => ['label' => __('公開開始の新しい順'), 'column' => 'publication_start_datetime', 'direction' => 'desc'],
+            'publication_start_asc' => ['label' => __('公開開始の古い順'), 'column' => 'publication_start_datetime', 'direction' => 'asc'],
+            'publication_end_desc' => ['label' => __('公開終了の新しい順'), 'column' => 'publication_end_datetime', 'direction' => 'desc'],
+            'publication_end_asc' => ['label' => __('公開終了の古い順'), 'column' => 'publication_end_datetime', 'direction' => 'asc'],
+            self::REORDERABLE_SORT => ['label' => __('表示順(ドラッグで並び替え)'), 'column' => 'sort_order', 'direction' => 'asc'],
+        ];
     }
 }
