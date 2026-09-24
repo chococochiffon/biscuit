@@ -82,6 +82,28 @@ class SiteSettingControllerTest extends TestCase
         Storage::disk('public')->assertExists($expectedImagePath);
     }
 
+    public function test_store_saves_call_content_sort_order_from_form_or_row_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
+        $row = fn (string $callName, ?int $sortOrder) => array_filter([
+            'call_type' => CallType::Link->value,
+            'call_name' => $callName,
+            'content_model_relation_id' => $relation->id,
+            'view_count' => 1,
+            'place' => CallContentPlace::Top->value,
+            'sort_order' => $sortOrder,
+        ], fn ($value) => $value !== null);
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [$row('並び順指定', 5), $row('並び順なし', null)],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(5, CallContent::where('call_name', '並び順指定')->value('sort_order'));
+        $this->assertSame(1, CallContent::where('call_name', '並び順なし')->value('sort_order'));
+    }
+
     public function test_store_creates_call_contents_together_with_site_setting(): void
     {
         $actor = Administrator::factory()->create();

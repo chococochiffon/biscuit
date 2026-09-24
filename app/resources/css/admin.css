@@ -253,7 +253,8 @@ main > form {
     width: 2.75rem;
 }
 
-#single-page-reorder-rows tbody tr.dragging {
+#single-page-reorder-rows tbody tr.dragging,
+#call-content-rows [data-role="call-content-row"].dragging {
     opacity: 0.5;
 }
 

@@ -3,7 +3,12 @@
 namespace Tests\Feature\API;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Enums\CallContentPlace;
+use App\Enums\CallContentType;
+use App\Enums\CallType;
 use App\Models\Article;
+use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,7 +22,8 @@ class ResolveControllerTest extends TestCase
     public function test_resolves_single_page_by_path(): void
     {
         $singlePage = SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
-        SinglePageDetail::factory()->create(['single_page_id' => $singlePage->id, 'sub_title' => '沿革']);
+        SinglePageDetail::factory()->create(['single_page_id' => $singlePage->id, 'sub_title' => '事業内容', 'sort_order' => 1]);
+        SinglePageDetail::factory()->create(['single_page_id' => $singlePage->id, 'sub_title' => '沿革', 'sort_order' => 0]);
 
         $response = $this->getJson(route('api.resolve', ['path' => '/company/about']));
 
@@ -26,6 +32,7 @@ class ResolveControllerTest extends TestCase
         $response->assertJsonPath('data.id', $singlePage->id);
         $response->assertJsonPath('data.path', '/company/about');
         $response->assertJsonPath('data.details.0.sub_title', '沿革');
+        $response->assertJsonPath('data.details.1.sub_title', '事業内容');
     }
 
     public function test_resolves_single_page_at_site_root_and_ignores_surrounding_slashes(): void
@@ -126,8 +133,81 @@ class ResolveControllerTest extends TestCase
         $response->assertStatus($visible ? 200 : 404);
     }
 
+    public function test_top_path_returns_top_call_contents_in_sort_order(): void
+    {
+        $article = Article::factory()->published()->create();
+        $this->callContent('2番目', CallType::Link, 'Article', CallContentPlace::Top, 1);
+        $this->callContent('1番目', CallType::Archive, 'Article', CallContentPlace::Top, 0);
+        $this->callContent('その他', CallType::LinkList, 'Article', CallContentPlace::Others, 0);
+
+        $response = $this->getJson(route('api.resolve', ['path' => '/']));
+
+        $response->assertOk();
+        $response->assertJsonPath('type', 'top');
+        $response->assertJsonPath('data', null);
+        $this->assertSame(['1番目', '2番目'], array_column($response->json('call_contents'), 'call_name'));
+        $response->assertJsonPath('call_contents.0.call_type', 'archive');
+        $response->assertJsonPath('call_contents.1.articles.id', $article->id);
+    }
+
+    public function test_single_page_fills_its_original_text_slot_and_omits_article_body_slot(): void
+    {
+        $singlePage = SinglePage::factory()->create(['slug' => 'about']);
+        SinglePage::factory()->create(['slug' => 'other', 'sort_order' => -1]);
+        $this->callContent('記事本文', CallType::OriginalText, 'Article', CallContentPlace::Inside, 0);
+        $this->callContent('固定ページ本文', CallType::OriginalText, 'SinglePage', CallContentPlace::Inside, 1);
+        $this->callContent('トップ', CallType::Link, 'SinglePage', CallContentPlace::Top, 0);
+
+        $response = $this->getJson(route('api.resolve', ['path' => '/about']));
+
+        $response->assertOk();
+        $response->assertJsonPath('type', 'single_page');
+        $response->assertJsonCount(1, 'call_contents');
+        $response->assertJsonPath('call_contents.0.call_name', '固定ページ本文');
+        $response->assertJsonPath('call_contents.0.call_type', 'original_text');
+        $response->assertJsonPath('call_contents.0.single_pages.id', $singlePage->id);
+    }
+
+    public function test_article_fills_its_original_text_slot_instead_of_latest_article(): void
+    {
+        $article = Article::factory()->published()->create(['parent_path' => 'news', 'slug' => 'old-post']);
+        Article::factory()->published()->create(['parent_path' => 'news', 'slug' => 'latest-post']);
+        $this->callContent('固定ページ本文', CallType::OriginalText, 'SinglePage', CallContentPlace::Inside, 0);
+        $this->callContent('記事本文', CallType::OriginalText, 'Article', CallContentPlace::Inside, 1);
+
+        $response = $this->getJson(route('api.resolve', ['path' => '/news/old-post']));
+
+        $response->assertOk();
+        $response->assertJsonPath('type', 'article');
+        $response->assertJsonCount(1, 'call_contents');
+        $response->assertJsonPath('call_contents.0.call_name', '記事本文');
+        $response->assertJsonPath('call_contents.0.articles.id', $article->id);
+    }
+
     public function test_requires_path(): void
     {
         $this->getJson(route('api.resolve'))->assertUnprocessable()->assertJsonValidationErrors('path');
+    }
+
+    /**
+     * 呼び出しコンテンツを作成する(データ種別の紐付けはモデル名ごとに1件を使い回す)。
+     */
+    private function callContent(string $callName, CallType $callType, string $modelName, CallContentPlace $place, int $sortOrder): CallContent
+    {
+        $relation = ContentModelRelation::query()->firstOrCreate(
+            ['model_name' => $modelName],
+            [
+                'content_type' => $modelName === 'Article' ? CallContentType::Article : CallContentType::SinglePage,
+                'table_name' => $modelName === 'Article' ? 'articles' : 'single_pages',
+            ]
+        );
+
+        return CallContent::factory()->create([
+            'call_name' => $callName,
+            'call_type' => $callType,
+            'content_model_relation_id' => $relation->id,
+            'place' => $place,
+            'sort_order' => $sortOrder,
+        ]);
     }
 }

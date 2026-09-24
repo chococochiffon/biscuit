@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use Illuminate\Support\Str;
+
 enum CallType: int
 {
     case ShortSentence = 1;
@@ -24,6 +26,14 @@ enum CallType: int
             self::Archive => __('アーカイブ'),
             self::SkillList => __('スキルリスト'),
         };
+    }
+
+    /**
+     * APIレスポンスでフロントエンドが表示方法を判別するための識別子(例: link_list)。
+     */
+    public function apiName(): string
+    {
+        return Str::snake($this->name);
     }
 
     /**

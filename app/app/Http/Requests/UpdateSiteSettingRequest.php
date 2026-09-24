@@ -40,6 +40,7 @@ class UpdateSiteSettingRequest extends FormRequest
             'call_contents.*.call_type' => ['required', new Enum(CallType::class), new ValidCallContentCombination('call_type')],
             'call_contents.*.content_model_relation_id' => ['required', 'integer', Rule::exists('content_model_relations', 'id'), new ValidCallContentCombination('content_model_relation_id')],
             'call_contents.*.view_count' => ['required', 'integer', 'min:1', new ValidCallContentCombination('view_count')],
+            'call_contents.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

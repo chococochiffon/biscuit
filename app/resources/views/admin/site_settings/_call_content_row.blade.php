@@ -7,6 +7,7 @@
      * @var int|null $contentModelRelationId
      * @var int $viewCount
      * @var int|null $place
+     * @var int $sortOrder
      * @var \Illuminate\Support\Collection $contentModelRelations
      */
 @endphp
@@ -15,6 +16,13 @@
     @if ($id)
         <input type="hidden" name="call_contents[{{ $index }}][id]" value="{{ $id }}">
     @endif
+    <input type="hidden" name="call_contents[{{ $index }}][sort_order]" value="{{ $sortOrder }}" data-role="sort-order">
+
+    <div class="col-auto align-self-stretch d-flex">
+        <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
+            <i class="bi bi-grip-vertical"></i>
+        </span>
+    </div>
 
     <div class="col-md-2">
         <label class="form-label small">{{ __('呼び出し名') }}</label>
@@ -48,7 +56,7 @@
         <div class="invalid-feedback" data-role="call-type-error" hidden></div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md-2">
         <label class="form-label small">{{ __('データ種別') }}</label>
         <select name="call_contents[{{ $index }}][content_model_relation_id]" class="form-select form-select-sm" data-role="content-model-relation-select" required>
             <option value="" disabled @selected(! $contentModelRelationId)>{{ __('選択してください') }}</option>
@@ -79,7 +87,7 @@
         >
     </div>
 
-    <div class="col-md-1">
+    <div class="col-auto">
         <button type="button" class="btn btn-outline-danger btn-sm" data-role="remove-row">−</button>
     </div>
 </div>

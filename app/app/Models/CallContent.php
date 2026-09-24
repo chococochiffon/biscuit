@@ -6,12 +6,14 @@ use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use Database\Factories\CallContentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['call_type', 'call_name', 'content_model_relation_id', 'view_count', 'place'])]
+#[Fillable(['call_type', 'call_name', 'content_model_relation_id', 'view_count', 'place', 'sort_order'])]
 class CallContent extends Model
 {
     /** @use HasFactory<CallContentFactory> */
@@ -28,6 +30,15 @@ class CallContent extends Model
             'call_type' => CallType::class,
             'place' => CallContentPlace::class,
         ];
+    }
+
+    /**
+     * 指定した設置場所の呼び出しコンテンツを、並び順(sort_order、同順ならid)で取得する。
+     */
+    #[Scope]
+    protected function forPlace(Builder $query, CallContentPlace $place): void
+    {
+        $query->where('place', $place)->orderBy('sort_order')->orderBy('id');
     }
 
     /**
