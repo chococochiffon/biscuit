@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-#[Fillable(['call_type', 'call_name', 'content_model_relation_id', 'view_count', 'place', 'sort_order'])]
+#[Fillable(['call_type', 'call_name', 'title', 'subtitle', 'content_model_relation_id', 'view_count', 'place', 'sort_order'])]
 class CallContent extends Model
 {
     /** @use HasFactory<CallContentFactory> */

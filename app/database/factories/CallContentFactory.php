@@ -23,6 +23,8 @@ class CallContentFactory extends Factory
         return [
             'call_type' => fake()->randomElement(CallType::cases()),
             'call_name' => fake()->word(),
+            'title' => null,
+            'subtitle' => null,
             'content_model_relation_id' => ContentModelRelation::factory(),
             'view_count' => 1,
             'place' => fake()->randomElement(CallContentPlace::cases()),

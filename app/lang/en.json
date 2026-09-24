@@ -85,5 +85,8 @@
     "記事番号": "Article number",
     "URL「:path」は他の記事または固定ページで使われています。": "The URL \":path\" is already used by another article or page.",
     "数字だけのスラッグは記事番号用のため使えません。": "A slug consisting only of numbers is reserved for article numbers.",
-    "左端のハンドルをドラッグして並び替えると、同じ表示箇所の中でその順にAPIで返します。": "Drag the handle on the left to reorder. The API returns items in this order within each display location."
+    "左端のハンドルをドラッグして並び替えると、同じ表示箇所の中でその順にAPIで返します。": "Drag the handle on the left to reorder. The API returns items in this order within each display location.",
+    "見出し": "Heading",
+    "小見出し": "Subheading",
+    "空欄の場合は見出しを表示しません": "Leave blank to show no heading"
 }

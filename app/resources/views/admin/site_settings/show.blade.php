@@ -48,6 +48,7 @@
                 <thead>
                     <tr>
                         <th>{{ __('呼び出し名') }}</th>
+                        <th>{{ __('見出し') }}</th>
                         <th>{{ __('表示箇所') }}</th>
                         <th>{{ __('呼び出し方') }}</th>
                         <th>{{ __('データ種別') }}</th>
@@ -58,6 +59,12 @@
                     @forelse ($callContents as $callContent)
                         <tr>
                             <td>{{ $callContent->call_name }}</td>
+                            <td>
+                                {{ $callContent->title }}
+                                @if ($callContent->subtitle)
+                                    <div class="small text-body-secondary">{{ $callContent->subtitle }}</div>
+                                @endif
+                            </td>
                             <td>{{ $callContent->place->label() }}</td>
                             <td>{{ $callContent->call_type->label() }}</td>
                             <td>{{ $callContent->contentModelRelation->content_type->label() }} / {{ $callContent->contentModelRelation->model_name }}</td>
@@ -65,7 +72,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
+                            <td colspan="6" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

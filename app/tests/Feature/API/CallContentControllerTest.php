@@ -89,6 +89,8 @@ class CallContentControllerTest extends TestCase
         CallContent::factory()->create([
             'call_type' => CallType::Link,
             'call_name' => '注目記事',
+            'title' => 'Pickup',
+            'subtitle' => 'おすすめの記事',
             'place' => CallContentPlace::Top,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
@@ -96,10 +98,28 @@ class CallContentControllerTest extends TestCase
         $response = $this->getJson(route('call-contents.index'));
 
         $response->assertOk();
-        $this->assertSame(['call_type', 'call_name', 'articles'], array_keys($response->json('data.0')));
+        $this->assertSame(['call_type', 'call_name', 'title', 'subtitle', 'articles'], array_keys($response->json('data.0')));
         $response->assertJsonPath('data.0.call_type', 'link');
         $response->assertJsonPath('data.0.call_name', '注目記事');
+        $response->assertJsonPath('data.0.title', 'Pickup');
+        $response->assertJsonPath('data.0.subtitle', 'おすすめの記事');
         $response->assertJsonPath('data.0.articles.id', $article->id);
+    }
+
+    public function test_index_returns_null_title_and_subtitle_when_not_set(): void
+    {
+        Article::factory()->published()->create();
+        CallContent::factory()->create([
+            'call_type' => CallType::Link,
+            'place' => CallContentPlace::Top,
+            'content_model_relation_id' => $this->relation('Article')->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.title', null);
+        $response->assertJsonPath('data.0.subtitle', null);
     }
 
     public function test_index_orders_items_by_sort_order(): void

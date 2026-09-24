@@ -17,6 +17,7 @@ class CallContentSeeder extends Seeder
         $callContents = [
             [
                 'call_name' => 'ArticleLinkList',
+                'title' => '最新記事',
                 'call_type' => CallType::LinkList,
                 'content_model_relation_id' => 1,
                 'view_count' => 6,
@@ -25,6 +26,8 @@ class CallContentSeeder extends Seeder
             ],
             [
                 'call_name' => 'SinglePage',
+                'title' => 'About',
+                'subtitle' => 'このサイトについて',
                 'call_type' => CallType::ShortSentence,
                 'content_model_relation_id' => 2,
                 'view_count' => 1,

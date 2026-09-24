@@ -4,6 +4,8 @@
      * @var int|string|null $id
      * @var int|null $callType
      * @var string|null $callName
+     * @var string|null $title
+     * @var string|null $subtitle
      * @var int|null $contentModelRelationId
      * @var int $viewCount
      * @var int|null $place
@@ -89,5 +91,30 @@
 
     <div class="col-auto">
         <button type="button" class="btn btn-outline-danger btn-sm" data-role="remove-row">−</button>
+    </div>
+
+    <div class="w-100"></div>
+
+    <div class="col-md-4">
+        <label class="form-label small">{{ __('見出し') }}</label>
+        <input
+            type="text"
+            name="call_contents[{{ $index }}][title]"
+            value="{{ $title }}"
+            class="form-control form-control-sm"
+            maxlength="255"
+            placeholder="{{ __('空欄の場合は見出しを表示しません') }}"
+        >
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label small">{{ __('小見出し') }}</label>
+        <input
+            type="text"
+            name="call_contents[{{ $index }}][subtitle]"
+            value="{{ $subtitle }}"
+            class="form-control form-control-sm"
+            maxlength="255"
+        >
     </div>
 </div>
