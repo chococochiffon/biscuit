@@ -27,11 +27,13 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.single-pages.index') }}" class="card mb-3">
-        <div class="card-body">
-            <input type="hidden" name="sort" value="{{ $sort }}">
+    <form method="GET" action="{{ route('admin.single-pages.index') }}" class="card mb-3 admin-search-card">
+        <input type="hidden" name="sort" value="{{ $sort }}">
 
-            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end">
+        @include('admin.partials._search_toggle', ['target' => 'single-page-search-body', 'isSearching' => $isSearching])
+
+        <div id="single-page-search-body" @class(['collapse', 'show' => $isSearching])>
+            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end pt-3">
                 <div style="width: 14rem;">
                     <label for="search-title" class="form-label small">{{ __('タイトル') }}</label>
                     <input id="search-title" type="text" name="title" value="{{ $filters['title'] ?? '' }}" class="form-control form-control-sm">
@@ -82,11 +84,7 @@
                                 <input type="hidden" form="single-page-reorder-form" name="order[]" value="{{ $singlePage->id }}">
                             </td>
                         @endif
-                        <td>
-                            <a href="{{ route('admin.single-pages.show', $singlePage) }}">
-                                {{ $singlePage->title }}
-                            </a>
-                        </td>
+                        <td>{{ $singlePage->title }}</td>
                         <td>{{ $singlePage->short_sentences }}</td>
                         <td>{{ $singlePage->publication_start_datetime?->format('Y/m/d H:i') }}</td>
                         <td>{{ $singlePage->publication_end_datetime?->format('Y/m/d H:i') ?? __('未設定') }}</td>

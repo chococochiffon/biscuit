@@ -193,6 +193,42 @@ main > form {
     box-shadow: 0 0.15rem 1.75rem rgba(13, 1, 22, 0.1);
 }
 
+/*
+ * 一覧テーブルのホバー行。Bootstrap既定の薄い灰色はページ背景(bg-light)と見分けにくいため、
+ * 淡い青で塗り分ける。
+ */
+.table-hover {
+    --bs-table-hover-bg: #dbeafe;
+    --bs-table-hover-color: #0d0116;
+}
+
+/* 一覧の折りたたみ式検索フォーム */
+.admin-search-card {
+    padding: 1rem 1.5rem;
+}
+
+.admin-search-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #0d0116;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.admin-search-toggle-icon {
+    transition: transform 0.2s ease;
+}
+
+.admin-search-toggle.collapsed .admin-search-toggle-icon {
+    transform: rotate(-90deg);
+}
+
 /* 固定ページ詳細の並び替え可能な行 */
 .single-page-detail-handle {
     display: flex;

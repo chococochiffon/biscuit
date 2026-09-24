@@ -56,7 +56,9 @@ class ArticleController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.articles.index', compact('articles', 'filters', 'sort'));
+        $isSearching = collect($filters)->except('sort')->filter(fn ($value) => filled($value))->isNotEmpty();
+
+        return view('admin.articles.index', compact('articles', 'filters', 'sort', 'isSearching'));
     }
 
     /**
@@ -89,16 +91,6 @@ class ArticleController extends Controller
         $this->syncTags($article, $request->validated('tags', []));
 
         return redirect()->route('admin.articles.index')->with('status', '記事を登録しました。');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Article $article): View
-    {
-        $article->load('tags', 'user');
-
-        return view('admin.articles.show', compact('article'));
     }
 
     /**
@@ -190,13 +182,53 @@ class ArticleController extends Controller
     }
 
     /**
-     * サムネイル画像を保存し、公開ディスク基準の保存パスを返す。
+     * サムネイル画像を Article::THUMBNAIL_SIZES のうち比率が近いサイズへ切り抜き・縮小して保存し、公開ディスク基準の保存パスを返す。
      */
     private function storeThumbnail(UploadedFile $file, Article $article): string
     {
-        $filename = now()->format('YmdHis').'_'.$article->getTable().'_'.$article->id.'.'.$file->extension();
+        $extension = in_array($file->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $file->extension() : 'png';
+        $path = 'image/thumbnail/'.now()->format('YmdHis').'_'.$article->getTable().'_'.$article->id.'.'.$extension;
 
-        return $file->storeAs('image/thumbnail', $filename, 'public');
+        Storage::disk('public')->put($path, $this->resizeThumbnail($file->getRealPath(), $extension));
+
+        return $path;
+    }
+
+    /**
+     * 画像の中央を目標サイズの比率で切り抜いてから目標サイズへ拡大・縮小し、指定形式でエンコードしたバイナリを返す。
+     */
+    private function resizeThumbnail(string $sourcePath, string $extension): string
+    {
+        $source = imagecreatefromstring(file_get_contents($sourcePath));
+        $sourceWidth = imagesx($source);
+        $sourceHeight = imagesy($source);
+
+        // 元画像の比率に最も近い目標サイズを選ぶ(比の対数の差で比較し、横長・縦長の差を対称に扱う)
+        [$width, $height] = collect(Article::THUMBNAIL_SIZES)
+            ->sortBy(fn (array $size) => abs(log(($sourceWidth / $sourceHeight) / ($size[0] / $size[1]))))
+            ->first();
+
+        // 目標の比率になるよう、はみ出す辺を中央基準で切り落とす
+        $cropWidth = min($sourceWidth, (int) round($sourceHeight * $width / $height));
+        $cropHeight = min($sourceHeight, (int) round($sourceWidth * $height / $width));
+        $cropX = intdiv($sourceWidth - $cropWidth, 2);
+        $cropY = intdiv($sourceHeight - $cropHeight, 2);
+
+        $thumbnail = imagecreatetruecolor($width, $height);
+        imagealphablending($thumbnail, false);
+        imagesavealpha($thumbnail, true);
+        imagefill($thumbnail, 0, 0, imagecolorallocatealpha($thumbnail, 0, 0, 0, 127));
+        imagecopyresampled($thumbnail, $source, 0, 0, $cropX, $cropY, $width, $height, $cropWidth, $cropHeight);
+
+        ob_start();
+        match ($extension) {
+            'jpg', 'jpeg' => imagejpeg($thumbnail, null, 85),
+            'gif' => imagegif($thumbnail),
+            'webp' => imagewebp($thumbnail, null, 85),
+            default => imagepng($thumbnail),
+        };
+
+        return ob_get_clean();
     }
 
     /**

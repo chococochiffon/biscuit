@@ -56,7 +56,7 @@ class SinglePageController extends Controller
         $isSearching = collect($filters)->except('sort')->filter(fn ($value) => filled($value))->isNotEmpty();
         $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
 
-        return view('admin.single_pages.index', compact('singlePages', 'filters', 'sort', 'canReorder'));
+        return view('admin.single_pages.index', compact('singlePages', 'filters', 'sort', 'isSearching', 'canReorder'));
     }
 
     /**
@@ -91,16 +91,6 @@ class SinglePageController extends Controller
         $this->syncDetails($singlePage, $request->validated('details', []));
 
         return redirect()->route('admin.single-pages.index')->with('status', '固定ページを登録しました。');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(SinglePage $singlePage): View
-    {
-        $singlePage->load('details');
-
-        return view('admin.single_pages.show', compact('singlePage'));
     }
 
     /**

@@ -51,6 +51,7 @@ Route::patch('admin/articles/{article}/approval', [ArticleController::class, 'up
     ->middleware('auth:admin');
 
 Route::resource('admin/articles', ArticleController::class)
+    ->except(['show'])
     ->names('admin.articles')
     ->middleware('auth:admin');
 
@@ -75,6 +76,7 @@ Route::patch('admin/single-pages/reorder', [SinglePageController::class, 'reorde
 
 Route::resource('admin/single-pages', SinglePageController::class)
     ->parameters(['single-pages' => 'singlePage'])
+    ->except(['show'])
     ->names('admin.single-pages')
     ->middleware('auth:admin');
 
