@@ -131,6 +131,45 @@ class CallContentControllerTest extends TestCase
         $response->assertJsonPath('data.0.single_pages.0.id', $visible->id);
     }
 
+    public function test_index_excludes_articles_outside_publication_period(): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        Article::factory()->published()->create(['publication_start_datetime' => '2026-10-02 00:00:00']);
+        Article::factory()->published()->create(['publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => '2026-09-30 00:00:00']);
+        $visible = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => null]);
+        CallContent::factory()->create([
+            'call_type' => CallType::LinkList,
+            'place' => CallContentPlace::Others,
+            'view_count' => 10,
+            'content_model_relation_id' => $this->relation('Article')->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Others->value]));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data.0.articles');
+        $response->assertJsonPath('data.0.articles.0.id', $visible->id);
+    }
+
+    public function test_index_excludes_single_pages_outside_publication_period(): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        SinglePage::factory()->create(['top_page_view' => true, 'sort_order' => 0, 'publication_start_datetime' => '2026-10-02 00:00:00']);
+        SinglePage::factory()->create(['top_page_view' => true, 'sort_order' => 1, 'publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => '2026-09-30 00:00:00']);
+        $visible = SinglePage::factory()->create(['top_page_view' => true, 'sort_order' => 2, 'publication_start_datetime' => '2026-09-01 00:00:00']);
+        CallContent::factory()->create([
+            'call_type' => CallType::LinkList,
+            'place' => CallContentPlace::Top,
+            'content_model_relation_id' => $this->relation('SinglePage')->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $response->assertJsonCount(1, 'data.0.single_pages');
+        $response->assertJsonPath('data.0.single_pages.0.id', $visible->id);
+    }
+
     public function test_index_resolves_user_detail_skill_list_filtered_by_view_flag(): void
     {
         UserDetail::factory()->create(['view_flag' => false]);

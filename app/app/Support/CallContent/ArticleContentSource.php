@@ -49,10 +49,14 @@ class ArticleContentSource
     }
 
     /**
+     * 公開済み(approval=Published)かつ公開期間内の記事のクエリ。
+     *
      * @return Builder<Article>
      */
     private function publishedQuery(): Builder
     {
-        return Article::query()->where('approval', ArticleApprovalStatus::Published);
+        return Article::query()
+            ->where('approval', ArticleApprovalStatus::Published)
+            ->withinPublicationPeriod();
     }
 }

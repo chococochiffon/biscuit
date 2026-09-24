@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -33,5 +34,20 @@ trait HasPublicationPeriod
                 $query->whereDate($column, '<=', $filters["{$prefix}_to"]);
             }
         }
+    }
+
+    /**
+     * 指定日時(省略時は現在)に公開期間内のものに絞り込む。
+     * 公開開始 <= 指定日時 かつ(公開終了が未設定 または 指定日時 < 公開終了)を公開期間内とする。
+     */
+    #[Scope]
+    protected function withinPublicationPeriod(Builder $query, ?CarbonInterface $at = null): void
+    {
+        $at ??= now();
+
+        $query->where('publication_start_datetime', '<=', $at)
+            ->where(fn (Builder $query) => $query
+                ->whereNull('publication_end_datetime')
+                ->orWhere('publication_end_datetime', '>', $at));
     }
 }
