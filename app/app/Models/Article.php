@@ -26,6 +26,14 @@ class Article extends Model
     public const DEFAULT_THUMBNAIL_PATH = 'image/no_thumbnail_image.png';
 
     /**
+     * サムネイル画像の保存サイズ(幅・高さ)。アップロード画像は比率が近い方へ中央で切り抜いて縮小する。
+     * 1200×630 は OGP 向けの約1.91:1、1280×720 は16:9。
+     *
+     * @var list<array{int, int}>
+     */
+    public const THUMBNAIL_SIZES = [[1200, 630], [1280, 720]];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>

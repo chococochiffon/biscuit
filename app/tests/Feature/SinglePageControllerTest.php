@@ -7,6 +7,7 @@ use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -73,6 +74,37 @@ class SinglePageControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeInOrder(['<table', 'タイトル', '概要', '公開開始', '公開終了', 'Topページへ表示する', 'リンクリストへ表示する'], false);
+    }
+
+    public function test_index_collapses_search_form_when_not_searching(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertSee('id="single-page-search-body" class="collapse"', false);
+        $response->assertSee('aria-expanded="false"', false);
+        $response->assertDontSee('検索中');
+    }
+
+    public function test_index_expands_search_form_while_searching(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['title' => '会社']));
+
+        $response->assertSee('id="single-page-search-body" class="collapse show"', false);
+        $response->assertSee('aria-expanded="true"', false);
+        $response->assertSee('検索中');
+    }
+
+    public function test_index_keeps_search_form_collapsed_when_only_sort_is_specified(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
+
+        $response->assertSee('id="single-page-search-body" class="collapse"', false);
     }
 
     public function test_index_displays_search_fields_in_expected_order(): void
@@ -336,17 +368,13 @@ class SinglePageControllerTest extends TestCase
         $response->assertSessionHasErrors(['publication_end_datetime']);
     }
 
-    public function test_show_displays_single_page(): void
+    public function test_show_screen_does_not_exist(): void
     {
         $actor = Administrator::factory()->create();
         $target = SinglePage::factory()->create();
-        SinglePageDetail::factory()->create(['single_page_id' => $target->id, 'sub_title' => '沿革']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.show', $target));
-
-        $response->assertOk();
-        $response->assertSee($target->title);
-        $response->assertSee('沿革');
+        $this->assertFalse(Route::has('admin.single-pages.show'));
+        $this->actingAs($actor, 'admin')->get('/admin/single-pages/'.$target->id)->assertMethodNotAllowed();
     }
 
     public function test_edit_screen_can_be_rendered(): void

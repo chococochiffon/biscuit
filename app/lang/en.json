@@ -10,7 +10,6 @@
     "タグが登録されていません。": "No tags registered.",
     "タグの新規登録": "New Tag",
     "タグの編集": "Edit Tag",
-    "タグはありません。": "No tags.",
     "タグ一覧": "Tags",
     "タグ名": "Tag Name",
     "タグ名を入力して検索...": "Type a tag name to search...",
@@ -55,7 +54,6 @@
     "記事の新規登録": "New Article",
     "記事の編集": "Edit Article",
     "記事一覧": "Articles",
-    "記事詳細": "Article Details",
     "サイト設定": "Site Settings",
     "サイト設定の登録": "Register Site Settings",
     "サイト設定詳細": "Site Settings Details",
@@ -72,5 +70,8 @@
     "該当する記事がありません。": "No matching articles found.",
     "該当する固定ページがありません。": "No matching pages found.",
     "表示順で並び替え": "Sort by display order",
-    "検索条件をクリアして表示順で並べ、ドラッグで並び替えられるようにします。": "Clear the search conditions and sort by display order so you can reorder by dragging."
+    "検索条件をクリアして表示順で並べ、ドラッグで並び替えられるようにします。": "Clear the search conditions and sort by display order so you can reorder by dragging.",
+    "検索条件": "Search conditions",
+    "検索中": "Filtering",
+    "1200×630px(約1.91:1)または1280×720px(16:9)のうち、比率が近い方へ中央を切り抜いて縮小します。": "The image is center-cropped and resized to whichever is closer in aspect ratio: 1200×630px (about 1.91:1) or 1280×720px (16:9)."
 }

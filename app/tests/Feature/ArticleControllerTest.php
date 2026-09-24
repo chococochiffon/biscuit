@@ -9,7 +9,9 @@ use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ArticleControllerTest extends TestCase
@@ -45,6 +47,37 @@ class ArticleControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertSeeInOrder(['<table', 'サムネイル', 'タイトル', '公開開始', '公開終了', 'ステータス', '投稿者', '更新日時'], false);
+    }
+
+    public function test_index_collapses_search_form_when_not_searching(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertSee('id="article-search-body" class="collapse"', false);
+        $response->assertSee('aria-expanded="false"', false);
+        $response->assertDontSee('検索中');
+    }
+
+    public function test_index_expands_search_form_while_searching(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['title' => 'Laravel']));
+
+        $response->assertSee('id="article-search-body" class="collapse show"', false);
+        $response->assertSee('aria-expanded="true"', false);
+        $response->assertSee('検索中');
+    }
+
+    public function test_index_keeps_search_form_collapsed_when_only_sort_is_specified(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'title_asc']));
+
+        $response->assertSee('id="article-search-body" class="collapse"', false);
     }
 
     public function test_index_displays_search_fields_in_expected_order(): void
@@ -245,6 +278,39 @@ class ArticleControllerTest extends TestCase
         Storage::disk('public')->assertExists($expectedPath);
     }
 
+    /**
+     * @return array<string, array{int, int, int, int}>
+     */
+    public static function thumbnailSizeProvider(): array
+    {
+        return [
+            '約1.91:1の大きな画像は1200×630に縮小' => [2400, 1260, 1200, 630],
+            '16:9の大きな画像は1280×720に縮小' => [1600, 900, 1280, 720],
+            '横長すぎる画像は1200×630に切り抜き' => [3000, 1000, 1200, 630],
+            '正方形の画像は比率が近い1280×720に切り抜き' => [1000, 1000, 1280, 720],
+            '小さな画像も1280×720に拡大' => [320, 180, 1280, 720],
+        ];
+    }
+
+    #[DataProvider('thumbnailSizeProvider')]
+    public function test_store_resizes_thumbnail_to_closest_aspect_ratio(int $sourceWidth, int $sourceHeight, int $expectedWidth, int $expectedHeight): void
+    {
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+            'title' => 'サムネイル記事',
+            'content' => '<p>本文</p>',
+            'thumbnail' => UploadedFile::fake()->image('photo.jpg', $sourceWidth, $sourceHeight),
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+        ])->assertRedirect(route('admin.articles.index'));
+
+        $article = Article::where('title', 'サムネイル記事')->firstOrFail();
+        [$width, $height] = getimagesize(Storage::disk('public')->path($article->thumbnail));
+
+        $this->assertSame([$expectedWidth, $expectedHeight], [$width, $height]);
+    }
+
     public function test_store_creates_new_tags_and_attaches_existing_ones(): void
     {
         $actor = Administrator::factory()->create();
@@ -265,15 +331,13 @@ class ArticleControllerTest extends TestCase
         $this->assertDatabaseHas('tags', ['tag_name' => 'NewTag']);
     }
 
-    public function test_show_displays_article(): void
+    public function test_show_screen_does_not_exist(): void
     {
         $actor = Administrator::factory()->create();
         $target = Article::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.show', $target));
-
-        $response->assertOk();
-        $response->assertSee($target->title);
+        $this->assertFalse(Route::has('admin.articles.show'));
+        $this->actingAs($actor, 'admin')->get('/admin/articles/'.$target->id)->assertMethodNotAllowed();
     }
 
     public function test_edit_screen_can_be_rendered(): void
@@ -315,7 +379,7 @@ class ArticleControllerTest extends TestCase
         Storage::fake('public');
         $actor = Administrator::factory()->create();
         $target = Article::factory()->create();
-        $file = UploadedFile::fake()->image('new.png');
+        $file = UploadedFile::fake()->image('new.png', 1600, 900);
 
         $response = $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), [
             'title' => $target->title,
@@ -330,6 +394,7 @@ class ArticleControllerTest extends TestCase
         $expectedPath = 'image/thumbnail/'.now()->format('YmdHis').'_articles_'.$target->id.'.png';
         $this->assertSame($expectedPath, $target->fresh()->thumbnail);
         Storage::disk('public')->assertExists($expectedPath);
+        $this->assertSame([1280, 720], array_slice(getimagesize(Storage::disk('public')->path($expectedPath)), 0, 2));
     }
 
     public function test_update_syncs_tags(): void

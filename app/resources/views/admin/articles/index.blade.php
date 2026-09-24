@@ -11,11 +11,13 @@
         </a>
     </div>
 
-    <form method="GET" action="{{ route('admin.articles.index') }}" class="card mb-3">
-        <div class="card-body">
-            <input type="hidden" name="sort" value="{{ $sort }}">
+    <form method="GET" action="{{ route('admin.articles.index') }}" class="card mb-3 admin-search-card">
+        <input type="hidden" name="sort" value="{{ $sort }}">
 
-            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end">
+        @include('admin.partials._search_toggle', ['target' => 'article-search-body', 'isSearching' => $isSearching])
+
+        <div id="article-search-body" @class(['collapse', 'show' => $isSearching])>
+            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end pt-3">
                 <div style="width: 14rem;">
                     <label for="search-title" class="form-label small">{{ __('タイトル') }}</label>
                     <input id="search-title" type="text" name="title" value="{{ $filters['title'] ?? '' }}" class="form-control form-control-sm">
@@ -90,18 +92,15 @@
                             >
                         </td>
                         <td>
+                            {{-- 保存時の比率(1200×630 / 1280×720)のまま表示し、それ以外の比率の古い画像は16:9の高さで切り抜く --}}
                             <img
                                 src="{{ $article->thumbnail_url }}"
                                 alt="{{ $article->title }}"
                                 class="img-thumbnail"
-                                style="width: 64px; height: 64px; object-fit: cover;"
+                                style="width: 112px; height: auto; max-height: 63px; object-fit: cover;"
                             >
                         </td>
-                        <td>
-                            <a href="{{ route('admin.articles.show', $article) }}">
-                                {{ $article->title }}
-                            </a>
-                        </td>
+                        <td>{{ $article->title }}</td>
                         <td>{{ $article->publication_start_datetime?->format('Y/m/d H:i') }}</td>
                         <td>{{ $article->publication_end_datetime?->format('Y/m/d H:i') ?? __('未設定') }}</td>
                         <td>
