@@ -83,11 +83,12 @@ class CallContentControllerTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_index_item_only_contains_the_table_name_keyed_field(): void
+    public function test_index_item_contains_call_type_call_name_and_table_name_keyed_data(): void
     {
-        Article::factory()->published()->create();
+        $article = Article::factory()->published()->create();
         CallContent::factory()->create([
             'call_type' => CallType::Link,
+            'call_name' => '注目記事',
             'place' => CallContentPlace::Top,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
@@ -95,7 +96,28 @@ class CallContentControllerTest extends TestCase
         $response = $this->getJson(route('call-contents.index'));
 
         $response->assertOk();
-        $this->assertSame(['articles'], array_keys($response->json('data.0')));
+        $this->assertSame(['call_type', 'call_name', 'articles'], array_keys($response->json('data.0')));
+        $response->assertJsonPath('data.0.call_type', 'link');
+        $response->assertJsonPath('data.0.call_name', '注目記事');
+        $response->assertJsonPath('data.0.articles.id', $article->id);
+    }
+
+    public function test_index_orders_items_by_sort_order(): void
+    {
+        foreach (['2番目' => 1, '3番目' => 2, '1番目' => 0] as $callName => $sortOrder) {
+            CallContent::factory()->create([
+                'call_type' => CallType::Link,
+                'call_name' => $callName,
+                'place' => CallContentPlace::Top,
+                'sort_order' => $sortOrder,
+                'content_model_relation_id' => $this->relation('Article')->id,
+            ]);
+        }
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $this->assertSame(['1番目', '2番目', '3番目'], array_column($response->json('data'), 'call_name'));
     }
 
     public function test_index_resolves_article_link_list_up_to_view_count(): void

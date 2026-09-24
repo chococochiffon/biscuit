@@ -85,6 +85,7 @@
             'contentModelRelationId' => isset($row['content_model_relation_id']) && $row['content_model_relation_id'] !== '' ? (int) $row['content_model_relation_id'] : null,
             'viewCount' => $row['view_count'] ?? 1,
             'place' => isset($row['place']) && $row['place'] !== '' ? (int) $row['place'] : null,
+            'sortOrder' => $row['sort_order'] ?? $i,
         ])
         : ($callContents ?? collect())->values()->map(fn ($callContent, $i) => (object) [
             'index' => (string) $i,
@@ -94,6 +95,7 @@
             'contentModelRelationId' => $callContent->content_model_relation_id,
             'viewCount' => $callContent->view_count,
             'place' => $callContent->place->value,
+            'sortOrder' => $callContent->sort_order,
         ]);
 @endphp
 
@@ -104,6 +106,8 @@
             {{ __('データ種別紐付け管理') }}
         </button>
     </div>
+
+    <div class="form-text mb-2">{{ __('左端のハンドルをドラッグして並び替えると、同じ表示箇所の中でその順にAPIで返します。') }}</div>
 
     <div
         id="call-content-rows"
@@ -119,6 +123,7 @@
                 'contentModelRelationId' => $row->contentModelRelationId,
                 'viewCount' => $row->viewCount,
                 'place' => $row->place,
+                'sortOrder' => $row->sortOrder,
                 'contentModelRelations' => $contentModelRelations ?? collect(),
             ])
         @endforeach
@@ -137,6 +142,7 @@
             'contentModelRelationId' => null,
             'viewCount' => 1,
             'place' => null,
+            'sortOrder' => 0,
             'contentModelRelations' => $contentModelRelations ?? collect(),
         ])
     </template>

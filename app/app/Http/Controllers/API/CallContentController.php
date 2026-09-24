@@ -14,7 +14,10 @@ use OpenApi\Attributes as OA;
 class CallContentController extends Controller
 {
     /**
-     * 指定した設置場所の呼び出しコンテンツ一覧を取得する(place未指定時はトップ扱い)。
+     * 指定した設置場所の呼び出しコンテンツ一覧を、並び順(sort_order)で取得する(place未指定時はトップ扱い)。
+     * 各要素は call_type・call_name と、table_name をキーにした実データを持つ。
+     * ページ単位の表示(トップ・本文ページ)にはパス解決API(/api/resolve)を使い、ここはヘッダー・フッターなど
+     * 共通部品(その他)の取得に使う想定。
      */
     #[OA\Get(
         path: '/call-contents',
@@ -24,7 +27,7 @@ class CallContentController extends Controller
             new OA\Parameter(name: 'place', in: 'query', required: false, description: '設置場所(1:トップ, 2:本文内, 3:その他。未指定時は1)', schema: new OA\Schema(type: 'integer', default: 1)),
         ],
         responses: [
-            new OA\Response(response: 200, description: '呼び出しコンテンツ一覧'),
+            new OA\Response(response: 200, description: '呼び出しコンテンツ一覧(並び順)。各要素は call_type(例: link_list)・call_name と、table_name(articles/single_pages/user_details)をキーにした実データ'),
             new OA\Response(response: 422, description: 'placeの値が不正'),
         ]
     )]
@@ -40,8 +43,7 @@ class CallContentController extends Controller
 
         $callContents = CallContent::query()
             ->with('contentModelRelation')
-            ->where('place', $place)
-            ->latest('created_at')
+            ->forPlace($place)
             ->get();
 
         return CallContentResource::collection($callContents);

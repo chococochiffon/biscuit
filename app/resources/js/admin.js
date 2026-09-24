@@ -445,9 +445,15 @@ function initCallContentRows() {
     const constraints = JSON.parse(container.dataset.callTypeConstraints || '{}');
 
     let nextIndex = Number(container.dataset.nextIndex || '0');
+    const { bindRow: bindSortableRow, updateSortOrders } = initSortableRows(container, '[data-role="call-content-row"]');
 
     function bindRow(row) {
-        row.querySelector('[data-role="remove-row"]').addEventListener('click', () => row.remove());
+        bindSortableRow(row);
+
+        row.querySelector('[data-role="remove-row"]').addEventListener('click', () => {
+            row.remove();
+            updateSortOrders();
+        });
 
         const placeSelect = row.querySelector('[data-role="place-select"]');
         const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
@@ -475,7 +481,79 @@ function initCallContentRows() {
         container.appendChild(row);
         bindRow(row);
         nextIndex += 1;
+        updateSortOrders();
     });
+
+    updateSortOrders();
+}
+
+/**
+ * コンテナ内の行をハンドル(data-role="drag-handle")のドラッグで並び替えられるようにする。
+ * 並び替えるたびに、各行の隠しinput(data-role="sort-order")へ画面上の順番(0始まり)を設定する。
+ * 返り値の bindRow で行ごとにドラッグ操作を登録し、行の追加・削除後は updateSortOrders を呼ぶ。
+ */
+function initSortableRows(container, rowSelector) {
+    let draggingRow = null;
+
+    function updateSortOrders() {
+        container.querySelectorAll(rowSelector).forEach((row, index) => {
+            row.querySelector('[data-role="sort-order"]').value = String(index);
+        });
+    }
+
+    function getRowAfterElement(y) {
+        const rows = [...container.querySelectorAll(`${rowSelector}:not(.dragging)`)];
+
+        return rows.reduce(
+            (closest, row) => {
+                const box = row.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset, element: row };
+                }
+
+                return closest;
+            },
+            { offset: Number.NEGATIVE_INFINITY, element: null }
+        ).element;
+    }
+
+    function bindRow(row) {
+        row.querySelector('[data-role="drag-handle"]').addEventListener('mousedown', () => {
+            row.draggable = true;
+        });
+
+        row.addEventListener('dragstart', () => {
+            draggingRow = row;
+            row.classList.add('dragging');
+        });
+
+        row.addEventListener('dragend', () => {
+            row.draggable = false;
+            row.classList.remove('dragging');
+            draggingRow = null;
+            updateSortOrders();
+        });
+    }
+
+    container.addEventListener('dragover', (event) => {
+        if (!draggingRow) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const afterElement = getRowAfterElement(event.clientY);
+
+        if (afterElement == null) {
+            container.appendChild(draggingRow);
+        } else {
+            container.insertBefore(draggingRow, afterElement);
+        }
+    });
+
+    return { bindRow, updateSortOrders };
 }
 
 /**

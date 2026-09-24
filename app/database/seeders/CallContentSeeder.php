@@ -21,6 +21,7 @@ class CallContentSeeder extends Seeder
                 'content_model_relation_id' => 1,
                 'view_count' => 6,
                 'place' => CallContentPlace::Others,
+                'sort_order' => 0,
             ],
             [
                 'call_name' => 'SinglePage',
@@ -28,6 +29,24 @@ class CallContentSeeder extends Seeder
                 'content_model_relation_id' => 2,
                 'view_count' => 1,
                 'place' => CallContentPlace::Top,
+                'sort_order' => 1,
+            ],
+            // 本文ページ(パス解決API)で、URLから解決した記事・固定ページの本文を入れる枠
+            [
+                'call_name' => 'ArticleBody',
+                'call_type' => CallType::OriginalText,
+                'content_model_relation_id' => 1,
+                'view_count' => 1,
+                'place' => CallContentPlace::Inside,
+                'sort_order' => 2,
+            ],
+            [
+                'call_name' => 'SinglePageBody',
+                'call_type' => CallType::OriginalText,
+                'content_model_relation_id' => 2,
+                'view_count' => 1,
+                'place' => CallContentPlace::Inside,
+                'sort_order' => 3,
             ],
         ];
 

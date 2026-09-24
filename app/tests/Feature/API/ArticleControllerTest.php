@@ -37,37 +37,17 @@ class ArticleControllerTest extends TestCase
         $response->assertJsonFragment(['name' => 'Laravel']);
     }
 
-    public function test_show_returns_published_article(): void
+    public function test_index_excludes_articles_outside_publication_period(): void
     {
-        $article = Article::factory()->create([
-            'title' => '公開記事',
-            'approval' => ArticleApprovalStatus::Published,
-        ]);
+        $this->travelTo('2026-10-01 10:00:00');
+        Article::factory()->published()->create(['publication_start_datetime' => '2026-10-02 00:00:00']);
+        Article::factory()->published()->create(['publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => '2026-09-30 00:00:00']);
+        $visible = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-01 00:00:00']);
 
-        $response = $this->getJson(route('articles.show', $article));
+        $response = $this->getJson(route('articles.index'));
 
         $response->assertOk();
-        $response->assertJsonPath('data.id', $article->id);
-        $response->assertJsonPath('data.title', $article->title);
-    }
-
-    public function test_show_returns_404_for_draft_article(): void
-    {
-        $article = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft]);
-
-        $response = $this->getJson(route('articles.show', $article));
-
-        $response->assertNotFound();
-    }
-
-    public function test_show_returns_404_for_soft_deleted_article(): void
-    {
-        $article = Article::factory()->create(['approval' => ArticleApprovalStatus::Published]);
-        $articleId = $article->id;
-        $article->delete();
-
-        $response = $this->getJson("/api/articles/{$articleId}");
-
-        $response->assertNotFound();
+        $response->assertJsonCount(1, 'data');
+        $response->assertJsonPath('data.0.id', $visible->id);
     }
 }

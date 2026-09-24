@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use App\Models\CallContent;
 use App\Support\CallContent\ArticleContentSource;
@@ -43,10 +44,17 @@ class CallContentResolver
 
     /**
      * 1件のCallContentを解決する。
+     * ページ(パス解決APIで取得した記事・固定ページ)の文脈で解決する場合は $pageContent を渡し、
+     * 本文内(Inside)の原文(OriginalText)枠には、固定の取得条件ではなくそのページの本文を入れる
+     * (データ種別がページの本文と異なる原文枠は null)。
      */
-    public function resolve(CallContent $callContent): Model|EloquentCollection|null
+    public function resolve(CallContent $callContent, ?Model $pageContent = null): Model|EloquentCollection|null
     {
         $callContent->loadMissing('contentModelRelation');
+
+        if ($pageContent !== null && $this->isPageContentSlot($callContent)) {
+            return $this->appliesToPage($callContent, $pageContent) ? $pageContent : null;
+        }
 
         return match ($callContent->contentModelRelation->model_name) {
             'Article' => $this->resolveArticle($callContent),
@@ -56,6 +64,26 @@ class CallContentResolver
                 "未対応のmodel_nameです: {$callContent->contentModelRelation->model_name}"
             ),
         };
+    }
+
+    /**
+     * ページの文脈で、この呼び出しコンテンツを表示するかどうか。
+     * 本文内(Inside)の原文(OriginalText)枠は、データ種別がページの本文(記事/固定ページ)と一致する場合だけ表示する。
+     */
+    public function appliesToPage(CallContent $callContent, Model $pageContent): bool
+    {
+        $callContent->loadMissing('contentModelRelation');
+
+        return ! $this->isPageContentSlot($callContent)
+            || $callContent->contentModelRelation->model_name === class_basename($pageContent);
+    }
+
+    /**
+     * ページの本文を入れる枠(本文内の原文)かどうか。
+     */
+    private function isPageContentSlot(CallContent $callContent): bool
+    {
+        return $callContent->place === CallContentPlace::Inside && $callContent->call_type === CallType::OriginalText;
     }
 
     private function resolveArticle(CallContent $callContent): Model|EloquentCollection|null
