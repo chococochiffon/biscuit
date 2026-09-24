@@ -15,6 +15,7 @@ class ResolveController extends Controller
 {
     /**
      * 公開側のURLのパスから、表示するコンテンツ(固定ページまたは公開済みの記事)を取得する。
+     * どちらも公開期間外(公開開始前・公開終了後)のものは該当なしとして扱う。
      * パスは記事・固定ページの間で重複しないよう保存時に検証しているため、先に見つかった方を返す。
      */
     #[OA\Get(
@@ -26,7 +27,7 @@ class ResolveController extends Controller
         ],
         responses: [
             new OA\Response(response: 200, description: 'type(article または single_page)と data(記事または固定ページ)'),
-            new OA\Response(response: 404, description: 'パスに該当するコンテンツがない、または記事が未公開'),
+            new OA\Response(response: 404, description: 'パスに該当するコンテンツがない、公開期間外、または記事が未公開'),
             new OA\Response(response: 422, description: 'path が未指定'),
         ]
     )]
@@ -38,7 +39,11 @@ class ResolveController extends Controller
 
         $path = '/'.trim($validated['path'], '/');
 
-        $singlePage = SinglePage::query()->where('path', $path)->with('details')->first();
+        $singlePage = SinglePage::query()
+            ->where('path', $path)
+            ->withinPublicationPeriod()
+            ->with('details')
+            ->first();
 
         if ($singlePage !== null) {
             return (new SinglePageResource($singlePage))->additional(['type' => 'single_page']);
@@ -47,6 +52,7 @@ class ResolveController extends Controller
         $article = Article::query()
             ->where('path', $path)
             ->where('approval', ArticleApprovalStatus::Published)
+            ->withinPublicationPeriod()
             ->with(['user', 'tags'])
             ->firstOrFail();
 

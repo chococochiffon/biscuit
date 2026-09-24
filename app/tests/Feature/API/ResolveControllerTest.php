@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class ResolveControllerTest extends TestCase
@@ -77,6 +78,52 @@ class ResolveControllerTest extends TestCase
         $this->getJson(route('api.resolve', ['path' => '/unknown']))->assertNotFound();
         $this->getJson(route('api.resolve', ['path' => '/deleted']))->assertNotFound();
         $this->getJson(route('api.resolve', ['path' => '/deleted-post']))->assertNotFound();
+    }
+
+    /**
+     * @return array<string, array{string|null, string|null, bool}>
+     */
+    public static function publicationPeriodProvider(): array
+    {
+        return [
+            '公開開始前' => ['2026-10-01 10:01:00', null, false],
+            '公開開始ちょうど' => ['2026-10-01 10:00:00', null, true],
+            '公開終了なしで公開中' => ['2026-09-01 00:00:00', null, true],
+            '公開終了前' => ['2026-09-01 00:00:00', '2026-10-01 10:01:00', true],
+            '公開終了ちょうど' => ['2026-09-01 00:00:00', '2026-10-01 10:00:00', false],
+            '公開終了後' => ['2026-09-01 00:00:00', '2026-09-30 23:59:00', false],
+        ];
+    }
+
+    #[DataProvider('publicationPeriodProvider')]
+    public function test_excludes_single_page_outside_publication_period(string $start, ?string $end, bool $visible): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        SinglePage::factory()->create([
+            'slug' => 'campaign',
+            'publication_start_datetime' => $start,
+            'publication_end_datetime' => $end,
+        ]);
+
+        $response = $this->getJson(route('api.resolve', ['path' => '/campaign']));
+
+        $response->assertStatus($visible ? 200 : 404);
+    }
+
+    #[DataProvider('publicationPeriodProvider')]
+    public function test_excludes_article_outside_publication_period(string $start, ?string $end, bool $visible): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        Article::factory()->published()->create([
+            'parent_path' => 'news',
+            'slug' => 'campaign',
+            'publication_start_datetime' => $start,
+            'publication_end_datetime' => $end,
+        ]);
+
+        $response = $this->getJson(route('api.resolve', ['path' => '/news/campaign']));
+
+        $response->assertStatus($visible ? 200 : 404);
     }
 
     public function test_requires_path(): void
