@@ -72,7 +72,30 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
 
         $response->assertOk();
-        $response->assertSeeInOrder(['<th>タイトル</th>', '<th>概要</th>', '<th>公開開始</th>', '<th>公開終了</th>', '<th>Topページへ表示する</th>', '<th>リンクリストへ表示する</th>'], false);
+        $response->assertSeeInOrder(['<table', 'タイトル', '概要', '公開開始', '公開終了', 'Topページへ表示する', 'リンクリストへ表示する'], false);
+    }
+
+    public function test_index_displays_search_fields_in_expected_order(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['id="search-title"', 'id="search-publication_start-from"', 'id="search-publication_end-from"'], false);
+        $response->assertDontSee('id="search-approval"', false);
+    }
+
+    public function test_index_shows_link_to_sort_by_display_order_when_reorder_is_disabled(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $response->assertSee('表示順で並び替え');
+        $response->assertSee(e(route('admin.single-pages.index', ['sort' => 'sort_order'])), false);
     }
 
     public function test_index_orders_single_pages_by_updated_at_desc_by_default(): void
@@ -180,6 +203,27 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
 
         $response->assertOk();
+    }
+
+    public function test_create_screen_displays_one_empty_detail_row(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+
+        // テンプレート(__INDEX__)とは別に、初期表示の空の詳細ブロックが1つだけ存在する
+        $response->assertSee('name="details[0][sub_title]"', false);
+        $response->assertDontSee('name="details[1][sub_title]"', false);
+        $response->assertSee('data-next-index="1"', false);
+    }
+
+    public function test_create_screen_displays_title_short_sentences_and_details_in_expected_order(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+
+        $response->assertSeeInOrder(['id="title"', 'id="short_sentences"', 'id="single-page-detail-rows"', 'id="taxonomy"'], false);
     }
 
     public function test_store_creates_single_page_with_details(): void
@@ -313,6 +357,17 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.edit', $target));
 
         $response->assertOk();
+    }
+
+    public function test_edit_screen_does_not_add_empty_detail_row_when_single_page_has_no_details(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.edit', $target));
+
+        $response->assertDontSee('name="details[0][sub_title]"', false);
+        $response->assertSee('data-next-index="0"', false);
     }
 
     public function test_update_modifies_single_page(): void

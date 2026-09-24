@@ -3,12 +3,12 @@
 @section('title', __('タグ詳細'))
 
 @section('content')
-    <div class="mb-4 d-flex align-items-center justify-content-between">
+    <div class="mb-4 d-flex align-items-center justify-content-between mx-auto" style="max-width: 28rem;">
         <h1 class="h5 mb-0">{{ __('タグ詳細') }}</h1>
         <a href="{{ route('admin.tags.edit', $tag) }}" class="link-primary">{{ __('編集する') }}</a>
     </div>
 
-    <div class="card" style="max-width: 28rem;">
+    <div class="card mx-auto" style="max-width: 28rem;">
         <dl class="row mb-0 p-3">
             <dt class="col-4 text-muted fw-normal">{{ __('タグ名') }}</dt>
             <dd class="col-8 mb-0">{{ $tag->tag_name }}</dd>

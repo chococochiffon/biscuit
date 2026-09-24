@@ -44,7 +44,30 @@ class ArticleControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
 
         $response->assertOk();
-        $response->assertSeeInOrder(['<th>サムネイル</th>', '<th>タイトル</th>', '<th>公開開始</th>', '<th>公開終了</th>', '<th>ステータス</th>', '<th>投稿者</th>', '<th>更新日時</th>'], false);
+        $response->assertSeeInOrder(['<table', 'サムネイル', 'タイトル', '公開開始', '公開終了', 'ステータス', '投稿者', '更新日時'], false);
+    }
+
+    public function test_index_displays_search_fields_in_expected_order(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['id="search-title"', 'id="search-publication_start-from"', 'id="search-publication_end-from"', 'id="search-approval"'], false);
+    }
+
+    public function test_index_header_link_toggles_sort_direction(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'title_asc', 'title' => 'Laravel']));
+
+        $response->assertOk();
+        // 並び中の項目は方向を反転し、検索条件は引き継ぐ
+        $response->assertSee(e(route('admin.articles.index', ['sort' => 'title_desc', 'title' => 'Laravel'])), false);
+        // 未選択の日時項目は新しい順から
+        $response->assertSee(e(route('admin.articles.index', ['sort' => 'publication_start_desc', 'title' => 'Laravel'])), false);
     }
 
     public function test_index_orders_articles_by_updated_at_desc_by_default(): void

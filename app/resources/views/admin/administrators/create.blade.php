@@ -3,9 +3,9 @@
 @section('title', __('管理者の新規登録'))
 
 @section('content')
-    <h1 class="h5 mb-4">{{ __('管理者の新規登録') }}</h1>
+    <h1 class="h5 mb-4 mx-auto" style="max-width: 28rem;">{{ __('管理者の新規登録') }}</h1>
 
-    <form method="POST" action="{{ route('admin.store') }}" style="max-width: 28rem;">
+    <form method="POST" action="{{ route('admin.store') }}" class="mx-auto" style="max-width: 28rem;">
         @csrf
 
         @include('admin.administrators._form')

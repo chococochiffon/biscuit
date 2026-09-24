@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     initSinglePageReorder();
     initImageDropzones();
     initDateTimePickers();
-    initAutoSubmitSelects();
     initArticleApprovalControls();
 });
 
@@ -1170,15 +1169,6 @@ function initDateTimePickers() {
                 },
             });
         });
-    });
-}
-
-/**
- * data-role="auto-submit" のセレクトボックス(一覧の並び順など)は、選択を変更したら所属するフォームを送信する。
- */
-function initAutoSubmitSelects() {
-    document.querySelectorAll('[data-role="auto-submit"]').forEach((select) => {
-        select.addEventListener('change', () => select.form?.requestSubmit());
     });
 }
 

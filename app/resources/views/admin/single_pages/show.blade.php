@@ -3,12 +3,12 @@
 @section('title', __('固定ページ詳細'))
 
 @section('content')
-    <div class="mb-4 d-flex align-items-center justify-content-between">
+    <div class="mb-4 d-flex align-items-center justify-content-between mx-auto" style="max-width: 48rem;">
         <h1 class="h5 mb-0">{{ __('固定ページ詳細') }}</h1>
         <a href="{{ route('admin.single-pages.edit', $singlePage) }}" class="link-primary">{{ __('編集する') }}</a>
     </div>
 
-    <div class="card" style="max-width: 48rem;">
+    <div class="card mx-auto" style="max-width: 48rem;">
         <dl class="row mb-0 p-3">
             <dt class="col-4 text-muted fw-normal">{{ __('タイトル') }}</dt>
             <dd class="col-8">{{ $singlePage->title }}</dd>
@@ -50,10 +50,10 @@
         </dl>
     </div>
 
-    <h2 class="h6 mt-4 mb-3">{{ __('詳細') }}</h2>
+    <h2 class="h6 mt-4 mb-3 mx-auto" style="max-width: 48rem;">{{ __('詳細') }}</h2>
 
     @forelse ($singlePage->details as $detail)
-        <div class="card mb-3" style="max-width: 48rem;">
+        <div class="card mb-3 mx-auto" style="max-width: 48rem;">
             <div class="card-body">
                 <h3 class="h6">{{ $detail->sub_title }}</h3>
                 <div>{!! $detail->contents !!}</div>

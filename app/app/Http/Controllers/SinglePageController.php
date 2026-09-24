@@ -56,7 +56,7 @@ class SinglePageController extends Controller
         $isSearching = collect($filters)->except('sort')->filter(fn ($value) => filled($value))->isNotEmpty();
         $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
 
-        return view('admin.single_pages.index', compact('singlePages', 'filters', 'sort', 'sortOptions', 'canReorder'));
+        return view('admin.single_pages.index', compact('singlePages', 'filters', 'sort', 'canReorder'));
     }
 
     /**
@@ -199,22 +199,22 @@ class SinglePageController extends Controller
     }
 
     /**
-     * 一覧で選択可能な並び順(キー → 表示名・並び替えるカラム・方向)。
+     * 一覧で選択可能な並び順(キー → 並び替えるカラム・方向)。一覧の見出しクリックで「項目_asc/desc」のキーが送られる。
      *
-     * @return array<string, array{label: string, column: string, direction: string}>
+     * @return array<string, array{column: string, direction: string}>
      */
     private function sortOptions(): array
     {
         return [
-            'updated_at_desc' => ['label' => __('更新日時の新しい順'), 'column' => 'updated_at', 'direction' => 'desc'],
-            'updated_at_asc' => ['label' => __('更新日時の古い順'), 'column' => 'updated_at', 'direction' => 'asc'],
-            'title_asc' => ['label' => __('タイトルの昇順'), 'column' => 'title', 'direction' => 'asc'],
-            'title_desc' => ['label' => __('タイトルの降順'), 'column' => 'title', 'direction' => 'desc'],
-            'publication_start_desc' => ['label' => __('公開開始の新しい順'), 'column' => 'publication_start_datetime', 'direction' => 'desc'],
-            'publication_start_asc' => ['label' => __('公開開始の古い順'), 'column' => 'publication_start_datetime', 'direction' => 'asc'],
-            'publication_end_desc' => ['label' => __('公開終了の新しい順'), 'column' => 'publication_end_datetime', 'direction' => 'desc'],
-            'publication_end_asc' => ['label' => __('公開終了の古い順'), 'column' => 'publication_end_datetime', 'direction' => 'asc'],
-            self::REORDERABLE_SORT => ['label' => __('表示順(ドラッグで並び替え)'), 'column' => 'sort_order', 'direction' => 'asc'],
+            'updated_at_desc' => ['column' => 'updated_at', 'direction' => 'desc'],
+            'updated_at_asc' => ['column' => 'updated_at', 'direction' => 'asc'],
+            'title_asc' => ['column' => 'title', 'direction' => 'asc'],
+            'title_desc' => ['column' => 'title', 'direction' => 'desc'],
+            'publication_start_desc' => ['column' => 'publication_start_datetime', 'direction' => 'desc'],
+            'publication_start_asc' => ['column' => 'publication_start_datetime', 'direction' => 'asc'],
+            'publication_end_desc' => ['column' => 'publication_end_datetime', 'direction' => 'desc'],
+            'publication_end_asc' => ['column' => 'publication_end_datetime', 'direction' => 'asc'],
+            self::REORDERABLE_SORT => ['column' => 'sort_order', 'direction' => 'asc'],
         ];
     }
 }

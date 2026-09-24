@@ -11,6 +11,14 @@
                 <button type="submit" form="single-page-reorder-form" class="btn btn-outline-secondary btn-sm">
                     {{ __('並び替えを保存') }}
                 </button>
+            @elseif (! $canReorder)
+                <a
+                    href="{{ route('admin.single-pages.index', ['sort' => 'sort_order']) }}"
+                    class="btn btn-outline-secondary btn-sm"
+                    title="{{ __('検索条件をクリアして表示順で並べ、ドラッグで並び替えられるようにします。') }}"
+                >
+                    {{ __('表示順で並び替え') }}
+                </a>
             @endif
 
             <a href="{{ route('admin.single-pages.create') }}" class="btn btn-primary">
@@ -21,28 +29,19 @@
 
     <form method="GET" action="{{ route('admin.single-pages.index') }}" class="card mb-3">
         <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+
+            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end">
+                <div style="width: 14rem;">
                     <label for="search-title" class="form-label small">{{ __('タイトル') }}</label>
                     <input id="search-title" type="text" name="title" value="{{ $filters['title'] ?? '' }}" class="form-control form-control-sm">
                 </div>
 
-                <div class="col-md-auto">
-                    <label for="search-sort" class="form-label small">{{ __('並び順') }}</label>
-                    <select id="search-sort" name="sort" class="form-select form-select-sm form-select-auto" data-role="auto-submit">
-                        @foreach ($sortOptions as $key => $option)
-                            <option value="{{ $key }}" @selected($sort === $key)>{{ $option['label'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="row g-3 align-items-end mt-0">
                 @include('admin.partials._publication_period_search', ['filters' => $filters])
 
-                <div class="col-md-auto d-flex gap-2">
+                <div class="d-flex gap-2 text-nowrap">
                     <button type="submit" class="btn btn-sm btn-primary">{{ __('検索') }}</button>
-                    <a href="{{ route('admin.single-pages.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
+                    <a href="{{ route('admin.single-pages.index', ['sort' => $sort]) }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
                 </div>
             </div>
         </div>
@@ -54,8 +53,6 @@
             @method('PATCH')
             <input type="hidden" name="offset" value="{{ $singlePages->firstItem() ? $singlePages->firstItem() - 1 : 0 }}">
         </form>
-    @elseif ($singlePages->isNotEmpty())
-        <p class="small text-muted mb-2">{{ __('ドラッグで並び替えるには、検索条件をクリアして並び順を「表示順」にしてください。') }}</p>
     @endif
 
     <div class="card">
@@ -65,10 +62,10 @@
                     @if ($canReorder)
                         <th></th>
                     @endif
-                    <th>{{ __('タイトル') }}</th>
+                    @include('admin.partials._sortable_th', ['label' => __('タイトル'), 'field' => 'title', 'defaultDirection' => 'asc'])
                     <th>{{ __('概要') }}</th>
-                    <th>{{ __('公開開始') }}</th>
-                    <th>{{ __('公開終了') }}</th>
+                    @include('admin.partials._sortable_th', ['label' => __('公開開始'), 'field' => 'publication_start', 'defaultDirection' => 'desc'])
+                    @include('admin.partials._sortable_th', ['label' => __('公開終了'), 'field' => 'publication_end', 'defaultDirection' => 'desc'])
                     <th>{{ __('Topページへ表示する') }}</th>
                     <th>{{ __('リンクリストへ表示する') }}</th>
                     <th></th>
