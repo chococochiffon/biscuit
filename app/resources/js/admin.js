@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSinglePageReorder();
     initImageDropzones();
     initDateTimePickers();
+    initAutoSubmitSelects();
     initArticleApprovalControls();
 });
 
@@ -448,19 +449,19 @@ function initCallContentRows() {
     function bindRow(row) {
         row.querySelector('[data-role="remove-row"]').addEventListener('click', () => row.remove());
 
+        const placeSelect = row.querySelector('[data-role="place-select"]');
         const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+        const callTypeError = row.querySelector('[data-role="call-type-error"]');
         const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
         const relationError = row.querySelector('[data-role="content-model-relation-error"]');
-        const placeSelect = row.querySelector('[data-role="place-select"]');
-        const placeError = row.querySelector('[data-role="place-error"]');
 
-        callTypeSelect.addEventListener('change', () => applyCallTypeConstraints(row, constraints));
-        relationSelect.addEventListener('change', () => {
-            setFieldError(relationSelect, relationError, null);
-            applyPlaceConstraints(row, constraints[callTypeSelect.value]);
+        placeSelect.addEventListener('change', () => applyPlaceConstraints(row, constraints));
+        callTypeSelect.addEventListener('change', () => {
+            setFieldError(callTypeSelect, callTypeError, null);
+            applyCallTypeConstraints(row, constraints);
         });
-        placeSelect.addEventListener('change', () => setFieldError(placeSelect, placeError, null));
-        applyCallTypeConstraints(row, constraints);
+        relationSelect.addEventListener('change', () => setFieldError(relationSelect, relationError, null));
+        applyPlaceConstraints(row, constraints);
     }
 
     container.querySelectorAll('[data-role="call-content-row"]').forEach(bindRow);
@@ -478,22 +479,69 @@ function initCallContentRows() {
 }
 
 /**
- * 呼び出し方(call_type)の選択に応じて、同じ行のデータ種別(モデル名)/表示箇所の選択肢を絞り込み、
+ * 表示箇所(place)の選択に応じて、同じ行の呼び出し方(call_type)の選択肢を絞り込み、
+ * 続けてデータ種別・表示件数の制御(applyCallTypeConstraints)を行う。
+ * 表示箇所が未選択の場合はすべての呼び出し方を候補にする。
+ * 既存の選択値が選択できなくなった場合は、値をクリアした上でその行にエラーを表示する。
+ */
+function applyPlaceConstraints(row, constraints) {
+    const placeSelect = row.querySelector('[data-role="place-select"]');
+    const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+    const callTypeError = row.querySelector('[data-role="call-type-error"]');
+
+    const placeRule = constraints.places?.[placeSelect.value];
+    const previousCallTypeValue = callTypeSelect.value;
+
+    Array.from(callTypeSelect.options).forEach((option) => {
+        if (!option.value) {
+            return;
+        }
+
+        const allowed = !placeRule || placeRule.callTypes.includes(Number(option.value));
+        option.hidden = !allowed;
+        option.disabled = !allowed;
+    });
+
+    if (previousCallTypeValue && callTypeSelect.selectedOptions[0]?.hidden) {
+        callTypeSelect.value = '';
+        setFieldError(callTypeSelect, callTypeError, '選択した表示箇所ではこの呼び出し方は選択できなくなりました。呼び出し方を選び直してください。');
+    } else {
+        setFieldError(callTypeSelect, callTypeError, null);
+    }
+
+    applyCallTypeConstraints(row, constraints);
+}
+
+/**
+ * 表示箇所(place)・呼び出し方(call_type)の選択に応じて、同じ行のデータ種別(モデル名)の選択肢を絞り込み、
  * 表示件数を固定(読み取り専用・値1)にするかどうかを切り替える。
- * 既存の選択値が新しい呼び出し方では選択できなくなった場合は、値をクリアした上でその行にエラーを表示する。
+ * 表示箇所が未選択の場合は、呼び出し方で選択可能なモデル名(全表示箇所の和集合)を候補にする。
+ * 既存の選択値が選択できなくなった場合は、値をクリアした上でその行にエラーを表示する。
  */
 function applyCallTypeConstraints(row, constraints) {
+    const placeSelect = row.querySelector('[data-role="place-select"]');
     const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
     const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
     const relationError = row.querySelector('[data-role="content-model-relation-error"]');
     const viewCountInput = row.querySelector('[data-role="view-count-input"]');
 
-    const rule = constraints[callTypeSelect.value];
+    const callType = callTypeSelect.value;
 
-    if (!rule) {
+    // 呼び出し方が未選択(表示箇所の変更でクリアされた場合を含む)なら、データ種別の絞り込みを解除する
+    if (!callType) {
+        Array.from(relationSelect.options).forEach((option) => {
+            option.hidden = false;
+            option.disabled = !option.value;
+        });
+        viewCountInput.readOnly = false;
+
         return;
     }
 
+    const placeRule = constraints.places?.[placeSelect.value];
+    const allowedModelNames = placeRule
+        ? (placeRule.modelNamesByCallType[callType] ?? [])
+        : (constraints.modelNamesByCallType?.[callType] ?? []);
     const previousRelationValue = relationSelect.value;
 
     Array.from(relationSelect.options).forEach((option) => {
@@ -501,21 +549,19 @@ function applyCallTypeConstraints(row, constraints) {
             return;
         }
 
-        const allowed = rule.modelNames.includes(option.dataset.modelName);
+        const allowed = allowedModelNames.includes(option.dataset.modelName);
         option.hidden = !allowed;
         option.disabled = !allowed;
     });
 
     if (previousRelationValue && relationSelect.selectedOptions[0]?.hidden) {
         relationSelect.value = '';
-        setFieldError(relationSelect, relationError, '選択した呼び出し方ではこのデータ種別は選択できなくなりました。データ種別を選び直してください。');
+        setFieldError(relationSelect, relationError, '選択した表示箇所・呼び出し方ではこのデータ種別は選択できなくなりました。データ種別を選び直してください。');
     } else {
         setFieldError(relationSelect, relationError, null);
     }
 
-    applyPlaceConstraints(row, rule);
-
-    if (rule.fixedViewCount) {
+    if (constraints.fixedViewCount?.[callType]) {
         viewCountInput.value = '1';
         viewCountInput.readOnly = true;
     } else {
@@ -523,43 +569,6 @@ function applyCallTypeConstraints(row, constraints) {
         if (!viewCountInput.value) {
             viewCountInput.value = '1';
         }
-    }
-}
-
-/**
- * 表示箇所(place)の選択肢を絞り込む。データ種別(モデル名)が選択済みの場合は
- * 呼び出し方(call_type)・モデル名の組み合わせで許可された表示箇所に限定し、
- * 未選択の場合は呼び出し方で選択可能な表示箇所の和集合を候補にする。
- * 既存の選択値が選択できなくなった場合は、値をクリアした上でその行にエラーを表示する。
- */
-function applyPlaceConstraints(row, rule) {
-    const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
-    const placeSelect = row.querySelector('[data-role="place-select"]');
-    const placeError = row.querySelector('[data-role="place-error"]');
-
-    if (!rule) {
-        return;
-    }
-
-    const selectedModelName = relationSelect.selectedOptions[0]?.dataset.modelName;
-    const allowedPlaces = selectedModelName ? (rule.placesByModelName[selectedModelName] ?? []) : rule.places;
-    const previousPlaceValue = placeSelect.value;
-
-    Array.from(placeSelect.options).forEach((option) => {
-        if (!option.value) {
-            return;
-        }
-
-        const allowed = allowedPlaces.includes(Number(option.value));
-        option.hidden = !allowed;
-        option.disabled = !allowed;
-    });
-
-    if (previousPlaceValue && placeSelect.selectedOptions[0]?.hidden) {
-        placeSelect.value = '';
-        setFieldError(placeSelect, placeError, '選択した呼び出し方・データ種別ではこの表示箇所は選択できなくなりました。表示箇所を選び直してください。');
-    } else {
-        setFieldError(placeSelect, placeError, null);
     }
 }
 
@@ -625,7 +634,7 @@ function removeContentModelRelationOption(id) {
 }
 
 /**
- * 既存の呼び出しコンテンツ行すべてに、呼び出し方(call_type)による選択肢の絞り込みを再適用する。
+ * 既存の呼び出しコンテンツ行すべてに、表示箇所(place)からの選択肢の絞り込みを再適用する。
  * データ種別紐付けをその場で追加/更新した直後に、絞り込み状態を最新化するために呼び出す。
  */
 function reapplyAllCallContentConstraints() {
@@ -636,7 +645,7 @@ function reapplyAllCallContentConstraints() {
     }
 
     const constraints = JSON.parse(container.dataset.callTypeConstraints || '{}');
-    container.querySelectorAll('[data-role="call-content-row"]').forEach((row) => applyCallTypeConstraints(row, constraints));
+    container.querySelectorAll('[data-role="call-content-row"]').forEach((row) => applyPlaceConstraints(row, constraints));
 }
 
 /**
@@ -1127,17 +1136,49 @@ function bindImageDropzone(dropzone) {
 }
 
 /**
- * 日時入力欄(公開開始日時・公開終了日時など)にDateTimePicker(flatpickr)を適用する。
+ * 日時入力欄(公開開始・公開終了など)にDateTimePicker(flatpickr)を、
+ * 日付入力欄(一覧の検索条件など)にDatePicker(flatpickr)を適用する。
+ * 送信値はバリデーション(date_format:Y-m-d H:i / Y-m-d)に合わせ、画面上の表示のみ Y/m/d H:i / Y/m/d とする。
  */
 function initDateTimePickers() {
-    document.querySelectorAll('[data-role="datetime-picker"]').forEach((input) => {
-        flatpickr(input, {
-            enableTime: true,
-            time_24hr: true,
-            dateFormat: 'Y-m-d H:i',
-            locale: Japanese,
-            allowInput: true,
+    const pickers = [
+        { selector: '[data-role="datetime-picker"]', options: { enableTime: true, time_24hr: true, dateFormat: 'Y-m-d H:i', altFormat: 'Y/m/d H:i' } },
+        { selector: '[data-role="date-picker"]', options: { dateFormat: 'Y-m-d', altFormat: 'Y/m/d' } },
+    ];
+
+    pickers.forEach(({ selector, options }) => {
+        document.querySelectorAll(selector).forEach((input) => {
+            flatpickr(input, {
+                ...options,
+                altInput: true,
+                locale: Japanese,
+                allowInput: true,
+                // ラベル(for属性)・aria-labelが画面上の表示用入力欄を指すよう、元の入力欄(hidden)から移す
+                onReady: (selectedDates, dateStr, instance) => {
+                    if (!instance.altInput) {
+                        return;
+                    }
+
+                    if (input.id) {
+                        instance.altInput.id = input.id;
+                        input.removeAttribute('id');
+                    }
+
+                    if (input.hasAttribute('aria-label')) {
+                        instance.altInput.setAttribute('aria-label', input.getAttribute('aria-label'));
+                    }
+                },
+            });
         });
+    });
+}
+
+/**
+ * data-role="auto-submit" のセレクトボックス(一覧の並び順など)は、選択を変更したら所属するフォームを送信する。
+ */
+function initAutoSubmitSelects() {
+    document.querySelectorAll('[data-role="auto-submit"]').forEach((select) => {
+        select.addEventListener('change', () => select.form?.requestSubmit());
     });
 }
 

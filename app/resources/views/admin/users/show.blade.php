@@ -24,7 +24,7 @@
                 <dd class="col-8">{{ $user->detail->nick_name }}</dd>
 
                 <dt class="col-4 text-muted fw-normal">{{ __('生年月日') }}</dt>
-                <dd class="col-8">{{ $user->detail->birthday->format('Y-m-d') }}</dd>
+                <dd class="col-8">{{ $user->detail->birthday->format('Y/m/d') }}</dd>
 
                 <dt class="col-4 text-muted fw-normal">{{ __('ユーザー画像') }}</dt>
                 <dd class="col-8">

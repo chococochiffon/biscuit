@@ -11,10 +11,49 @@
         </a>
     </div>
 
+    <form method="GET" action="{{ route('admin.articles.index') }}" class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label for="search-title" class="form-label small">{{ __('タイトル') }}</label>
+                    <input id="search-title" type="text" name="title" value="{{ $filters['title'] ?? '' }}" class="form-control form-control-sm">
+                </div>
+
+                <div class="col-md-auto">
+                    <label for="search-approval" class="form-label small">{{ __('ステータス') }}</label>
+                    <select id="search-approval" name="approval" class="form-select form-select-sm form-select-auto">
+                        <option value="">{{ __('すべて') }}</option>
+                        @foreach (\App\Enums\ArticleApprovalStatus::cases() as $status)
+                            <option value="{{ $status->value }}" @selected(($filters['approval'] ?? null) === $status->value)>{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="col-md-auto">
+                    <label for="search-sort" class="form-label small">{{ __('並び順') }}</label>
+                    <select id="search-sort" name="sort" class="form-select form-select-sm form-select-auto" data-role="auto-submit">
+                        @foreach ($sortOptions as $key => $option)
+                            <option value="{{ $key }}" @selected($sort === $key)>{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 align-items-end mt-0">
+                @include('admin.partials._publication_period_search', ['filters' => $filters])
+
+                <div class="col-md-auto d-flex gap-2">
+                    <button type="submit" class="btn btn-sm btn-primary">{{ __('検索') }}</button>
+                    <a href="{{ route('admin.articles.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
+                </div>
+            </div>
+        </div>
+    </form>
+
     <div class="card mb-3">
         <div class="card-body d-flex align-items-center gap-2 flex-wrap">
             <span class="small text-muted">{{ __('選択した記事の公開設定を一括変更') }}:</span>
-            <select id="bulk-approval-select" class="form-select form-select-sm" style="width: auto;">
+            <select id="bulk-approval-select" class="form-select form-select-sm form-select-auto">
                 @foreach (\App\Enums\ArticleApprovalStatus::cases() as $status)
                     <option value="{{ $status->value }}">{{ $status->label() }}</option>
                 @endforeach
@@ -39,9 +78,11 @@
                     </th>
                     <th>{{ __('サムネイル') }}</th>
                     <th>{{ __('タイトル') }}</th>
+                    <th>{{ __('公開開始') }}</th>
+                    <th>{{ __('公開終了') }}</th>
+                    <th>{{ __('ステータス') }}</th>
                     <th>{{ __('投稿者') }}</th>
                     <th>{{ __('更新日時') }}</th>
-                    <th>{{ __('ステータス') }}</th>
                     <th></th>
                 </tr>
             </thead>
@@ -70,12 +111,11 @@
                                 {{ $article->title }}
                             </a>
                         </td>
-                        <td>{{ $article->user_name }}</td>
-                        <td>{{ $article->updated_at->format('Y-m-d H:i') }}</td>
+                        <td>{{ $article->publication_start_datetime?->format('Y/m/d H:i') }}</td>
+                        <td>{{ $article->publication_end_datetime?->format('Y/m/d H:i') ?? __('未設定') }}</td>
                         <td>
                             <select
-                                class="form-select form-select-sm"
-                                style="width: auto;"
+                                class="form-select form-select-sm form-select-auto"
                                 data-role="approval-inline-select"
                                 data-update-url="{{ route('admin.articles.approval', $article) }}"
                                 aria-label="{{ __('公開ステータス') }}"
@@ -87,6 +127,8 @@
                                 @endforeach
                             </select>
                         </td>
+                        <td>{{ $article->user_name }}</td>
+                        <td>{{ $article->updated_at->format('Y/m/d H:i') }}</td>
                         <td class="text-end">
                             <a href="{{ route('admin.articles.edit', $article) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
@@ -104,7 +146,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">{{ __('記事が登録されていません。') }}</td>
+                        <td colspan="9" class="text-center text-muted py-4">{{ __('該当する記事がありません。') }}</td>
                     </tr>
                 @endforelse
             </tbody>

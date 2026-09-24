@@ -28,6 +28,16 @@
     </div>
 
     <div class="col-md-2">
+        <label class="form-label small">{{ __('表示箇所') }}</label>
+        <select name="call_contents[{{ $index }}][place]" class="form-select form-select-sm" data-role="place-select" required>
+            <option value="" disabled @selected(! $place)>{{ __('選択してください') }}</option>
+            @foreach (\App\Enums\CallContentPlace::cases() as $placeOption)
+                <option value="{{ $placeOption->value }}" @selected($place === $placeOption->value)>{{ $placeOption->label() }}</option>
+            @endforeach
+        </select>
+    </div>
+
+    <div class="col-md-2">
         <label class="form-label small">{{ __('呼び出し方') }}</label>
         <select name="call_contents[{{ $index }}][call_type]" class="form-select form-select-sm" data-role="call-type-select" required>
             <option value="" disabled @selected(! $callType)>{{ __('選択してください') }}</option>
@@ -35,6 +45,7 @@
                 <option value="{{ $type->value }}" @selected($callType === $type->value)>{{ $type->label() }}</option>
             @endforeach
         </select>
+        <div class="invalid-feedback" data-role="call-type-error" hidden></div>
     </div>
 
     <div class="col-md-3">
@@ -66,17 +77,6 @@
             data-role="view-count-input"
             required
         >
-    </div>
-
-    <div class="col-md-2">
-        <label class="form-label small">{{ __('表示箇所') }}</label>
-        <select name="call_contents[{{ $index }}][place]" class="form-select form-select-sm" data-role="place-select" required>
-            <option value="" disabled @selected(! $place)>{{ __('選択してください') }}</option>
-            @foreach (\App\Enums\CallContentPlace::cases() as $placeOption)
-                <option value="{{ $placeOption->value }}" @selected($place === $placeOption->value)>{{ $placeOption->label() }}</option>
-            @endforeach
-        </select>
-        <div class="invalid-feedback" data-role="place-error" hidden></div>
     </div>
 
     <div class="col-md-1">

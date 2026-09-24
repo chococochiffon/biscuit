@@ -20,7 +20,7 @@
             <dd class="col-8">{{ $administrator->role->label() }}</dd>
 
             <dt class="col-4 text-muted fw-normal">{{ __('最終ログイン') }}</dt>
-            <dd class="col-8 mb-0">{{ $administrator->last_login_at?->format('Y-m-d H:i') ?? __('未ログイン') }}</dd>
+            <dd class="col-8 mb-0">{{ $administrator->last_login_at?->format('Y/m/d H:i') ?? __('未ログイン') }}</dd>
         </dl>
     </div>
 

@@ -148,6 +148,20 @@ label.form-label.is-required::after {
     border-color: #cbd5e1;
 }
 
+/* 右側の下向き矢印と選択中の文字が重ならないよう、矢印分の余白を確保する */
+.form-select {
+    padding-right: 2.25rem;
+}
+
+.form-select-sm {
+    padding: 0.25rem 2.25rem 0.25rem 0.5rem;
+}
+
+/* 横幅を選択肢の文字の長さに合わせるセレクトボックス */
+.form-select-auto {
+    width: auto;
+}
+
 .form-control:focus,
 .form-select:focus {
     border-color: #334155;

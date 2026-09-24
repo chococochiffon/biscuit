@@ -36,6 +36,123 @@ class ArticleControllerTest extends TestCase
         $response->assertSee('Jane Doe');
     }
 
+    public function test_index_displays_columns_in_expected_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['<th>サムネイル</th>', '<th>タイトル</th>', '<th>公開開始</th>', '<th>公開終了</th>', '<th>ステータス</th>', '<th>投稿者</th>', '<th>更新日時</th>'], false);
+    }
+
+    public function test_index_orders_articles_by_updated_at_desc_by_default(): void
+    {
+        $actor = Administrator::factory()->create();
+        $older = Article::factory()->create(['updated_at' => now()->subDay()]);
+        $newer = Article::factory()->create(['updated_at' => now()]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertOk();
+        $this->assertSame([$newer->id, $older->id], $response->viewData('articles')->pluck('id')->all());
+    }
+
+    public function test_index_can_sort_by_publication_start(): void
+    {
+        $actor = Administrator::factory()->create();
+        $later = Article::factory()->create(['publication_start_datetime' => '2026-10-10 00:00:00']);
+        $earlier = Article::factory()->create(['publication_start_datetime' => '2026-10-01 00:00:00']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'publication_start_asc']));
+
+        $this->assertSame([$earlier->id, $later->id], $response->viewData('articles')->pluck('id')->all());
+    }
+
+    public function test_index_ignores_unknown_sort_and_falls_back_to_default(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'unknown', 'approval' => 'invalid']));
+
+        $response->assertOk();
+        $this->assertSame('updated_at_desc', $response->viewData('sort'));
+    }
+
+    public function test_index_searches_by_title_and_approval(): void
+    {
+        $actor = Administrator::factory()->create();
+        $hit = Article::factory()->published()->create(['title' => 'Laravel入門']);
+        Article::factory()->create(['title' => 'Laravel応用', 'approval' => ArticleApprovalStatus::Draft]);
+        Article::factory()->published()->create(['title' => 'PHP入門']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', [
+            'title' => 'Laravel',
+            'approval' => ArticleApprovalStatus::Published->value,
+        ]));
+
+        $this->assertSame([$hit->id], $response->viewData('articles')->pluck('id')->all());
+    }
+
+    public function test_index_searches_by_publication_period(): void
+    {
+        $actor = Administrator::factory()->create();
+        $hit = Article::factory()->create([
+            'publication_start_datetime' => '2026-10-05 10:00:00',
+            'publication_end_datetime' => '2026-12-31 23:59:00',
+        ]);
+        Article::factory()->create([
+            'publication_start_datetime' => '2026-09-01 10:00:00',
+            'publication_end_datetime' => '2026-12-31 23:59:00',
+        ]);
+        Article::factory()->create([
+            'publication_start_datetime' => '2026-10-05 10:00:00',
+            'publication_end_datetime' => null,
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', [
+            'publication_start_from' => '2026-10-01',
+            'publication_start_to' => '2026-10-31',
+            'publication_end_from' => '2026-12-01',
+            'publication_end_to' => '2026-12-31',
+        ]));
+
+        $this->assertSame([$hit->id], $response->viewData('articles')->pluck('id')->all());
+    }
+
+    public function test_index_displays_publication_datetimes(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create([
+            'publication_start_datetime' => '2026-10-01 09:00:00',
+            'publication_end_datetime' => '2026-10-31 23:59:30',
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertOk();
+        $response->assertSee('公開開始');
+        $response->assertSee('公開終了');
+        $response->assertSee('2026/10/01 09:00');
+        $response->assertSee('2026/10/31 23:59');
+        $response->assertDontSee('23:59:30');
+    }
+
+    public function test_index_displays_not_set_when_publication_end_datetime_is_null(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create([
+            'publication_start_datetime' => '2026-10-01 09:00:00',
+            'publication_end_datetime' => null,
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertOk();
+        $response->assertSee('未設定');
+    }
+
     public function test_index_displays_administrator_for_null_user(): void
     {
         $actor = Administrator::factory()->create();

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicationPeriod;
 use Database\Factories\SinglePageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 class SinglePage extends Model
 {
     /** @use HasFactory<SinglePageFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicationPeriod, SoftDeletes;
 
     /**
      * ヘッダー画像の保存先ディレクトリ(公開ディスク基準)。

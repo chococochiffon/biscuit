@@ -27,11 +27,11 @@
                 <dt class="col-3 text-muted fw-normal">{{ __('ステータス') }}</dt>
                 <dd class="col-9">{{ $article->approval->label() }}</dd>
 
-                <dt class="col-3 text-muted fw-normal">{{ __('公開開始日時') }}</dt>
-                <dd class="col-9">{{ $article->publication_start_datetime->format('Y-m-d H:i') }}</dd>
+                <dt class="col-3 text-muted fw-normal">{{ __('公開開始') }}</dt>
+                <dd class="col-9">{{ $article->publication_start_datetime->format('Y/m/d H:i') }}</dd>
 
-                <dt class="col-3 text-muted fw-normal">{{ __('公開終了日時') }}</dt>
-                <dd class="col-9">{{ optional($article->publication_end_datetime)->format('Y-m-d H:i') ?? __('未設定') }}</dd>
+                <dt class="col-3 text-muted fw-normal">{{ __('公開終了') }}</dt>
+                <dd class="col-9">{{ optional($article->publication_end_datetime)->format('Y/m/d H:i') ?? __('未設定') }}</dd>
 
                 <dt class="col-3 text-muted fw-normal">{{ __('タグ') }}</dt>
                 <dd class="col-9">
@@ -43,7 +43,7 @@
                 </dd>
 
                 <dt class="col-3 text-muted fw-normal">{{ __('更新日時') }}</dt>
-                <dd class="col-9 mb-0">{{ $article->updated_at->format('Y-m-d H:i') }}</dd>
+                <dd class="col-9 mb-0">{{ $article->updated_at->format('Y/m/d H:i') }}</dd>
             </dl>
 
             <hr>

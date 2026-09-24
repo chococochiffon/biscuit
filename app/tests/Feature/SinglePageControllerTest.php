@@ -32,19 +32,145 @@ class SinglePageControllerTest extends TestCase
         $response->assertSee($singlePage->title);
     }
 
-    public function test_index_orders_single_pages_by_sort_order(): void
+    public function test_index_displays_publication_datetimes(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create([
+            'publication_start_datetime' => '2026-10-01 09:00:00',
+            'publication_end_datetime' => '2026-10-31 23:59:30',
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $response->assertSee('公開開始');
+        $response->assertSee('公開終了');
+        $response->assertSee('2026/10/01 09:00');
+        $response->assertSee('2026/10/31 23:59');
+        $response->assertDontSee('23:59:30');
+    }
+
+    public function test_index_displays_not_set_when_publication_end_datetime_is_null(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create([
+            'publication_start_datetime' => '2026-10-01 09:00:00',
+            'publication_end_datetime' => null,
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $response->assertSee('未設定');
+    }
+
+    public function test_index_displays_columns_in_expected_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['<th>タイトル</th>', '<th>概要</th>', '<th>公開開始</th>', '<th>公開終了</th>', '<th>Topページへ表示する</th>', '<th>リンクリストへ表示する</th>'], false);
+    }
+
+    public function test_index_orders_single_pages_by_updated_at_desc_by_default(): void
+    {
+        $actor = Administrator::factory()->create();
+        $older = SinglePage::factory()->create(['sort_order' => 0, 'updated_at' => now()->subDay()]);
+        $newer = SinglePage::factory()->create(['sort_order' => 1, 'updated_at' => now()]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertOk();
+        $this->assertSame([$newer->id, $older->id], $response->viewData('singlePages')->pluck('id')->all());
+        $response->assertDontSee('single-page-reorder-form');
+    }
+
+    public function test_index_orders_single_pages_by_sort_order_and_enables_reorder(): void
     {
         $actor = Administrator::factory()->create();
         $second = SinglePage::factory()->create(['title' => '2番目', 'sort_order' => 1]);
         $first = SinglePage::factory()->create(['title' => '1番目', 'sort_order' => 0]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'sort_order']));
 
         $response->assertOk();
         $this->assertSame(
             [$first->id, $second->id],
             $response->viewData('singlePages')->pluck('id')->all()
         );
+        $response->assertSee('single-page-reorder-form');
+    }
+
+    public function test_index_disables_reorder_while_searching_even_if_sorted_by_sort_order(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create(['title' => '会社概要']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'sort_order', 'title' => '会社']));
+
+        $response->assertOk();
+        $response->assertDontSee('single-page-reorder-form');
+    }
+
+    public function test_index_can_sort_by_title(): void
+    {
+        $actor = Administrator::factory()->create();
+        $b = SinglePage::factory()->create(['title' => 'B']);
+        $a = SinglePage::factory()->create(['title' => 'A']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
+
+        $this->assertSame([$a->id, $b->id], $response->viewData('singlePages')->pluck('id')->all());
+    }
+
+    public function test_index_ignores_unknown_sort_and_falls_back_to_default(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'unknown', 'publication_start_from' => 'invalid']));
+
+        $response->assertOk();
+        $this->assertSame('updated_at_desc', $response->viewData('sort'));
+    }
+
+    public function test_index_searches_by_title(): void
+    {
+        $actor = Administrator::factory()->create();
+        $hit = SinglePage::factory()->create(['title' => '会社概要']);
+        SinglePage::factory()->create(['title' => 'お問い合わせ']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['title' => '会社']));
+
+        $this->assertSame([$hit->id], $response->viewData('singlePages')->pluck('id')->all());
+    }
+
+    public function test_index_searches_by_publication_period(): void
+    {
+        $actor = Administrator::factory()->create();
+        $hit = SinglePage::factory()->create([
+            'publication_start_datetime' => '2026-10-05 10:00:00',
+            'publication_end_datetime' => '2026-12-31 23:59:00',
+        ]);
+        SinglePage::factory()->create([
+            'publication_start_datetime' => '2026-09-01 10:00:00',
+            'publication_end_datetime' => '2026-12-31 23:59:00',
+        ]);
+        SinglePage::factory()->create([
+            'publication_start_datetime' => '2026-10-05 10:00:00',
+            'publication_end_datetime' => null,
+        ]);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', [
+            'publication_start_from' => '2026-10-01',
+            'publication_start_to' => '2026-10-31',
+            'publication_end_from' => '2026-12-01',
+            'publication_end_to' => '2026-12-31',
+        ]));
+
+        $this->assertSame([$hit->id], $response->viewData('singlePages')->pluck('id')->all());
     }
 
     public function test_create_screen_can_be_rendered(): void
@@ -290,7 +416,7 @@ class SinglePageControllerTest extends TestCase
             'order' => [$c->id, $a->id, $b->id],
         ]);
 
-        $response->assertRedirect(route('admin.single-pages.index'));
+        $response->assertRedirect(route('admin.single-pages.index', ['sort' => 'sort_order']));
         $this->assertSame(0, $c->fresh()->sort_order);
         $this->assertSame(1, $a->fresh()->sort_order);
         $this->assertSame(2, $b->fresh()->sort_order);
@@ -307,7 +433,7 @@ class SinglePageControllerTest extends TestCase
             'offset' => 20,
         ]);
 
-        $response->assertRedirect(route('admin.single-pages.index'));
+        $response->assertRedirect(route('admin.single-pages.index', ['sort' => 'sort_order']));
         $this->assertSame(20, $b->fresh()->sort_order);
         $this->assertSame(21, $a->fresh()->sort_order);
     }

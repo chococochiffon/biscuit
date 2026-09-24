@@ -146,7 +146,7 @@ class SiteSettingControllerTest extends TestCase
         $response->assertSessionHasErrors(['call_contents.0.content_model_relation_id']);
     }
 
-    public function test_store_fails_when_place_is_not_allowed_for_call_type(): void
+    public function test_store_fails_when_call_type_is_not_allowed_for_place(): void
     {
         $actor = Administrator::factory()->create();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::SinglePage, 'model_name' => 'SinglePage']);
@@ -164,7 +164,31 @@ class SiteSettingControllerTest extends TestCase
             ],
         ]);
 
-        $response->assertSessionHasErrors(['call_contents.0.place']);
+        $response->assertSessionHasErrors(['call_contents.0.call_type']);
+        $response->assertSessionDoesntHaveErrors(['call_contents.0.place', 'call_contents.0.content_model_relation_id']);
+    }
+
+    public function test_store_fails_when_content_model_relation_is_not_allowed_for_place_and_call_type(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
+
+        // リンクリストはTopで選択可能だが、TopでArticleのリンクリストは許可されていない(Othersのみ)
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::LinkList->value,
+                    'call_name' => '記事リンク一覧',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 3,
+                    'place' => CallContentPlace::Top->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['call_contents.0.content_model_relation_id']);
+        $response->assertSessionDoesntHaveErrors(['call_contents.0.place', 'call_contents.0.call_type']);
     }
 
     public function test_store_fails_when_view_count_is_not_fixed_to_one_for_call_type(): void
@@ -411,6 +435,7 @@ class SiteSettingControllerTest extends TestCase
         $response->assertSee($callContent->call_type->label());
         $response->assertSee('詳細確認用モデル');
         $response->assertSee($callContent->place->label());
+        $response->assertSeeInOrder(['呼び出し名', '表示箇所', '呼び出し方', 'データ種別', '表示件数']);
     }
 
     public function test_edit_screen_can_be_rendered(): void
