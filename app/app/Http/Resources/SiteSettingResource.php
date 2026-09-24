@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\SocialLink;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
@@ -10,6 +11,7 @@ class SiteSettingResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
+     * SNS リンク(social_links)はサイト全体で共通のため、並び順ですべて含める。
      *
      * @return array<string, mixed>
      */
@@ -20,6 +22,7 @@ class SiteSettingResource extends JsonResource
             'description' => $this->description,
             'site_icon_url' => $this->site_icon ? Storage::disk('public')->url($this->site_icon) : null,
             'site_image_url' => $this->site_image ? Storage::disk('public')->url($this->site_image) : null,
+            'social_links' => SocialLinkResource::collection(SocialLink::query()->ordered()->get()),
         ];
     }
 }

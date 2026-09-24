@@ -74,6 +74,61 @@
 </div>
 
 @php
+    $oldSocialLinks = old('social_links');
+
+    $socialLinkRows = $oldSocialLinks !== null
+        ? collect($oldSocialLinks)->values()->map(fn ($row, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $row['id'] ?? null,
+            'service' => isset($row['service']) && $row['service'] !== '' ? (int) $row['service'] : null,
+            'name' => $row['name'] ?? null,
+            'url' => $row['url'] ?? null,
+            'sortOrder' => $row['sort_order'] ?? $i,
+        ])
+        : ($socialLinks ?? collect())->values()->map(fn ($socialLink, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $socialLink->id,
+            'service' => $socialLink->service->value,
+            'name' => $socialLink->name,
+            'url' => $socialLink->url,
+            'sortOrder' => $socialLink->sort_order,
+        ]);
+@endphp
+
+<div class="mb-3" data-role="repeater">
+    <label class="form-label mb-0">{{ __('SNSリンク') }}</label>
+    <div class="form-text mb-2">{{ __('公開側のフッターに、この順でアイコンを並べます。') }}</div>
+
+    <div data-role="repeater-rows" data-next-index="{{ $socialLinkRows->count() }}">
+        @foreach ($socialLinkRows as $row)
+            @include('admin.site_settings._social_link_row', [
+                'index' => $row->index,
+                'id' => $row->id,
+                'service' => $row->service,
+                'name' => $row->name,
+                'url' => $row->url,
+                'sortOrder' => $row->sortOrder,
+            ])
+        @endforeach
+    </div>
+
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-role="repeater-add">
+        {{ __('+ 行を追加') }}
+    </button>
+
+    <template data-role="repeater-template">
+        @include('admin.site_settings._social_link_row', [
+            'index' => '__INDEX__',
+            'id' => null,
+            'service' => null,
+            'name' => null,
+            'url' => null,
+            'sortOrder' => 0,
+        ])
+    </template>
+</div>
+
+@php
     $oldCallContents = old('call_contents');
 
     $callContentRows = $oldCallContents !== null
@@ -82,6 +137,8 @@
             'id' => $row['id'] ?? null,
             'callType' => isset($row['call_type']) && $row['call_type'] !== '' ? (int) $row['call_type'] : null,
             'callName' => $row['call_name'] ?? null,
+            'title' => $row['title'] ?? null,
+            'subtitle' => $row['subtitle'] ?? null,
             'contentModelRelationId' => isset($row['content_model_relation_id']) && $row['content_model_relation_id'] !== '' ? (int) $row['content_model_relation_id'] : null,
             'viewCount' => $row['view_count'] ?? 1,
             'place' => isset($row['place']) && $row['place'] !== '' ? (int) $row['place'] : null,
@@ -92,6 +149,8 @@
             'id' => $callContent->id,
             'callType' => $callContent->call_type->value,
             'callName' => $callContent->call_name,
+            'title' => $callContent->title,
+            'subtitle' => $callContent->subtitle,
             'contentModelRelationId' => $callContent->content_model_relation_id,
             'viewCount' => $callContent->view_count,
             'place' => $callContent->place->value,
@@ -120,6 +179,8 @@
                 'id' => $row->id,
                 'callType' => $row->callType,
                 'callName' => $row->callName,
+                'title' => $row->title,
+                'subtitle' => $row->subtitle,
                 'contentModelRelationId' => $row->contentModelRelationId,
                 'viewCount' => $row->viewCount,
                 'place' => $row->place,
@@ -139,6 +200,8 @@
             'id' => null,
             'callType' => null,
             'callName' => null,
+            'title' => null,
+            'subtitle' => null,
             'contentModelRelationId' => null,
             'viewCount' => 1,
             'place' => null,

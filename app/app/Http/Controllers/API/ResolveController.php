@@ -36,7 +36,7 @@ class ResolveController extends Controller
             new OA\Parameter(name: 'path', in: 'query', required: true, description: '公開側URLのパス(例: /、/company/about、/news/123)', schema: new OA\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'type(top/single_page/article)、data(本文。トップはnull)、call_contents(トップはトップ、それ以外は本文内の呼び出しコンテンツ。各要素は call_type・call_name と table_name をキーにした実データ)'),
+            new OA\Response(response: 200, description: 'type(top/single_page/article)、data(本文。トップはnull)、call_contents(トップはトップ、それ以外は本文内の呼び出しコンテンツ。各要素は call_type・call_name・title・subtitle と table_name をキーにした実データ)'),
             new OA\Response(response: 404, description: 'パスに該当するコンテンツがない、公開期間外、または記事が未公開'),
             new OA\Response(response: 422, description: 'path が未指定'),
         ]

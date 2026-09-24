@@ -85,5 +85,19 @@
     "記事番号": "Article number",
     "URL「:path」は他の記事または固定ページで使われています。": "The URL \":path\" is already used by another article or page.",
     "数字だけのスラッグは記事番号用のため使えません。": "A slug consisting only of numbers is reserved for article numbers.",
-    "左端のハンドルをドラッグして並び替えると、同じ表示箇所の中でその順にAPIで返します。": "Drag the handle on the left to reorder. The API returns items in this order within each display location."
+    "左端のハンドルをドラッグして並び替えると、同じ表示箇所の中でその順にAPIで返します。": "Drag the handle on the left to reorder. The API returns items in this order within each display location.",
+    "見出し": "Heading",
+    "小見出し": "Subheading",
+    "空欄の場合は見出しを表示しません": "Leave blank to show no heading",
+    "その他": "Other",
+    "サービス": "Service",
+    "表示名": "Display name",
+    "SNSリンク": "Social links",
+    "公開側のフッターに、この順でアイコンを並べます。": "Icons are shown in this order in the public site footer.",
+    "SNSリンクが登録されていません。": "No social links registered.",
+    "スキル": "Skills",
+    "スキル名": "Skill name",
+    "習熟度(0〜100)": "Level (0-100)",
+    "公開側のプロフィール(スキルリスト)に、この順で習熟度のバーを並べます。": "Level bars are shown in this order in the public profile (skill list).",
+    "未登録": "Not registered"
 }

@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\CallContentPlace;
 use App\Enums\CallType;
+use App\Enums\SocialService;
 use App\Rules\ValidCallContentCombination;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -36,11 +37,20 @@ class StoreSiteSettingRequest extends FormRequest
             'call_contents' => ['nullable', 'array'],
             'call_contents.*.id' => ['nullable', 'integer', Rule::exists('call_contents', 'id')],
             'call_contents.*.call_name' => ['required', 'string', 'max:255'],
+            'call_contents.*.title' => ['nullable', 'string', 'max:255'],
+            'call_contents.*.subtitle' => ['nullable', 'string', 'max:255'],
             'call_contents.*.place' => ['required', new Enum(CallContentPlace::class)],
             'call_contents.*.call_type' => ['required', new Enum(CallType::class), new ValidCallContentCombination('call_type')],
             'call_contents.*.content_model_relation_id' => ['required', 'integer', Rule::exists('content_model_relations', 'id'), new ValidCallContentCombination('content_model_relation_id')],
             'call_contents.*.view_count' => ['required', 'integer', 'min:1', new ValidCallContentCombination('view_count')],
             'call_contents.*.sort_order' => ['nullable', 'integer', 'min:0'],
+
+            'social_links' => ['nullable', 'array'],
+            'social_links.*.id' => ['nullable', 'integer', Rule::exists('social_links', 'id')],
+            'social_links.*.service' => ['required', new Enum(SocialService::class)],
+            'social_links.*.name' => ['required', 'string', 'max:255'],
+            'social_links.*.url' => ['required', 'url:http,https', 'max:2048'],
+            'social_links.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

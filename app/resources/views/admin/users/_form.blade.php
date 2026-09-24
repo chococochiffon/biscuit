@@ -176,3 +176,54 @@
         @endforeach
     </select>
 </div>
+
+@php
+    $oldSkills = old('user_detail.skills');
+
+    $skillRows = $oldSkills !== null
+        ? collect($oldSkills)->values()->map(fn ($row, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $row['id'] ?? null,
+            'name' => $row['name'] ?? null,
+            'level' => $row['level'] ?? null,
+            'sortOrder' => $row['sort_order'] ?? $i,
+        ])
+        : (($user ?? null)?->detail?->skills ?? collect())->values()->map(fn ($skill, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $skill->id,
+            'name' => $skill->name,
+            'level' => $skill->level,
+            'sortOrder' => $skill->sort_order,
+        ]);
+@endphp
+
+<div class="mb-3" data-role="repeater">
+    <label class="form-label mb-0">{{ __('スキル') }}</label>
+    <div class="form-text mb-2">{{ __('公開側のプロフィール(スキルリスト)に、この順で習熟度のバーを並べます。') }}</div>
+
+    <div data-role="repeater-rows" data-next-index="{{ $skillRows->count() }}">
+        @foreach ($skillRows as $row)
+            @include('admin.users._skill_row', [
+                'index' => $row->index,
+                'id' => $row->id,
+                'name' => $row->name,
+                'level' => $row->level,
+                'sortOrder' => $row->sortOrder,
+            ])
+        @endforeach
+    </div>
+
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-role="repeater-add">
+        {{ __('+ 行を追加') }}
+    </button>
+
+    <template data-role="repeater-template">
+        @include('admin.users._skill_row', [
+            'index' => '__INDEX__',
+            'id' => null,
+            'name' => null,
+            'level' => null,
+            'sortOrder' => 0,
+        ])
+    </template>
+</div>

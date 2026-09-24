@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -53,6 +54,14 @@ class UserDetail extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * このユーザー詳細に紐づくスキルを並び順(sort_order、同順ならid)で取得する。
+     */
+    public function skills(): HasMany
+    {
+        return $this->hasMany(UserSkill::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /**

@@ -22,13 +22,13 @@ class UserDetailContentSource
     }
 
     /**
-     * スキルリスト表示用に、表示対象(view_flag=true)のユーザー詳細を指定件数取得する。
+     * スキルリスト表示用に、表示対象(view_flag=true)のユーザー詳細をスキル付きで指定件数取得する。
      *
      * @return Collection<int, UserDetail>
      */
     public function getSkillList(int $count): Collection
     {
-        return $this->viewableQuery()->take($count)->get();
+        return $this->viewableQuery()->with('skills')->take($count)->get();
     }
 
     /**

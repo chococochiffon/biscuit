@@ -41,6 +41,33 @@
             </dl>
         </div>
 
+        <h2 class="h6 mt-4 mb-3">{{ __('SNSリンク') }}</h2>
+
+        <div class="card" style="max-width: 40rem;">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>{{ __('サービス') }}</th>
+                        <th>{{ __('表示名') }}</th>
+                        <th>{{ __('URL') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($socialLinks as $socialLink)
+                        <tr>
+                            <td class="text-nowrap">{{ $socialLink->service->label() }}</td>
+                            <td>{{ $socialLink->name }}</td>
+                            <td class="text-break"><a href="{{ $socialLink->url }}" target="_blank" rel="noopener">{{ $socialLink->url }}</a></td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">{{ __('SNSリンクが登録されていません。') }}</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
         <h2 class="h6 mt-4 mb-3">{{ __('API設定') }}</h2>
 
         <div class="card">
@@ -48,6 +75,7 @@
                 <thead>
                     <tr>
                         <th>{{ __('呼び出し名') }}</th>
+                        <th>{{ __('見出し') }}</th>
                         <th>{{ __('表示箇所') }}</th>
                         <th>{{ __('呼び出し方') }}</th>
                         <th>{{ __('データ種別') }}</th>
@@ -58,6 +86,12 @@
                     @forelse ($callContents as $callContent)
                         <tr>
                             <td>{{ $callContent->call_name }}</td>
+                            <td>
+                                {{ $callContent->title }}
+                                @if ($callContent->subtitle)
+                                    <div class="small text-body-secondary">{{ $callContent->subtitle }}</div>
+                                @endif
+                            </td>
                             <td>{{ $callContent->place->label() }}</td>
                             <td>{{ $callContent->call_type->label() }}</td>
                             <td>{{ $callContent->contentModelRelation->content_type->label() }} / {{ $callContent->contentModelRelation->model_name }}</td>
@@ -65,7 +99,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
+                            <td colspan="6" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateSiteSettingRequest;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
+use App\Models\SocialLink;
 use App\Rules\AllowedTableName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -19,10 +20,11 @@ class SiteSettingController extends Controller
     public function create(): View
     {
         $callContents = collect();
+        $socialLinks = collect();
         $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
         $tableNames = AllowedTableName::availableTables();
 
-        return view('admin.site_settings.create', compact('callContents', 'contentModelRelations', 'tableNames'));
+        return view('admin.site_settings.create', compact('callContents', 'socialLinks', 'contentModelRelations', 'tableNames'));
     }
 
     /**
@@ -44,6 +46,7 @@ class SiteSettingController extends Controller
         }
 
         $this->syncCallContents($request->validated('call_contents', []));
+        $this->syncSocialLinks($request->validated('social_links', []));
 
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を登録しました。');
     }
@@ -54,8 +57,9 @@ class SiteSettingController extends Controller
     public function show(SiteSetting $siteSetting): View
     {
         $callContents = CallContent::query()->with('contentModelRelation')->orderBy('place')->orderBy('sort_order')->orderBy('id')->get();
+        $socialLinks = SocialLink::query()->ordered()->get();
 
-        return view('admin.site_settings.show', compact('siteSetting', 'callContents'));
+        return view('admin.site_settings.show', compact('siteSetting', 'callContents', 'socialLinks'));
     }
 
     /**
@@ -64,10 +68,11 @@ class SiteSettingController extends Controller
     public function edit(SiteSetting $siteSetting): View
     {
         $callContents = CallContent::query()->orderBy('sort_order')->orderBy('id')->get();
+        $socialLinks = SocialLink::query()->ordered()->get();
         $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
         $tableNames = AllowedTableName::availableTables();
 
-        return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'contentModelRelations', 'tableNames'));
+        return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'socialLinks', 'contentModelRelations', 'tableNames'));
     }
 
     /**
@@ -91,6 +96,7 @@ class SiteSettingController extends Controller
         $siteSetting->save();
 
         $this->syncCallContents($request->validated('call_contents', []));
+        $this->syncSocialLinks($request->validated('social_links', []));
 
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を更新しました。');
     }
@@ -100,7 +106,7 @@ class SiteSettingController extends Controller
      * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
      * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
      *
-     * @param  array<int, array{id?: int|string|null, call_type: int|string, call_name: string, content_model_relation_id: int|string, view_count: int|string, place: int|string, sort_order?: int|string|null}>  $rows
+     * @param  array<int, array{id?: int|string|null, call_type: int|string, call_name: string, title?: string|null, subtitle?: string|null, content_model_relation_id: int|string, view_count: int|string, place: int|string, sort_order?: int|string|null}>  $rows
      */
     private function syncCallContents(array $rows): void
     {
@@ -112,6 +118,8 @@ class SiteSettingController extends Controller
             $attributes = [
                 'call_type' => $row['call_type'],
                 'call_name' => $row['call_name'],
+                'title' => $row['title'] ?? null,
+                'subtitle' => $row['subtitle'] ?? null,
                 'content_model_relation_id' => $row['content_model_relation_id'],
                 'view_count' => $row['view_count'],
                 'place' => $row['place'],
@@ -122,6 +130,35 @@ class SiteSettingController extends Controller
                 CallContent::query()->whereKey($row['id'])->update($attributes);
             } else {
                 CallContent::create($attributes);
+            }
+        }
+    }
+
+    /**
+     * フォームから送信されたSNSリンク(social_links)の内容にデータベースを同期する。
+     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
+     * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
+     *
+     * @param  array<int, array{id?: int|string|null, service: int|string, name: string, url: string, sort_order?: int|string|null}>  $rows
+     */
+    private function syncSocialLinks(array $rows): void
+    {
+        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        SocialLink::query()->whereNotIn('id', $submittedIds)->delete();
+
+        foreach (array_values($rows) as $index => $row) {
+            $attributes = [
+                'service' => $row['service'],
+                'name' => $row['name'],
+                'url' => $row['url'],
+                'sort_order' => $row['sort_order'] ?? $index,
+            ];
+
+            if (! empty($row['id'])) {
+                SocialLink::query()->whereKey($row['id'])->update($attributes);
+            } else {
+                SocialLink::create($attributes);
             }
         }
     }

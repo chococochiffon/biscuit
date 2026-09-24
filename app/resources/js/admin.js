@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initTagManagerModal();
     initContentEditor();
     initCallContentRows();
+    initRepeaterRows();
     initContentModelRelationManagerModal();
     initSinglePageDetailRows();
     initSinglePageReorder();
@@ -485,6 +486,48 @@ function initCallContentRows() {
     });
 
     updateSortOrders();
+}
+
+/**
+ * 行の追加・削除・ドラッグでの並び替えだけを行う汎用の繰り返し入力(SNSリンク・スキルなど)を初期化する。
+ * data-role="repeater" の中に、行のコンテナ(repeater-rows、data-next-index に次の行番号)・
+ * 追加ボタン(repeater-add)・行のテンプレート(repeater-template、行番号は __INDEX__)を置く。
+ * 各行(repeater-row)にはドラッグハンドル(drag-handle)・並び順の隠しinput(sort-order)・削除ボタン(remove-row)を置く。
+ */
+function initRepeaterRows() {
+    document.querySelectorAll('[data-role="repeater"]').forEach((repeater) => {
+        const container = repeater.querySelector('[data-role="repeater-rows"]');
+        const addButton = repeater.querySelector('[data-role="repeater-add"]');
+        const template = repeater.querySelector('[data-role="repeater-template"]');
+
+        let nextIndex = Number(container.dataset.nextIndex || '0');
+        const { bindRow: bindSortableRow, updateSortOrders } = initSortableRows(container, '[data-role="repeater-row"]');
+
+        function bindRow(row) {
+            bindSortableRow(row);
+
+            row.querySelector('[data-role="remove-row"]').addEventListener('click', () => {
+                row.remove();
+                updateSortOrders();
+            });
+        }
+
+        container.querySelectorAll('[data-role="repeater-row"]').forEach(bindRow);
+
+        addButton.addEventListener('click', () => {
+            const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex));
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = html.trim();
+            const row = wrapper.firstElementChild;
+
+            container.appendChild(row);
+            bindRow(row);
+            nextIndex += 1;
+            updateSortOrders();
+        });
+
+        updateSortOrders();
+    });
 }
 
 /**

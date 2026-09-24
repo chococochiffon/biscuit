@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Enums\CallContentPlace;
 use App\Enums\CallContentType;
 use App\Enums\CallType;
+use App\Enums\SocialService;
 use App\Models\Administrator;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
+use App\Models\SocialLink;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -102,6 +104,118 @@ class SiteSettingControllerTest extends TestCase
 
         $this->assertSame(5, CallContent::where('call_name', '並び順指定')->value('sort_order'));
         $this->assertSame(1, CallContent::where('call_name', '並び順なし')->value('sort_order'));
+    }
+
+    public function test_store_saves_call_content_title_and_subtitle(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
+        $row = fn (string $callName, array $headings) => [
+            'call_type' => CallType::Link->value,
+            'call_name' => $callName,
+            'content_model_relation_id' => $relation->id,
+            'view_count' => 1,
+            'place' => CallContentPlace::Top->value,
+            ...$headings,
+        ];
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                $row('見出しあり', ['title' => 'About', 'subtitle' => 'このサイトについて']),
+                $row('見出しなし', ['title' => '', 'subtitle' => '']),
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('call_contents', ['call_name' => '見出しあり', 'title' => 'About', 'subtitle' => 'このサイトについて']);
+        $this->assertDatabaseHas('call_contents', ['call_name' => '見出しなし', 'title' => null, 'subtitle' => null]);
+    }
+
+    public function test_store_rejects_call_content_title_longer_than_255_characters(): void
+    {
+        $actor = Administrator::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [[
+                'call_type' => CallType::Link->value,
+                'call_name' => '長すぎる見出し',
+                'title' => str_repeat('あ', 256),
+                'content_model_relation_id' => $relation->id,
+                'view_count' => 1,
+                'place' => CallContentPlace::Top->value,
+            ]],
+        ]);
+
+        $response->assertSessionHasErrors('call_contents.0.title');
+        $this->assertDatabaseMissing('call_contents', ['call_name' => '長すぎる見出し']);
+    }
+
+    public function test_store_creates_social_links_in_row_order(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'social_links' => [
+                ['service' => SocialService::YouTube->value, 'name' => 'YouTube', 'url' => 'https://www.youtube.com/@example'],
+                ['service' => SocialService::X->value, 'name' => 'X', 'url' => 'https://x.com/example'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $links = SocialLink::query()->ordered()->get();
+        $this->assertSame([SocialService::YouTube, SocialService::X], $links->pluck('service')->all());
+        $this->assertSame([0, 1], $links->pluck('sort_order')->all());
+        $this->assertSame('https://x.com/example', $links[1]->url);
+    }
+
+    public function test_store_rejects_social_link_with_invalid_url_or_service(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'social_links' => [
+                ['service' => SocialService::GitHub->value, 'name' => 'GitHub', 'url' => 'javascript:alert(1)'],
+                ['service' => 999, 'name' => '不明', 'url' => 'https://example.com'],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['social_links.0.url', 'social_links.1.service']);
+        $this->assertDatabaseCount('social_links', 0);
+    }
+
+    public function test_update_syncs_social_links_creating_updating_and_deleting_rows(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $kept = SocialLink::factory()->create(['service' => SocialService::GitHub, 'name' => '旧GitHub', 'sort_order' => 0]);
+        $removed = SocialLink::factory()->create(['sort_order' => 1]);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'social_links' => [
+                ['service' => SocialService::Amazon->value, 'name' => 'ほしいものリスト', 'url' => 'https://www.amazon.jp/hz/wishlist/ls/example', 'sort_order' => 0],
+                ['id' => $kept->id, 'service' => SocialService::GitHub->value, 'name' => 'GitHub', 'url' => 'https://github.com/example', 'sort_order' => 1],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('GitHub', $kept->fresh()->name);
+        $this->assertSame(1, $kept->fresh()->sort_order);
+        $this->assertSoftDeleted($removed);
+        $this->assertDatabaseHas('social_links', ['name' => 'ほしいものリスト', 'service' => SocialService::Amazon->value, 'sort_order' => 0]);
+    }
+
+    public function test_show_displays_social_links(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        SocialLink::factory()->create(['name' => '表示確認用リンク']);
+
+        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting))
+            ->assertOk()
+            ->assertSee('表示確認用リンク');
     }
 
     public function test_store_creates_call_contents_together_with_site_setting(): void
@@ -340,6 +454,39 @@ class SiteSettingControllerTest extends TestCase
             'view_count' => 5,
             'place' => CallContentPlace::Others->value,
         ]);
+    }
+
+    public function test_update_changes_and_clears_call_content_title_and_subtitle(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
+        $callContent = CallContent::factory()->create([
+            'call_type' => CallType::Link,
+            'content_model_relation_id' => $relation->id,
+            'view_count' => 1,
+            'place' => CallContentPlace::Top,
+            'title' => '旧見出し',
+            'subtitle' => '旧小見出し',
+        ]);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'call_contents' => [[
+                'id' => $callContent->id,
+                'call_type' => CallType::Link->value,
+                'call_name' => $callContent->call_name,
+                'title' => '新見出し',
+                'subtitle' => '',
+                'content_model_relation_id' => $relation->id,
+                'view_count' => 1,
+                'place' => CallContentPlace::Top->value,
+            ]],
+        ])->assertSessionHasNoErrors();
+
+        $callContent->refresh();
+        $this->assertSame('新見出し', $callContent->title);
+        $this->assertNull($callContent->subtitle);
     }
 
     public function test_update_syncs_call_contents_creating_updating_and_deleting_rows(): void

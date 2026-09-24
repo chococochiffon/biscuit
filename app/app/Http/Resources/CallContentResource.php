@@ -31,7 +31,8 @@ class CallContentResource extends JsonResource
 
     /**
      * Transform the resource into an array.
-     * フロントエンドが表示方法を切り替えるための call_type(例: link_list)・call_name と、
+     * フロントエンドが表示方法を切り替えるための call_type(例: link_list)・call_name(管理用ラベル)、
+     * 公開側で表示する見出し title・小見出し subtitle(未設定は null)と、
      * table_name(例: articles/single_pages/user_details)をキーにした解決済みの実データを返す。
      *
      * @return array<string, mixed>
@@ -41,6 +42,8 @@ class CallContentResource extends JsonResource
         return [
             'call_type' => $this->call_type->apiName(),
             'call_name' => $this->call_name,
+            'title' => $this->title,
+            'subtitle' => $this->subtitle,
             $this->contentModelRelation->table_name => $this->resolveData(),
         ];
     }
