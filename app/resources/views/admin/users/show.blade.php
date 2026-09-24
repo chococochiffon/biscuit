@@ -47,7 +47,19 @@
                 <dd class="col-8">{{ $user->detail->view_flag ? __('表示') : __('非表示') }}</dd>
 
                 <dt class="col-4 text-muted fw-normal">{{ __('名前の表示設定') }}</dt>
-                <dd class="col-8 mb-0">{{ $user->detail->name_settings->label() }}</dd>
+                <dd class="col-8">{{ $user->detail->name_settings->label() }}</dd>
+
+                <dt class="col-4 text-muted fw-normal">{{ __('スキル') }}</dt>
+                <dd class="col-8 mb-0">
+                    @forelse ($user->detail->skills as $skill)
+                        <div class="small">{{ $skill->name }}</div>
+                        <div class="progress mb-2" role="progressbar" aria-label="{{ $skill->name }}" aria-valuenow="{{ $skill->level }}" aria-valuemin="0" aria-valuemax="{{ \App\Models\UserSkill::MAX_LEVEL }}" style="height: 6px;">
+                            <div class="progress-bar" style="width: {{ $skill->level }}%;"></div>
+                        </div>
+                    @empty
+                        <span class="text-muted">{{ __('未登録') }}</span>
+                    @endforelse
+                </dd>
             @endif
         </dl>
     </div>

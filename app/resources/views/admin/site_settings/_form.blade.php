@@ -74,6 +74,61 @@
 </div>
 
 @php
+    $oldSocialLinks = old('social_links');
+
+    $socialLinkRows = $oldSocialLinks !== null
+        ? collect($oldSocialLinks)->values()->map(fn ($row, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $row['id'] ?? null,
+            'service' => isset($row['service']) && $row['service'] !== '' ? (int) $row['service'] : null,
+            'name' => $row['name'] ?? null,
+            'url' => $row['url'] ?? null,
+            'sortOrder' => $row['sort_order'] ?? $i,
+        ])
+        : ($socialLinks ?? collect())->values()->map(fn ($socialLink, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $socialLink->id,
+            'service' => $socialLink->service->value,
+            'name' => $socialLink->name,
+            'url' => $socialLink->url,
+            'sortOrder' => $socialLink->sort_order,
+        ]);
+@endphp
+
+<div class="mb-3" data-role="repeater">
+    <label class="form-label mb-0">{{ __('SNSリンク') }}</label>
+    <div class="form-text mb-2">{{ __('公開側のフッターに、この順でアイコンを並べます。') }}</div>
+
+    <div data-role="repeater-rows" data-next-index="{{ $socialLinkRows->count() }}">
+        @foreach ($socialLinkRows as $row)
+            @include('admin.site_settings._social_link_row', [
+                'index' => $row->index,
+                'id' => $row->id,
+                'service' => $row->service,
+                'name' => $row->name,
+                'url' => $row->url,
+                'sortOrder' => $row->sortOrder,
+            ])
+        @endforeach
+    </div>
+
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-role="repeater-add">
+        {{ __('+ 行を追加') }}
+    </button>
+
+    <template data-role="repeater-template">
+        @include('admin.site_settings._social_link_row', [
+            'index' => '__INDEX__',
+            'id' => null,
+            'service' => null,
+            'name' => null,
+            'url' => null,
+            'sortOrder' => 0,
+        ])
+    </template>
+</div>
+
+@php
     $oldCallContents = old('call_contents');
 
     $callContentRows = $oldCallContents !== null

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
+use App\Models\UserDetail;
+use App\Models\UserSkill;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
@@ -48,6 +50,8 @@ class UserController extends Controller
             $detail->update(['user_image' => $detail->storeUserImage($request->file('user_detail.user_image'))]);
         }
 
+        $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+
         return redirect()->route('admin.users.index')->with('status', 'ユーザーを登録しました。');
     }
 
@@ -56,7 +60,7 @@ class UserController extends Controller
      */
     public function show(User $user): View
     {
-        $user->load('detail');
+        $user->load('detail.skills');
 
         return view('admin.users.show', compact('user'));
     }
@@ -66,7 +70,7 @@ class UserController extends Controller
      */
     public function edit(User $user): View
     {
-        $user->load('detail');
+        $user->load('detail.skills');
 
         return view('admin.users.edit', compact('user'));
     }
@@ -92,6 +96,8 @@ class UserController extends Controller
         if ($request->hasFile('user_detail.user_image')) {
             $detail->update(['user_image' => $detail->storeUserImage($request->file('user_detail.user_image'))]);
         }
+
+        $this->syncSkills($detail, $request->validated('user_detail.skills', []));
 
         return redirect()->route('admin.users.index')->with('status', 'ユーザーを更新しました。');
     }
@@ -122,5 +128,33 @@ class UserController extends Controller
             'view_flag' => $request->boolean('user_detail.view_flag'),
             'name_settings' => $request->validated('user_detail.name_settings'),
         ];
+    }
+
+    /**
+     * フォームから送信されたスキル(user_detail.skills)の内容に、ユーザー詳細のスキルを同期する。
+     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
+     * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
+     *
+     * @param  array<int, array{id?: int|string|null, name: string, level: int|string, sort_order?: int|string|null}>  $rows
+     */
+    private function syncSkills(UserDetail $detail, array $rows): void
+    {
+        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+
+        UserSkill::query()->where('user_detail_id', $detail->id)->whereNotIn('id', $submittedIds)->delete();
+
+        foreach (array_values($rows) as $index => $row) {
+            $attributes = [
+                'name' => $row['name'],
+                'level' => $row['level'],
+                'sort_order' => $row['sort_order'] ?? $index,
+            ];
+
+            if (! empty($row['id'])) {
+                UserSkill::query()->where('user_detail_id', $detail->id)->whereKey($row['id'])->update($attributes);
+            } else {
+                $detail->skills()->create($attributes);
+            }
+        }
     }
 }

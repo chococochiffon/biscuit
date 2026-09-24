@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\UserDetailNameSetting;
+use App\Models\UserSkill;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -40,6 +41,10 @@ class StoreUserRequest extends FormRequest
             'user_detail.comment' => ['nullable', 'string'],
             'user_detail.view_flag' => ['nullable', 'boolean'],
             'user_detail.name_settings' => ['required', new Enum(UserDetailNameSetting::class)],
+            'user_detail.skills' => ['nullable', 'array'],
+            'user_detail.skills.*.name' => ['required', 'string', 'max:255'],
+            'user_detail.skills.*.level' => ['required', 'integer', 'min:0', 'max:'.UserSkill::MAX_LEVEL],
+            'user_detail.skills.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

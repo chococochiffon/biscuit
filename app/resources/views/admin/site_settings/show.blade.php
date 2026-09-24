@@ -41,6 +41,33 @@
             </dl>
         </div>
 
+        <h2 class="h6 mt-4 mb-3">{{ __('SNSリンク') }}</h2>
+
+        <div class="card" style="max-width: 40rem;">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>{{ __('サービス') }}</th>
+                        <th>{{ __('表示名') }}</th>
+                        <th>{{ __('URL') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($socialLinks as $socialLink)
+                        <tr>
+                            <td class="text-nowrap">{{ $socialLink->service->label() }}</td>
+                            <td>{{ $socialLink->name }}</td>
+                            <td class="text-break"><a href="{{ $socialLink->url }}" target="_blank" rel="noopener">{{ $socialLink->url }}</a></td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">{{ __('SNSリンクが登録されていません。') }}</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+
         <h2 class="h6 mt-4 mb-3">{{ __('API設定') }}</h2>
 
         <div class="card">

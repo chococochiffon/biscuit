@@ -6,6 +6,7 @@ use App\Enums\UserDetailNameSetting;
 use App\Models\Administrator;
 use App\Models\User;
 use App\Models\UserDetail;
+use App\Models\UserSkill;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
@@ -84,6 +85,102 @@ class UserControllerTest extends TestCase
         $this->assertSame('1990-01-01', $detail->birthday->format('Y-m-d'));
         $this->assertTrue($detail->view_flag);
         $this->assertSame(UserDetailNameSetting::FullName, $detail->name_settings);
+    }
+
+    public function test_store_creates_skills_in_row_order(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+            'name' => '検証太郎',
+            'email' => 'skill-user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'user_detail' => $this->validUserDetailPayload([
+                'skills' => [
+                    ['name' => 'Frontend', 'level' => 74],
+                    ['name' => 'Backend API', 'level' => 98],
+                ],
+            ]),
+        ])->assertSessionHasNoErrors();
+
+        $skills = User::where('email', 'skill-user@example.com')->firstOrFail()->detail->skills;
+        $this->assertSame(['Frontend', 'Backend API'], $skills->pluck('name')->all());
+        $this->assertSame([74, 98], $skills->pluck('level')->all());
+        $this->assertSame([0, 1], $skills->pluck('sort_order')->all());
+    }
+
+    public function test_store_rejects_skill_level_out_of_range(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+            'name' => '検証太郎',
+            'email' => 'skill-user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'user_detail' => $this->validUserDetailPayload([
+                'skills' => [['name' => '上限超え', 'level' => 101]],
+            ]),
+        ]);
+
+        $response->assertSessionHasErrors('user_detail.skills.0.level');
+        $this->assertDatabaseCount('user_skills', 0);
+    }
+
+    public function test_update_syncs_skills_creating_updating_and_deleting_rows(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
+        $kept = UserSkill::factory()->for($target->detail)->create(['name' => '旧スキル', 'level' => 10, 'sort_order' => 0]);
+        $removed = UserSkill::factory()->for($target->detail)->create(['sort_order' => 1]);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'user_detail' => $this->validUserDetailPayload([
+                'skills' => [
+                    ['name' => '新スキル', 'level' => 50, 'sort_order' => 0],
+                    ['id' => $kept->id, 'name' => '更新スキル', 'level' => 80, 'sort_order' => 1],
+                ],
+            ]),
+        ])->assertSessionHasNoErrors();
+
+        $kept->refresh();
+        $this->assertSame('更新スキル', $kept->name);
+        $this->assertSame(80, $kept->level);
+        $this->assertSame(1, $kept->sort_order);
+        $this->assertSoftDeleted($removed);
+        $this->assertDatabaseHas('user_skills', ['user_detail_id' => $target->detail->id, 'name' => '新スキル', 'sort_order' => 0]);
+    }
+
+    public function test_update_rejects_skill_belonging_to_another_user(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
+        $othersSkill = UserSkill::factory()->create(['name' => '他人のスキル']);
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'user_detail' => $this->validUserDetailPayload([
+                'skills' => [['id' => $othersSkill->id, 'name' => '書き換え', 'level' => 1]],
+            ]),
+        ]);
+
+        $response->assertSessionHasErrors('user_detail.skills.0.id');
+        $this->assertSame('他人のスキル', $othersSkill->fresh()->name);
+    }
+
+    public function test_show_displays_skills(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
+        UserSkill::factory()->for($target->detail)->create(['name' => '表示確認用スキル']);
+
+        $this->actingAs($actor, 'admin')->get(route('admin.users.show', $target))
+            ->assertOk()
+            ->assertSee('表示確認用スキル');
     }
 
     public function test_store_uploads_user_image_with_expected_filename(): void

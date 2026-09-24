@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use App\Enums\CallContentPlace;
 use App\Enums\CallContentType;
 use App\Enums\CallType;
+use App\Enums\SocialService;
 use App\Models\Administrator;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
+use App\Models\SocialLink;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -148,6 +150,72 @@ class SiteSettingControllerTest extends TestCase
 
         $response->assertSessionHasErrors('call_contents.0.title');
         $this->assertDatabaseMissing('call_contents', ['call_name' => '長すぎる見出し']);
+    }
+
+    public function test_store_creates_social_links_in_row_order(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'social_links' => [
+                ['service' => SocialService::YouTube->value, 'name' => 'YouTube', 'url' => 'https://www.youtube.com/@example'],
+                ['service' => SocialService::X->value, 'name' => 'X', 'url' => 'https://x.com/example'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $links = SocialLink::query()->ordered()->get();
+        $this->assertSame([SocialService::YouTube, SocialService::X], $links->pluck('service')->all());
+        $this->assertSame([0, 1], $links->pluck('sort_order')->all());
+        $this->assertSame('https://x.com/example', $links[1]->url);
+    }
+
+    public function test_store_rejects_social_link_with_invalid_url_or_service(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'social_links' => [
+                ['service' => SocialService::GitHub->value, 'name' => 'GitHub', 'url' => 'javascript:alert(1)'],
+                ['service' => 999, 'name' => '不明', 'url' => 'https://example.com'],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['social_links.0.url', 'social_links.1.service']);
+        $this->assertDatabaseCount('social_links', 0);
+    }
+
+    public function test_update_syncs_social_links_creating_updating_and_deleting_rows(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $kept = SocialLink::factory()->create(['service' => SocialService::GitHub, 'name' => '旧GitHub', 'sort_order' => 0]);
+        $removed = SocialLink::factory()->create(['sort_order' => 1]);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'social_links' => [
+                ['service' => SocialService::Amazon->value, 'name' => 'ほしいものリスト', 'url' => 'https://www.amazon.jp/hz/wishlist/ls/example', 'sort_order' => 0],
+                ['id' => $kept->id, 'service' => SocialService::GitHub->value, 'name' => 'GitHub', 'url' => 'https://github.com/example', 'sort_order' => 1],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('GitHub', $kept->fresh()->name);
+        $this->assertSame(1, $kept->fresh()->sort_order);
+        $this->assertSoftDeleted($removed);
+        $this->assertDatabaseHas('social_links', ['name' => 'ほしいものリスト', 'service' => SocialService::Amazon->value, 'sort_order' => 0]);
+    }
+
+    public function test_show_displays_social_links(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        SocialLink::factory()->create(['name' => '表示確認用リンク']);
+
+        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting))
+            ->assertOk()
+            ->assertSee('表示確認用リンク');
     }
 
     public function test_store_creates_call_contents_together_with_site_setting(): void

@@ -23,6 +23,7 @@ class UserDetailResource extends JsonResource
             'user_image_url' => $this->user_image ? Storage::disk('public')->url($this->user_image) : null,
             'comment' => $this->comment,
             'name_settings' => $this->name_settings->value,
+            'skills' => UserSkillResource::collection($this->whenLoaded('skills')),
         ];
     }
 }

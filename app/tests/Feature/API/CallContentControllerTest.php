@@ -10,6 +10,7 @@ use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SinglePage;
 use App\Models\UserDetail;
+use App\Models\UserSkill;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -228,6 +229,43 @@ class CallContentControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(1, 'data.0.user_details');
         $response->assertJsonPath('data.0.user_details.0.id', $visible->id);
+    }
+
+    public function test_index_includes_skills_in_sort_order_for_skill_list(): void
+    {
+        $userDetail = UserDetail::factory()->create(['view_flag' => true]);
+        UserSkill::factory()->for($userDetail)->create(['name' => 'Backend API', 'level' => 98, 'sort_order' => 1]);
+        UserSkill::factory()->for($userDetail)->create(['name' => 'Frontend', 'level' => 74, 'sort_order' => 0]);
+        UserSkill::factory()->for($userDetail)->create(['name' => '削除済み', 'sort_order' => 2])->delete();
+        CallContent::factory()->create([
+            'call_type' => CallType::SkillList,
+            'place' => CallContentPlace::Top,
+            'content_model_relation_id' => $this->relation('UserDetail')->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data.0.user_details.0.skills');
+        $response->assertJsonPath('data.0.user_details.0.skills.0.name', 'Frontend');
+        $response->assertJsonPath('data.0.user_details.0.skills.0.level', 74);
+        $response->assertJsonPath('data.0.user_details.0.skills.1.name', 'Backend API');
+    }
+
+    public function test_index_does_not_include_skills_for_user_detail_link_list(): void
+    {
+        $userDetail = UserDetail::factory()->create(['view_flag' => true]);
+        UserSkill::factory()->for($userDetail)->create();
+        CallContent::factory()->create([
+            'call_type' => CallType::LinkList,
+            'place' => CallContentPlace::Top,
+            'content_model_relation_id' => $this->relation('UserDetail')->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $response->assertJsonMissingPath('data.0.user_details.0.skills');
     }
 
     public function test_index_fails_when_the_stored_combination_has_no_defined_rule(): void
