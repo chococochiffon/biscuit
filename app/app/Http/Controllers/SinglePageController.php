@@ -75,8 +75,8 @@ class SinglePageController extends Controller
         $singlePage = SinglePage::create([
             'title' => $request->validated('title'),
             'short_sentences' => $request->validated('short_sentences'),
-            'taxonomy' => $request->validated('taxonomy'),
-            'uri' => $request->validated('uri'),
+            'parent_path' => $request->validated('parent_path'),
+            'slug' => $request->validated('slug'),
             'top_page_view' => $request->boolean('top_page_view'),
             'link_list_view' => $request->boolean('link_list_view'),
             'sort_order' => (SinglePage::max('sort_order') ?? -1) + 1,
@@ -111,8 +111,8 @@ class SinglePageController extends Controller
         $singlePage->fill([
             'title' => $request->validated('title'),
             'short_sentences' => $request->validated('short_sentences'),
-            'taxonomy' => $request->validated('taxonomy'),
-            'uri' => $request->validated('uri'),
+            'parent_path' => $request->validated('parent_path'),
+            'slug' => $request->validated('slug'),
             'top_page_view' => $request->boolean('top_page_view'),
             'link_list_view' => $request->boolean('link_list_view'),
             'publication_start_datetime' => $request->validated('publication_start_datetime'),

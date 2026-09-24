@@ -21,8 +21,8 @@ class SinglePageFactory extends Factory
             'title' => fake()->sentence(),
             'short_sentences' => fake()->sentence(),
             'header_image' => null,
-            'taxonomy' => fake()->word(),
-            'uri' => fake()->slug(),
+            'parent_path' => null,
+            'slug' => fake()->unique()->slug(),
             'top_page_view' => fake()->boolean(),
             'link_list_view' => fake()->boolean(),
         ];

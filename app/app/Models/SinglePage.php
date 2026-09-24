@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
 use Database\Factories\SinglePageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,11 +14,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'short_sentences', 'header_image', 'taxonomy', 'uri', 'top_page_view', 'link_list_view', 'sort_order', 'publication_start_datetime', 'publication_end_datetime'])]
+#[Fillable(['title', 'short_sentences', 'header_image', 'parent_path', 'slug', 'top_page_view', 'link_list_view', 'sort_order', 'publication_start_datetime', 'publication_end_datetime'])]
+#[Hidden(['unique_path'])]
 class SinglePage extends Model
 {
     /** @use HasFactory<SinglePageFactory> */
-    use HasFactory, HasPublicationPeriod, SoftDeletes;
+    use HasFactory, HasPath, HasPublicationPeriod, SoftDeletes;
 
     /**
      * ヘッダー画像の保存先ディレクトリ(公開ディスク基準)。

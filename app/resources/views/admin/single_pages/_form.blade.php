@@ -118,27 +118,11 @@
 
     <div class="col-lg-4">
         <div class="card mb-3">
-            <div class="mb-3">
-                <label for="taxonomy" class="form-label">{{ __('タクソノミー') }}</label>
-                <input
-                    id="taxonomy"
-                    type="text"
-                    name="taxonomy"
-                    value="{{ old('taxonomy', $singlePage->taxonomy ?? '') }}"
-                    class="form-control"
-                >
-            </div>
-
-            <div class="mb-3">
-                <label for="uri" class="form-label">{{ __('URI') }}</label>
-                <input
-                    id="uri"
-                    type="text"
-                    name="uri"
-                    value="{{ old('uri', $singlePage->uri ?? '') }}"
-                    class="form-control"
-                >
-            </div>
+            @include('admin.partials._path_fields', [
+                'parentPath' => $singlePage->parent_path ?? null,
+                'slug' => $singlePage->slug ?? null,
+                'slugRequired' => true,
+            ])
 
             @php
                 $topPageView = (int) old('top_page_view', (int) ($singlePage->top_page_view ?? false));

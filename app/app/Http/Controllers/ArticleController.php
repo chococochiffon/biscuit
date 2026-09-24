@@ -66,7 +66,10 @@ class ArticleController extends Controller
      */
     public function create(): View
     {
-        return view('admin.articles.create');
+        // 親パスは直近に登録した記事と同じものを初期値にする(記事は同じ階層にまとめて置くことが多いため)
+        $defaultParentPath = Article::query()->latest('id')->value('parent_path');
+
+        return view('admin.articles.create', compact('defaultParentPath'));
     }
 
     /**
@@ -78,6 +81,8 @@ class ArticleController extends Controller
             'title' => $request->validated('title'),
             'content' => $request->validated('content'),
             'thumbnail' => Article::DEFAULT_THUMBNAIL_PATH,
+            'parent_path' => $request->validated('parent_path'),
+            'slug' => $request->validated('slug'),
             'user_id' => null,
             'approval' => ArticleApprovalStatus::Published,
             'publication_start_datetime' => $request->validated('publication_start_datetime'),
@@ -111,6 +116,8 @@ class ArticleController extends Controller
         $article->fill([
             'title' => $request->validated('title'),
             'content' => $request->validated('content'),
+            'parent_path' => $request->validated('parent_path'),
+            'slug' => $request->validated('slug'),
             'approval' => $request->validated('approval'),
             'publication_start_datetime' => $request->validated('publication_start_datetime'),
             'publication_end_datetime' => $request->validated('publication_end_datetime'),

@@ -3,9 +3,11 @@
 namespace App\Models;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
 use Database\Factories\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,11 +16,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['title', 'content', 'thumbnail', 'user_id', 'approval', 'publication_start_datetime', 'publication_end_datetime'])]
+#[Fillable(['title', 'content', 'thumbnail', 'parent_path', 'slug', 'user_id', 'approval', 'publication_start_datetime', 'publication_end_datetime'])]
+#[Hidden(['unique_path'])]
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
-    use HasFactory, HasPublicationPeriod, SoftDeletes;
+    use HasFactory, HasPath, HasPublicationPeriod, SoftDeletes;
 
     /**
      * サムネイル未指定の場合に使用するデフォルト画像の(publicディスク基準の)パス。
