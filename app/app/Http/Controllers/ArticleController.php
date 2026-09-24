@@ -56,7 +56,7 @@ class ArticleController extends Controller
             ->paginate(20)
             ->withQueryString();
 
-        return view('admin.articles.index', compact('articles', 'filters', 'sort', 'sortOptions'));
+        return view('admin.articles.index', compact('articles', 'filters', 'sort'));
     }
 
     /**
@@ -217,23 +217,23 @@ class ArticleController extends Controller
     }
 
     /**
-     * 一覧で選択可能な並び順(キー → 表示名・並び替えるカラム・方向)。
+     * 一覧で選択可能な並び順(キー → 並び替えるカラム・方向)。一覧の見出しクリックで「項目_asc/desc」のキーが送られる。
      *
-     * @return array<string, array{label: string, column: string, direction: string}>
+     * @return array<string, array{column: string, direction: string}>
      */
     private function sortOptions(): array
     {
         return [
-            'updated_at_desc' => ['label' => __('更新日時の新しい順'), 'column' => 'updated_at', 'direction' => 'desc'],
-            'updated_at_asc' => ['label' => __('更新日時の古い順'), 'column' => 'updated_at', 'direction' => 'asc'],
-            'title_asc' => ['label' => __('タイトルの昇順'), 'column' => 'title', 'direction' => 'asc'],
-            'title_desc' => ['label' => __('タイトルの降順'), 'column' => 'title', 'direction' => 'desc'],
-            'publication_start_desc' => ['label' => __('公開開始の新しい順'), 'column' => 'publication_start_datetime', 'direction' => 'desc'],
-            'publication_start_asc' => ['label' => __('公開開始の古い順'), 'column' => 'publication_start_datetime', 'direction' => 'asc'],
-            'publication_end_desc' => ['label' => __('公開終了の新しい順'), 'column' => 'publication_end_datetime', 'direction' => 'desc'],
-            'publication_end_asc' => ['label' => __('公開終了の古い順'), 'column' => 'publication_end_datetime', 'direction' => 'asc'],
-            'approval_asc' => ['label' => __('ステータス順(下書き→公開)'), 'column' => 'approval', 'direction' => 'asc'],
-            'approval_desc' => ['label' => __('ステータス順(公開→下書き)'), 'column' => 'approval', 'direction' => 'desc'],
+            'updated_at_desc' => ['column' => 'updated_at', 'direction' => 'desc'],
+            'updated_at_asc' => ['column' => 'updated_at', 'direction' => 'asc'],
+            'title_asc' => ['column' => 'title', 'direction' => 'asc'],
+            'title_desc' => ['column' => 'title', 'direction' => 'desc'],
+            'publication_start_desc' => ['column' => 'publication_start_datetime', 'direction' => 'desc'],
+            'publication_start_asc' => ['column' => 'publication_start_datetime', 'direction' => 'asc'],
+            'publication_end_desc' => ['column' => 'publication_end_datetime', 'direction' => 'desc'],
+            'publication_end_asc' => ['column' => 'publication_end_datetime', 'direction' => 'asc'],
+            'approval_asc' => ['column' => 'approval', 'direction' => 'asc'],
+            'approval_desc' => ['column' => 'approval', 'direction' => 'desc'],
         ];
     }
 }

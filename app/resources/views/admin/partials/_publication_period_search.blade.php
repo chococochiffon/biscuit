@@ -7,7 +7,7 @@
 @endphp
 
 @foreach (['publication_start' => __('公開開始'), 'publication_end' => __('公開終了')] as $prefix => $label)
-    <div class="col-md-auto">
+    <div>
         <label for="search-{{ $prefix }}-from" class="form-label small">{{ $label }}</label>
         <div class="d-flex align-items-center gap-1">
             <input
@@ -16,7 +16,7 @@
                 name="{{ $prefix }}_from"
                 value="{{ $filters[$prefix.'_from'] ?? '' }}"
                 class="form-control form-control-sm"
-                style="width: 8.5rem;"
+                style="width: 7.5rem;"
                 data-role="date-picker"
                 autocomplete="off"
                 aria-label="{{ $label }}({{ __('から') }})"
@@ -28,7 +28,7 @@
                 name="{{ $prefix }}_to"
                 value="{{ $filters[$prefix.'_to'] ?? '' }}"
                 class="form-control form-control-sm"
-                style="width: 8.5rem;"
+                style="width: 7.5rem;"
                 data-role="date-picker"
                 autocomplete="off"
                 aria-label="{{ $label }}({{ __('まで') }})"

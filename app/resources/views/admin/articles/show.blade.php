@@ -3,12 +3,12 @@
 @section('title', __('記事詳細'))
 
 @section('content')
-    <div class="mb-4 d-flex align-items-center justify-content-between">
+    <div class="mb-4 d-flex align-items-center justify-content-between mx-auto" style="max-width: 48rem;">
         <h1 class="h5 mb-0">{{ __('記事詳細') }}</h1>
         <a href="{{ route('admin.articles.edit', $article) }}" class="link-primary">{{ __('編集する') }}</a>
     </div>
 
-    <div class="card" style="max-width: 48rem;">
+    <div class="card mx-auto" style="max-width: 48rem;">
         <div class="p-3">
             <img
                 src="{{ $article->thumbnail_url }}"

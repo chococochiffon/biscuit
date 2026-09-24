@@ -3,12 +3,12 @@
 @section('title', __('データ種別紐付け詳細'))
 
 @section('content')
-    <div class="mb-4 d-flex align-items-center justify-content-between">
+    <div class="mb-4 d-flex align-items-center justify-content-between mx-auto" style="max-width: 32rem;">
         <h1 class="h5 mb-0">{{ __('データ種別紐付け詳細') }}</h1>
         <a href="{{ route('admin.content-model-relations.edit', $contentModelRelation) }}" class="link-primary">{{ __('編集する') }}</a>
     </div>
 
-    <div class="card" style="max-width: 32rem;">
+    <div class="card mx-auto" style="max-width: 32rem;">
         <dl class="row mb-0 p-3">
             <dt class="col-4 text-muted fw-normal">{{ __('コンテンツ種別') }}</dt>
             <dd class="col-8">{{ $contentModelRelation->content_type->label() }}</dd>

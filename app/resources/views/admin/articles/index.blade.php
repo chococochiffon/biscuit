@@ -13,13 +13,17 @@
 
     <form method="GET" action="{{ route('admin.articles.index') }}" class="card mb-3">
         <div class="card-body">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
+            <input type="hidden" name="sort" value="{{ $sort }}">
+
+            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end">
+                <div style="width: 14rem;">
                     <label for="search-title" class="form-label small">{{ __('タイトル') }}</label>
                     <input id="search-title" type="text" name="title" value="{{ $filters['title'] ?? '' }}" class="form-control form-control-sm">
                 </div>
 
-                <div class="col-md-auto">
+                @include('admin.partials._publication_period_search', ['filters' => $filters])
+
+                <div>
                     <label for="search-approval" class="form-label small">{{ __('ステータス') }}</label>
                     <select id="search-approval" name="approval" class="form-select form-select-sm form-select-auto">
                         <option value="">{{ __('すべて') }}</option>
@@ -29,22 +33,9 @@
                     </select>
                 </div>
 
-                <div class="col-md-auto">
-                    <label for="search-sort" class="form-label small">{{ __('並び順') }}</label>
-                    <select id="search-sort" name="sort" class="form-select form-select-sm form-select-auto" data-role="auto-submit">
-                        @foreach ($sortOptions as $key => $option)
-                            <option value="{{ $key }}" @selected($sort === $key)>{{ $option['label'] }}</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            <div class="row g-3 align-items-end mt-0">
-                @include('admin.partials._publication_period_search', ['filters' => $filters])
-
-                <div class="col-md-auto d-flex gap-2">
+                <div class="d-flex gap-2 text-nowrap">
                     <button type="submit" class="btn btn-sm btn-primary">{{ __('検索') }}</button>
-                    <a href="{{ route('admin.articles.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
+                    <a href="{{ route('admin.articles.index', ['sort' => $sort]) }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
                 </div>
             </div>
         </div>
@@ -77,12 +68,12 @@
                         <input type="checkbox" class="form-check-input" data-role="select-all-articles" aria-label="{{ __('すべて選択') }}">
                     </th>
                     <th>{{ __('サムネイル') }}</th>
-                    <th>{{ __('タイトル') }}</th>
-                    <th>{{ __('公開開始') }}</th>
-                    <th>{{ __('公開終了') }}</th>
-                    <th>{{ __('ステータス') }}</th>
+                    @include('admin.partials._sortable_th', ['label' => __('タイトル'), 'field' => 'title', 'defaultDirection' => 'asc'])
+                    @include('admin.partials._sortable_th', ['label' => __('公開開始'), 'field' => 'publication_start', 'defaultDirection' => 'desc'])
+                    @include('admin.partials._sortable_th', ['label' => __('公開終了'), 'field' => 'publication_end', 'defaultDirection' => 'desc'])
+                    @include('admin.partials._sortable_th', ['label' => __('ステータス'), 'field' => 'approval', 'defaultDirection' => 'asc'])
                     <th>{{ __('投稿者') }}</th>
-                    <th>{{ __('更新日時') }}</th>
+                    @include('admin.partials._sortable_th', ['label' => __('更新日時'), 'field' => 'updated_at', 'defaultDirection' => 'desc'])
                     <th></th>
                 </tr>
             </thead>

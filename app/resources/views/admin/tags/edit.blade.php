@@ -3,9 +3,9 @@
 @section('title', __('タグの編集'))
 
 @section('content')
-    <h1 class="h5 mb-4">{{ __('タグの編集') }}</h1>
+    <h1 class="h5 mb-4 mx-auto" style="max-width: 28rem;">{{ __('タグの編集') }}</h1>
 
-    <form method="POST" action="{{ route('admin.tags.update', $tag) }}" style="max-width: 28rem;">
+    <form method="POST" action="{{ route('admin.tags.update', $tag) }}" class="mx-auto" style="max-width: 28rem;">
         @csrf
         @method('PUT')
 

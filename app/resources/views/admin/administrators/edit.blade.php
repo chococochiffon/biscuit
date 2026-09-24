@@ -3,9 +3,9 @@
 @section('title', __('管理者の編集'))
 
 @section('content')
-    <h1 class="h5 mb-4">{{ __('管理者の編集') }}</h1>
+    <h1 class="h5 mb-4 mx-auto" style="max-width: 28rem;">{{ __('管理者の編集') }}</h1>
 
-    <form method="POST" action="{{ route('admin.update', $administrator) }}" style="max-width: 28rem;">
+    <form method="POST" action="{{ route('admin.update', $administrator) }}" class="mx-auto" style="max-width: 28rem;">
         @csrf
         @method('PUT')
 
