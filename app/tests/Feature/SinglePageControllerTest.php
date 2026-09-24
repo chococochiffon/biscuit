@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Administrator;
+use App\Models\Article;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class SinglePageControllerTest extends TestCase
@@ -105,6 +107,16 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
 
         $response->assertSee('id="single-page-search-body" class="collapse"', false);
+    }
+
+    public function test_index_displays_path(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+
+        $response->assertSee('/company/about');
     }
 
     public function test_index_displays_search_fields_in_expected_order(): void
@@ -255,7 +267,7 @@ class SinglePageControllerTest extends TestCase
 
         $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
 
-        $response->assertSeeInOrder(['id="title"', 'id="short_sentences"', 'id="single-page-detail-rows"', 'id="taxonomy"'], false);
+        $response->assertSeeInOrder(['id="title"', 'id="short_sentences"', 'id="single-page-detail-rows"', 'id="parent_path"'], false);
     }
 
     public function test_store_creates_single_page_with_details(): void
@@ -265,8 +277,8 @@ class SinglePageControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
             'title' => '会社概要',
             'short_sentences' => '会社の概要ページです',
-            'taxonomy' => 'company',
-            'uri' => 'about',
+            'parent_path' => 'company',
+            'slug' => 'about',
             'publication_start_datetime' => now()->format('Y-m-d H:i'),
             'details' => [
                 ['sub_title' => '沿革', 'contents' => '<p>沿革本文</p>', 'sort_order' => 0],
@@ -277,11 +289,94 @@ class SinglePageControllerTest extends TestCase
         $response->assertRedirect(route('admin.single-pages.index'));
 
         $singlePage = SinglePage::where('title', '会社概要')->firstOrFail();
-        $this->assertSame('company', $singlePage->taxonomy);
-        $this->assertSame('about', $singlePage->uri);
+        $this->assertSame('company', $singlePage->parent_path);
+        $this->assertSame('about', $singlePage->slug);
+        $this->assertSame('/company/about', $singlePage->path);
         $this->assertCount(2, $singlePage->details);
         $this->assertSame('沿革', $singlePage->details->first()->sub_title);
         $this->assertSame(0, $singlePage->details->first()->sort_order);
+    }
+
+    public function test_store_places_page_at_site_root_and_normalizes_parent_path(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['slug' => 'about']))
+            ->assertRedirect(route('admin.single-pages.index'));
+        $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => '/company/info/', 'slug' => 'history']))
+            ->assertRedirect(route('admin.single-pages.index'));
+
+        $this->assertSame('/about', SinglePage::where('slug', 'about')->value('path'));
+        $history = SinglePage::where('slug', 'history')->firstOrFail();
+        $this->assertSame('company/info', $history->parent_path);
+        $this->assertSame('/company/info/history', $history->path);
+    }
+
+    /**
+     * @return array<string, array{array<string, string>, string}>
+     */
+    public static function invalidPathProvider(): array
+    {
+        return [
+            'スラッグに大文字' => [['slug' => 'About'], 'slug'],
+            'スラッグに日本語' => [['slug' => '会社概要'], 'slug'],
+            'スラッグに階層' => [['slug' => 'company/about'], 'slug'],
+            'スラッグが数字だけ' => [['slug' => '123'], 'slug'],
+            '親パスに空白' => [['parent_path' => 'our company', 'slug' => 'about'], 'parent_path'],
+            '親パスの階層が空' => [['parent_path' => 'company//info', 'slug' => 'about'], 'parent_path'],
+        ];
+    }
+
+    #[DataProvider('invalidPathProvider')]
+    public function test_store_rejects_invalid_path_format(array $input, string $errorField): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload($input));
+
+        $response->assertSessionHasErrors($errorField);
+    }
+
+    public function test_store_rejects_path_used_by_another_active_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
+
+        $response->assertSessionHasErrors('slug');
+    }
+
+    public function test_store_allows_path_used_by_soft_deleted_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about'])->delete();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame(1, SinglePage::where('path', '/company/about')->count());
+    }
+
+    public function test_update_allows_keeping_its_own_path(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
+
+        $response->assertSessionHasNoErrors();
+        $this->assertSame('/company/about', $target->fresh()->path);
+    }
+
+    public function test_store_rejects_path_used_by_article(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create(['parent_path' => 'news', 'slug' => 'topics']);
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'news', 'slug' => 'topics']));
+
+        $response->assertSessionHasErrors('slug');
     }
 
     public function test_store_uploads_header_image_with_expected_filename(): void
@@ -292,6 +387,7 @@ class SinglePageControllerTest extends TestCase
         $file = UploadedFile::fake()->image('header.jpg');
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'slug' => 'page-1',
             'title' => 'ヘッダー画像記事',
             'short_sentences' => '概要',
             'header_image' => $file,
@@ -312,6 +408,7 @@ class SinglePageControllerTest extends TestCase
         SinglePage::factory()->create(['sort_order' => 3]);
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'slug' => 'page-2',
             'title' => '新着情報',
             'short_sentences' => '新着情報ページです',
             'top_page_view' => '1',
@@ -333,7 +430,7 @@ class SinglePageControllerTest extends TestCase
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), []);
 
-        $response->assertSessionHasErrors(['title', 'short_sentences', 'publication_start_datetime']);
+        $response->assertSessionHasErrors(['title', 'short_sentences', 'slug', 'publication_start_datetime']);
     }
 
     public function test_store_persists_publication_start_and_end_datetimes(): void
@@ -341,6 +438,7 @@ class SinglePageControllerTest extends TestCase
         $actor = Administrator::factory()->create();
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'slug' => 'page-4',
             'title' => '公開期間付きページ',
             'short_sentences' => '概要',
             'publication_start_datetime' => '2026-10-01 09:00',
@@ -359,6 +457,7 @@ class SinglePageControllerTest extends TestCase
         $actor = Administrator::factory()->create();
 
         $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'slug' => 'page-5',
             'title' => '公開期間逆転ページ',
             'short_sentences' => '概要',
             'publication_start_datetime' => '2026-10-10 00:00',
@@ -404,6 +503,7 @@ class SinglePageControllerTest extends TestCase
         $target = SinglePage::factory()->create();
 
         $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'slug' => $target->slug,
             'title' => '更新後タイトル',
             'short_sentences' => '更新後概要',
             'publication_start_datetime' => now()->format('Y-m-d H:i'),
@@ -419,6 +519,7 @@ class SinglePageControllerTest extends TestCase
         $target = SinglePage::factory()->create(['top_page_view' => false, 'link_list_view' => false]);
 
         $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'slug' => $target->slug,
             'title' => $target->title,
             'short_sentences' => $target->short_sentences,
             'top_page_view' => '1',
@@ -448,6 +549,7 @@ class SinglePageControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'slug' => $target->slug,
             'title' => $target->title,
             'short_sentences' => $target->short_sentences,
             'publication_start_datetime' => now()->format('Y-m-d H:i'),
@@ -530,5 +632,21 @@ class SinglePageControllerTest extends TestCase
         ]);
 
         $response->assertSessionHasErrors(['order.0']);
+    }
+
+    /**
+     * 固定ページの登録・更新で必須項目を満たす入力値。
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validSinglePagePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'title' => '会社概要',
+            'short_sentences' => '会社の概要ページです',
+            'slug' => 'about',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+        ], $overrides);
     }
 }

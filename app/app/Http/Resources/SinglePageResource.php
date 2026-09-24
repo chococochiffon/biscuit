@@ -20,8 +20,9 @@ class SinglePageResource extends JsonResource
             'title' => $this->title,
             'short_sentences' => $this->short_sentences,
             'header_image_url' => $this->header_image ? Storage::disk('public')->url($this->header_image) : null,
-            'taxonomy' => $this->taxonomy,
-            'uri' => $this->uri,
+            'parent_path' => $this->parent_path,
+            'slug' => $this->slug,
+            'path' => $this->path,
             'details' => SinglePageDetailResource::collection($this->whenLoaded('details')),
         ];
     }

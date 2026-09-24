@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\ArticleApprovalStatus;
 use App\Models\Administrator;
 use App\Models\Article;
+use App\Models\SinglePage;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -78,6 +79,16 @@ class ArticleControllerTest extends TestCase
         $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'title_asc']));
 
         $response->assertSee('id="article-search-body" class="collapse"', false);
+    }
+
+    public function test_index_displays_path(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+
+        $response->assertSee('/news/first-post');
     }
 
     public function test_index_displays_search_fields_in_expected_order(): void
@@ -309,6 +320,91 @@ class ArticleControllerTest extends TestCase
         [$width, $height] = getimagesize(Storage::disk('public')->path($article->thumbnail));
 
         $this->assertSame([$expectedWidth, $expectedHeight], [$width, $height]);
+    }
+
+    public function test_store_builds_path_from_parent_path_and_slug(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => '/news/', 'slug' => 'first-post']))
+            ->assertRedirect(route('admin.articles.index'));
+
+        $article = Article::where('slug', 'first-post')->firstOrFail();
+        $this->assertSame('news', $article->parent_path);
+        $this->assertSame('/news/first-post', $article->path);
+    }
+
+    public function test_store_uses_article_id_in_path_when_slug_is_empty(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => '']))
+            ->assertRedirect(route('admin.articles.index'));
+
+        $article = Article::where('title', 'URL記事')->firstOrFail();
+        $this->assertNull($article->slug);
+        $this->assertSame('/news/'.$article->id, $article->path);
+    }
+
+    public function test_update_switches_path_to_article_id_when_slug_is_cleared(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), $this->validArticlePayload([
+            'parent_path' => 'news',
+            'slug' => '',
+            'approval' => $target->approval->value,
+        ]))->assertRedirect(route('admin.articles.index'));
+
+        $this->assertSame('/news/'.$target->id, $target->fresh()->path);
+    }
+
+    public function test_update_allows_keeping_its_own_path(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
+
+        $response = $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), $this->validArticlePayload([
+            'parent_path' => 'news',
+            'slug' => 'first-post',
+            'approval' => $target->approval->value,
+        ]));
+
+        $response->assertSessionHasNoErrors();
+    }
+
+    public function test_store_rejects_numeric_slug(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => '123']));
+
+        $response->assertSessionHasErrors('slug');
+    }
+
+    public function test_store_rejects_path_used_by_another_article_or_single_page(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
+        SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
+
+        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => 'first-post']))
+            ->assertSessionHasErrors('slug');
+        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'company', 'slug' => 'about']))
+            ->assertSessionHasErrors('slug');
+    }
+
+    public function test_create_screen_uses_parent_path_of_latest_article_as_default(): void
+    {
+        $actor = Administrator::factory()->create();
+        Article::factory()->create(['parent_path' => 'blog']);
+        Article::factory()->create(['parent_path' => 'news']);
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.create'));
+
+        $response->assertSee('name="parent_path"', false);
+        $response->assertSee('value="news"', false);
     }
 
     public function test_store_creates_new_tags_and_attaches_existing_ones(): void
@@ -545,5 +641,20 @@ class ArticleControllerTest extends TestCase
 
         $url = $response->json('url');
         $this->assertStringContainsString('/storage/image/content/', $url);
+    }
+
+    /**
+     * 記事の登録・更新で必須項目を満たす入力値。
+     *
+     * @param  array<string, mixed>  $overrides
+     * @return array<string, mixed>
+     */
+    private function validArticlePayload(array $overrides = []): array
+    {
+        return array_merge([
+            'title' => 'URL記事',
+            'content' => '<p>本文</p>',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+        ], $overrides);
     }
 }

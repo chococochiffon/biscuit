@@ -51,6 +51,13 @@
 
     <div class="col-lg-4">
         <div class="card mb-3">
+            @include('admin.partials._path_fields', [
+                'parentPath' => $article->parent_path ?? $defaultParentPath ?? null,
+                'slug' => $article->slug ?? null,
+                'slugRequired' => false,
+                'slugFallback' => isset($article) ? (string) $article->id : __('記事番号'),
+            ])
+
             @php
                 $thumbnailUrl = $article->thumbnail_url ?? Illuminate\Support\Facades\Storage::disk('public')->url(\App\Models\Article::DEFAULT_THUMBNAIL_PATH);
             @endphp

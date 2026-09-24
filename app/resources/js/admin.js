@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initContentModelRelationManagerModal();
     initSinglePageDetailRows();
     initSinglePageReorder();
+    initPathPreview();
     initImageDropzones();
     initDateTimePickers();
     initArticleApprovalControls();
@@ -1170,6 +1171,33 @@ function initDateTimePickers() {
             });
         });
     });
+}
+
+/**
+ * 記事・固定ページの登録・編集画面で、親パスとスラッグの入力に合わせて公開側URLのプレビューを更新する。
+ * 組み立て方はサーバー側の HasPath::buildPath() と同じ(前後のスラッシュを除いて「/親パス/スラッグ」)。
+ * スラッグが未入力の場合はプレビューの data-fallback(記事番号など)を使い、それもなければ空にする。
+ */
+function initPathPreview() {
+    const parentPathInput = document.querySelector('[data-role="path-parent"]');
+    const slugInput = document.querySelector('[data-role="path-slug"]');
+    const preview = document.querySelector('[data-role="path-preview"]');
+
+    if (!parentPathInput || !slugInput || !preview) {
+        return;
+    }
+
+    const trimSlashes = (value) => value.trim().replace(/^\/+|\/+$/g, '');
+
+    const update = () => {
+        const slug = trimSlashes(slugInput.value) || preview.dataset.fallback || '';
+        const parentPath = trimSlashes(parentPathInput.value);
+
+        preview.textContent = slug === '' ? '' : `/${[parentPath, slug].filter((part) => part !== '').join('/')}`;
+    };
+
+    parentPathInput.addEventListener('input', update);
+    slugInput.addEventListener('input', update);
 }
 
 /**

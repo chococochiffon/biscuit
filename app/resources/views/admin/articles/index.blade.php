@@ -71,6 +71,7 @@
                     </th>
                     <th>{{ __('サムネイル') }}</th>
                     @include('admin.partials._sortable_th', ['label' => __('タイトル'), 'field' => 'title', 'defaultDirection' => 'asc'])
+                    <th>{{ __('URL') }}</th>
                     @include('admin.partials._sortable_th', ['label' => __('公開開始'), 'field' => 'publication_start', 'defaultDirection' => 'desc'])
                     @include('admin.partials._sortable_th', ['label' => __('公開終了'), 'field' => 'publication_end', 'defaultDirection' => 'desc'])
                     @include('admin.partials._sortable_th', ['label' => __('ステータス'), 'field' => 'approval', 'defaultDirection' => 'asc'])
@@ -101,6 +102,7 @@
                             >
                         </td>
                         <td>{{ $article->title }}</td>
+                        <td><code>{{ $article->path }}</code></td>
                         <td>{{ $article->publication_start_datetime?->format('Y/m/d H:i') }}</td>
                         <td>{{ $article->publication_end_datetime?->format('Y/m/d H:i') ?? __('未設定') }}</td>
                         <td>
@@ -136,7 +138,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">{{ __('該当する記事がありません。') }}</td>
+                        <td colspan="10" class="text-center text-muted py-4">{{ __('該当する記事がありません。') }}</td>
                     </tr>
                 @endforelse
             </tbody>

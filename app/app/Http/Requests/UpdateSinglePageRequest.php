@@ -2,18 +2,29 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesPath;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateSinglePageRequest extends FormRequest
 {
+    use ValidatesPath;
+
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
         return true;
+    }
+
+    /**
+     * Prepare the data for validation.
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->preparePathInput();
     }
 
     /**
@@ -26,8 +37,7 @@ class UpdateSinglePageRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'short_sentences' => ['required', 'string', 'max:255'],
-            'taxonomy' => ['nullable', 'string', 'max:255'],
-            'uri' => ['nullable', 'string', 'max:255'],
+            ...$this->pathRules(slugRequired: true, ignore: $this->route('singlePage')),
             'top_page_view' => ['nullable', 'boolean'],
             'link_list_view' => ['nullable', 'boolean'],
             'header_image' => ['nullable', 'image', 'max:10240'],
@@ -40,5 +50,15 @@ class UpdateSinglePageRequest extends FormRequest
             'details.*.contents' => ['nullable', 'string'],
             'details.*.sort_order' => ['nullable', 'integer'],
         ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return $this->pathMessages();
     }
 }

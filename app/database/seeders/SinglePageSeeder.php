@@ -14,11 +14,11 @@ class SinglePageSeeder extends Seeder
     public function run(): void
     {
         $singlePage = SinglePage::query()->firstOrCreate(
-            ['uri' => 'about'],
+            ['slug' => 'about'],
             [
                 'title' => 'biscuitについて',
                 'short_sentences' => 'biscuitは、シンプルで使いやすいコンテンツ管理システムです。',
-                'taxonomy' => 'information',
+                'parent_path' => 'information',
                 'top_page_view' => true,
                 'link_list_view' => true,
                 'sort_order' => 0,

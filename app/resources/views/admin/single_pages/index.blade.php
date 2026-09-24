@@ -65,6 +65,7 @@
                         <th></th>
                     @endif
                     @include('admin.partials._sortable_th', ['label' => __('タイトル'), 'field' => 'title', 'defaultDirection' => 'asc'])
+                    <th>{{ __('URL') }}</th>
                     <th>{{ __('概要') }}</th>
                     @include('admin.partials._sortable_th', ['label' => __('公開開始'), 'field' => 'publication_start', 'defaultDirection' => 'desc'])
                     @include('admin.partials._sortable_th', ['label' => __('公開終了'), 'field' => 'publication_end', 'defaultDirection' => 'desc'])
@@ -85,6 +86,7 @@
                             </td>
                         @endif
                         <td>{{ $singlePage->title }}</td>
+                        <td><code>{{ $singlePage->path }}</code></td>
                         <td>{{ $singlePage->short_sentences }}</td>
                         <td>{{ $singlePage->publication_start_datetime?->format('Y/m/d H:i') }}</td>
                         <td>{{ $singlePage->publication_end_datetime?->format('Y/m/d H:i') ?? __('未設定') }}</td>
@@ -107,7 +109,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="{{ $canReorder ? 8 : 7 }}" class="text-center text-muted py-4">{{ __('該当する固定ページがありません。') }}</td>
+                        <td colspan="{{ $canReorder ? 9 : 8 }}" class="text-center text-muted py-4">{{ __('該当する固定ページがありません。') }}</td>
                     </tr>
                 @endforelse
             </tbody>

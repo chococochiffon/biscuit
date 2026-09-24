@@ -73,5 +73,16 @@
     "検索条件をクリアして表示順で並べ、ドラッグで並び替えられるようにします。": "Clear the search conditions and sort by display order so you can reorder by dragging.",
     "検索条件": "Search conditions",
     "検索中": "Filtering",
-    "1200×630px(約1.91:1)または1280×720px(16:9)のうち、比率が近い方へ中央を切り抜いて縮小します。": "The image is center-cropped and resized to whichever is closer in aspect ratio: 1200×630px (about 1.91:1) or 1280×720px (16:9)."
+    "1200×630px(約1.91:1)または1280×720px(16:9)のうち、比率が近い方へ中央を切り抜いて縮小します。": "The image is center-cropped and resized to whichever is closer in aspect ratio: 1200×630px (about 1.91:1) or 1280×720px (16:9).",
+    "親パス": "Parent path",
+    "スラッグ": "Slug",
+    "URL": "URL",
+    "階層は「/」で区切ります(例: company/info)。未指定の場合はサイト直下になります。": "Separate levels with \"/\" (e.g. company/info). If left empty, the page is placed at the site root.",
+    "親パスは半角英小文字・数字・ハイフンで入力し、階層は「/」で区切ってください。": "Enter the parent path using lowercase letters, numbers, and hyphens, separating levels with \"/\".",
+    "スラッグは半角英小文字・数字・ハイフンで入力してください。": "Enter the slug using lowercase letters, numbers, and hyphens.",
+    "半角英小文字・数字・ハイフンが使えます(数字だけは不可)。": "Use lowercase letters, numbers, and hyphens (numbers only are not allowed).",
+    "未入力の場合は記事番号になります。": "If left empty, the article number is used.",
+    "記事番号": "Article number",
+    "URL「:path」は他の記事または固定ページで使われています。": "The URL \":path\" is already used by another article or page.",
+    "数字だけのスラッグは記事番号用のため使えません。": "A slug consisting only of numbers is reserved for article numbers."
 }
