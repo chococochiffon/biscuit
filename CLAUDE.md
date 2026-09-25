@@ -29,12 +29,12 @@ docker compose up -d
 すべて `app/` の中で実行します。
 
 - `php artisan dev`（または `composer dev`）— アプリ本体・キューリスナー・Vite dev サーバーを同時起動。
-- `php artisan test`（または `composer test`）— テストスイート全体を実行（実行前に config をクリアする）。特定のテストのみ実行する場合は `php artisan test --filter=testName`、ファイル指定は `php artisan test tests/Feature/ExampleTest.php`。`vendor/bin/phpunit` でも同じ引数が使える。
+- `php artisan test`（または `composer test`）— テストスイート全体を実行（実行前に config をクリアする）。特定のテストのみ実行する場合は `php artisan test --filter=testName`、ファイル指定は `php artisan test tests/Feature/ExampleTest.php`。`vendor/bin/phpunit` でも同じ引数が使える。テストは管理画面 CRUD が `tests/Feature/*ControllerTest.php`、API が `tests/Feature/API/`、管理者ログインが `tests/Feature/Auth/` に置かれている。
 - `vendor/bin/pint`（または `vendor/bin/pint --dirty --format agent`）— Laravel Pint によるコード整形。PHP ファイルを変更した後は必ず実行すること。
-- `php artisan migrate` / `php artisan migrate:refresh --seed` — マイグレーションの実行/リフレッシュ。
+- `php artisan migrate` / `php artisan migrate:refresh --seed` — マイグレーションの実行/リフレッシュ。`DatabaseSeeder` はテストユーザー（`test@example.com`）・管理者・サイト設定・固定ページ・`ContentModelRelation`・呼び出しコンテンツ・Q&A のサンプルを投入する（`ArticleSeeder`/`TagSeeder` は存在するが `DatabaseSeeder` からは呼ばれないため、記事・タグは `--seed` では入らない。必要なら `php artisan db:seed --class=ArticleSeeder` などで個別に実行する）。
 - `npm run dev` / `npm run build` — Vite の開発サーバー起動 / 本番ビルド。
 
-このプロジェクトで使われているスキャフォールディングの規約は `README.md` を参照。
+スキャフォールディングの規約（`README.md` より）: API コントローラーは `php artisan make:controller API/XxxController --resource`、管理画面側は `php artisan make:controller XxxController --resource`、モデルは `php artisan make:model Xxx -mfs`（マイグレーション・ファクトリー・シーダーを同時生成）。
 
 ## アーキテクチャ上のポイント
 
