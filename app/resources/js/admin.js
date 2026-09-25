@@ -3,6 +3,8 @@ import Quill from 'quill';
 import flatpickr from 'flatpickr';
 import { Japanese } from 'flatpickr/dist/l10n/ja.js';
 import 'flatpickr/dist/flatpickr.min.css';
+import Cropper from 'cropperjs';
+import 'cropperjs/dist/cropper.css';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSinglePageReorder();
     initPathPreview();
     initImageDropzones();
+    initImageCroppers();
     initDateTimePickers();
     initArticleApprovalControls();
     initQuestionAnswerForm();
@@ -1255,6 +1258,63 @@ function bindImageDropzone(dropzone) {
         event.stopPropagation();
         input.value = '';
         showPlaceholder();
+    });
+}
+
+/**
+ * 16:9 の切り抜き範囲を指定して画像をアップロードするUI(トップスライダー画像のフォーム)を初期化する。
+ * data-role="image-cropper" の中のファイル入力(image-cropper-input)で画像を選ぶと Cropper.js の枠を表示し、
+ * 枠の範囲(元画像のピクセル基準)を隠しinput(image-cropper-x/y/width/height)へ設定する。
+ * リピーターで後から追加される行にも対応するため、change イベントは document で受け取る。
+ */
+function initImageCroppers() {
+    const croppers = new WeakMap();
+
+    document.addEventListener('change', (event) => {
+        const input = event.target.closest('[data-role="image-cropper-input"]');
+
+        if (!input) {
+            return;
+        }
+
+        const wrapper = input.closest('[data-role="image-cropper"]');
+        const frame = wrapper.querySelector('[data-role="image-cropper-frame"]');
+        const image = wrapper.querySelector('[data-role="image-cropper-image"]');
+        const fields = ['x', 'y', 'width', 'height'].map((key) => [key, wrapper.querySelector(`[data-role="image-cropper-${key}"]`)]);
+        const file = input.files?.[0];
+
+        croppers.get(wrapper)?.destroy();
+        croppers.delete(wrapper);
+        fields.forEach(([, field]) => {
+            field.value = '';
+        });
+
+        // 選択を取り消した場合は保存済みの画像(あれば)の表示に戻す
+        if (!file || !file.type.startsWith('image/')) {
+            image.src = image.dataset.originalSrc || '';
+            frame.style.display = image.dataset.originalSrc ? '' : 'none';
+
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            image.src = reader.result;
+            frame.style.display = '';
+
+            croppers.set(wrapper, new Cropper(image, {
+                aspectRatio: 16 / 9,
+                viewMode: 1,
+                autoCropArea: 1,
+                zoomable: false,
+                crop(cropEvent) {
+                    fields.forEach(([key, field]) => {
+                        field.value = String(Math.round(cropEvent.detail[key]));
+                    });
+                },
+            }));
+        };
+        reader.readAsDataURL(file);
     });
 }
 

@@ -31,6 +31,8 @@ class StoreSiteSettingRequest extends FormRequest
         return [
             'site_title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'front_url' => ['nullable', 'url:http,https', 'max:255'],
+            'api_url' => ['nullable', 'url:http,https', 'max:255'],
             'site_icon' => ['nullable', 'image', 'max:10240'],
             'site_image' => ['nullable', 'image', 'max:10240'],
 
@@ -51,6 +53,16 @@ class StoreSiteSettingRequest extends FormRequest
             'social_links.*.name' => ['required', 'string', 'max:255'],
             'social_links.*.url' => ['required', 'url:http,https', 'max:2048'],
             'social_links.*.sort_order' => ['nullable', 'integer', 'min:0'],
+
+            'top_slider_images' => ['nullable', 'array'],
+            'top_slider_images.*.id' => ['nullable', 'integer', Rule::exists('top_slider_images', 'id')],
+            'top_slider_images.*.image' => ['required_without:top_slider_images.*.id', 'nullable', 'image', 'max:10240'],
+            'top_slider_images.*.url' => ['nullable', 'url:http,https', 'max:255'],
+            'top_slider_images.*.crop_x' => ['nullable', 'numeric', 'min:0'],
+            'top_slider_images.*.crop_y' => ['nullable', 'numeric', 'min:0'],
+            'top_slider_images.*.crop_width' => ['nullable', 'numeric', 'min:1'],
+            'top_slider_images.*.crop_height' => ['nullable', 'numeric', 'min:1'],
+            'top_slider_images.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
 }

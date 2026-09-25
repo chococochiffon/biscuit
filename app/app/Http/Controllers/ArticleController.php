@@ -7,6 +7,7 @@ use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Models\Article;
 use App\Models\Tag;
+use App\Support\ImageResizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -193,49 +194,19 @@ class ArticleController extends Controller
      */
     private function storeThumbnail(UploadedFile $file, Article $article): string
     {
-        $extension = in_array($file->extension(), ['jpg', 'jpeg', 'png', 'gif', 'webp'], true) ? $file->extension() : 'png';
+        $extension = ImageResizer::extensionFor($file);
         $path = 'image/thumbnail/'.now()->format('YmdHis').'_'.$article->getTable().'_'.$article->id.'.'.$extension;
 
-        Storage::disk('public')->put($path, $this->resizeThumbnail($file->getRealPath(), $extension));
-
-        return $path;
-    }
-
-    /**
-     * 画像の中央を目標サイズの比率で切り抜いてから目標サイズへ拡大・縮小し、指定形式でエンコードしたバイナリを返す。
-     */
-    private function resizeThumbnail(string $sourcePath, string $extension): string
-    {
-        $source = imagecreatefromstring(file_get_contents($sourcePath));
-        $sourceWidth = imagesx($source);
-        $sourceHeight = imagesy($source);
+        [$sourceWidth, $sourceHeight] = getimagesize($file->getRealPath());
 
         // 元画像の比率に最も近い目標サイズを選ぶ(比の対数の差で比較し、横長・縦長の差を対称に扱う)
         [$width, $height] = collect(Article::THUMBNAIL_SIZES)
             ->sortBy(fn (array $size) => abs(log(($sourceWidth / $sourceHeight) / ($size[0] / $size[1]))))
             ->first();
 
-        // 目標の比率になるよう、はみ出す辺を中央基準で切り落とす
-        $cropWidth = min($sourceWidth, (int) round($sourceHeight * $width / $height));
-        $cropHeight = min($sourceHeight, (int) round($sourceWidth * $height / $width));
-        $cropX = intdiv($sourceWidth - $cropWidth, 2);
-        $cropY = intdiv($sourceHeight - $cropHeight, 2);
+        Storage::disk('public')->put($path, ImageResizer::cropAndResize($file->getRealPath(), $extension, $width, $height));
 
-        $thumbnail = imagecreatetruecolor($width, $height);
-        imagealphablending($thumbnail, false);
-        imagesavealpha($thumbnail, true);
-        imagefill($thumbnail, 0, 0, imagecolorallocatealpha($thumbnail, 0, 0, 0, 127));
-        imagecopyresampled($thumbnail, $source, 0, 0, $cropX, $cropY, $width, $height, $cropWidth, $cropHeight);
-
-        ob_start();
-        match ($extension) {
-            'jpg', 'jpeg' => imagejpeg($thumbnail, null, 85),
-            'gif' => imagegif($thumbnail),
-            'webp' => imagewebp($thumbnail, null, 85),
-            default => imagepng($thumbnail),
-        };
-
-        return ob_get_clean();
+        return $path;
     }
 
     /**

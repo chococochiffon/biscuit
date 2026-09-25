@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['site_title', 'description', 'site_icon', 'site_image'])]
+#[Fillable(['site_title', 'description', 'front_url', 'api_url', 'site_icon', 'site_image'])]
 class SiteSetting extends Model
 {
     /** @use HasFactory<SiteSettingFactory> */

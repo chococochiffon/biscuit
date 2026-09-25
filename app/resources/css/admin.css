@@ -466,3 +466,13 @@ main > form {
     border: 0;
     background: none;
 }
+
+/* 16:9 の切り抜き範囲を指定する画像アップロード(トップスライダー画像) */
+.image-cropper-frame {
+    max-width: 480px;
+}
+
+.image-cropper-frame img {
+    display: block;
+    max-width: 100%;
+}
