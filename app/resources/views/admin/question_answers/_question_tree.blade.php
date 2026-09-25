@@ -4,18 +4,26 @@
      */
 @endphp
 
-<div class="fw-semibold">Q. {{ $question['question_text'] }}</div>
+<li>
+    <div class="qa-node qa-node--question">
+        <div class="qa-node-label small">Q</div>
+        <div class="qa-node-text">{{ $question['question_text'] }}</div>
+    </div>
 
-<ul class="list-unstyled ps-3 border-start mt-2 mb-0">
-    @foreach ($question['answers'] as $answer)
-        <li class="mb-2">
-            <div>A. {{ $answer['answer_text'] ?? '' }}</div>
-
-            @if ($answer['question'])
-                <div class="mt-2">
-                    @include('admin.question_answers._question_tree', ['question' => $answer['question']])
+    <ul>
+        @foreach ($question['answers'] as $answer)
+            <li>
+                <div class="qa-node qa-node--answer">
+                    <div class="qa-node-label small">A</div>
+                    <div class="qa-node-text">{{ $answer['answer_text'] ?? '' }}</div>
                 </div>
-            @endif
-        </li>
-    @endforeach
-</ul>
+
+                @if ($answer['question'])
+                    <ul>
+                        @include('admin.question_answers._question_tree', ['question' => $answer['question']])
+                    </ul>
+                @endif
+            </li>
+        @endforeach
+    </ul>
+</li>

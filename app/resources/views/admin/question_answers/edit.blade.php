@@ -3,13 +3,11 @@
 @section('title', __('Q&Aの編集'))
 
 @section('content')
-    <h1 class="h5 mb-4 mx-auto" style="max-width: 48rem;">{{ __('Q&Aの編集') }}</h1>
+    <h1 class="h5 mb-4">{{ __('Q&Aの編集') }}</h1>
 
     <form
         method="POST"
         action="{{ route('admin.question-answers.update', $questionAnswer) }}"
-        class="mx-auto"
-        style="max-width: 48rem;"
         data-role="question-answer-form"
     >
         @csrf

@@ -334,3 +334,135 @@ main > form {
     top: 0.5rem;
     right: 0.5rem;
 }
+
+/* Q&A のフローチャート(上→下のツリー)。li の ::before/::after で親子をつなぐ線を描く */
+/* 幅 0 + min-width 100% で、ツリーの幅がページ側に伝わらず、この中だけで横スクロールさせる */
+.qa-flow {
+    width: 0;
+    min-width: 100%;
+    overflow-x: auto;
+    padding: 1rem 0 1.5rem;
+}
+
+.qa-tree,
+.qa-tree ul {
+    display: flex;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+}
+
+.qa-tree {
+    min-width: 100%;
+    width: max-content;
+}
+
+.qa-tree ul {
+    position: relative;
+    padding-top: 1.25rem;
+}
+
+/* 分岐先の質問がまだない回答の下には線を出さない */
+.qa-tree ul:not(:has(> li)) {
+    display: none;
+}
+
+.qa-tree ul::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 1.25rem;
+    border-left: 2px solid var(--bs-border-color);
+}
+
+.qa-tree li {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1.25rem 0.5rem 0;
+    list-style: none;
+}
+
+.qa-tree li::before,
+.qa-tree li::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 50%;
+    width: 50%;
+    height: 1.25rem;
+    border-top: 2px solid var(--bs-border-color);
+}
+
+.qa-tree li::after {
+    right: auto;
+    left: 50%;
+    border-left: 2px solid var(--bs-border-color);
+}
+
+.qa-tree li:only-child {
+    padding-top: 0;
+}
+
+.qa-tree li:only-child::before,
+.qa-tree li:only-child::after,
+.qa-tree > li::before,
+.qa-tree > li::after {
+    display: none;
+}
+
+.qa-tree li:first-child::before,
+.qa-tree li:last-child::after {
+    border: 0 none;
+}
+
+.qa-tree li:last-child::before {
+    border-right: 2px solid var(--bs-border-color);
+    border-top-right-radius: 0.375rem;
+}
+
+.qa-tree li:first-child::after {
+    border-top-left-radius: 0.375rem;
+}
+
+.qa-node {
+    width: 15rem;
+    padding: 0.5rem;
+    text-align: left;
+    background-color: var(--bs-body-bg);
+    border: 2px solid var(--bs-border-color);
+    border-radius: 0.5rem;
+}
+
+.qa-node--question {
+    border-color: var(--bs-primary);
+}
+
+.qa-node--answer {
+    border-color: var(--bs-success);
+}
+
+.qa-node-label {
+    font-weight: 700;
+}
+
+.qa-node--question .qa-node-label {
+    color: var(--bs-primary);
+}
+
+.qa-node--answer .qa-node-label {
+    color: var(--bs-success);
+}
+
+.qa-node-text {
+    white-space: pre-wrap;
+}
+
+.qa-node--add {
+    width: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+}
