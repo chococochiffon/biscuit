@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initDateTimePickers();
     initArticleApprovalControls();
     initQuestionAnswerForm();
+    initQuestionAnswerFlows();
 });
 
 /**
@@ -1409,8 +1410,9 @@ function initArticleApprovalControls() {
 /**
  * Q&A の作成・編集フォームを初期化する。
  * 形式(type)のラジオで簡易版/分岐ありの入力欄(fieldset[data-type-section])を切り替え、
- * 選んでいない側は disabled にして送信しない。分岐ありでは、質問ブロック(question-block)に回答行(answer-row)を追加・削除し、
- * 回答行に分岐先の質問ブロックを入れ子で追加・削除する。入力名は各ブロック・行の data-name を接頭辞にして組み立てる。
+ * 選んでいない側は disabled にして送信しない。分岐ありはフローチャート(上→下のツリー)で、
+ * 質問ノード(question-block)の下に回答ノード(answer-row)を追加・削除し、回答ノードの下に分岐先の質問ノードを追加・削除する。
+ * 入力名は各ノードの data-name を接頭辞にして組み立てる。
  */
 function initQuestionAnswerForm() {
     const form = document.querySelector('[data-role="question-answer-form"]');
@@ -1450,8 +1452,10 @@ function initQuestionAnswerForm() {
     }
 
     function addAnswer(questionBlock) {
-        const rows = questionBlock.querySelector(':scope > .card-body > [data-role="answer-rows"]');
-        rows.appendChild(render(answerTemplate, `${questionBlock.dataset.name}[answers][${nextIndex()}]`));
+        const rows = questionBlock.querySelector(':scope > [data-role="answer-rows"]');
+        const addSlot = rows.querySelector(':scope > [data-role="answer-add-slot"]');
+
+        rows.insertBefore(render(answerTemplate, `${questionBlock.dataset.name}[answers][${nextIndex()}]`), addSlot);
     }
 
     form.addEventListener('click', (event) => {
@@ -1481,9 +1485,18 @@ function initQuestionAnswerForm() {
                 const row = button.closest('[data-role="answer-row"]');
 
                 button.closest('[data-role="question-block"]').remove();
-                row.querySelector(':scope > [data-role="add-branch"]').classList.remove('d-none');
+                row.querySelector(':scope > .qa-node [data-role="add-branch"]').classList.remove('d-none');
                 break;
             }
         }
+    });
+}
+
+/**
+ * Q&A のフローチャート(.qa-flow)が横にはみ出す場合、最初の質問が見えるよう横スクロールを中央に合わせる。
+ */
+function initQuestionAnswerFlows() {
+    document.querySelectorAll('.qa-flow').forEach((flow) => {
+        flow.scrollLeft = (flow.scrollWidth - flow.clientWidth) / 2;
     });
 }

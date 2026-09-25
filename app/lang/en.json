@@ -108,7 +108,6 @@
     "Q&A一覧": "Q&A",
     "Q&A詳細": "Q&A details",
     "分岐あり": "With branches",
-    "分岐する質問がない場合は、この回答文を表示して終わります。": "If there is no branch question, this answer is shown and the flow ends.",
     "分岐を削除": "Remove branch",
     "分岐先の質問": "Branch question",
     "回答": "Answers",
@@ -123,5 +122,6 @@
     "質問": "Question",
     "質問(簡易版)": "Question (simple)",
     "質問・回答": "Questions & answers",
-    "質問文": "Question text"
+    "質問文": "Question text",
+    "分岐する質問がない回答は、その回答文を表示して終わります。": "Answers without a branch question show their answer text and end the flow."
 }
