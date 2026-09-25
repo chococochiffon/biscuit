@@ -31,6 +31,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.question-answers.index') }}" class="nav-link">
+                            <i class="bi bi-question-circle"></i>{{ __('Q&A一覧') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.users.index') }}" class="nav-link">
                             <i class="bi bi-people"></i>{{ __('ユーザー一覧') }}
                         </a>

@@ -5,6 +5,7 @@ use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
 use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
@@ -78,6 +79,11 @@ Route::resource('admin/single-pages', SinglePageController::class)
     ->parameters(['single-pages' => 'singlePage'])
     ->except(['show'])
     ->names('admin.single-pages')
+    ->middleware('auth:admin');
+
+Route::resource('admin/question-answers', QuestionAnswerController::class)
+    ->parameters(['question-answers' => 'questionAnswer'])
+    ->names('admin.question-answers')
     ->middleware('auth:admin');
 
 Route::resource('admin', AdministratorController::class)
