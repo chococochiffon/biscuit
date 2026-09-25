@@ -11,6 +11,7 @@ use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
 use App\Models\SocialLink;
+use App\Models\TopSliderImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -667,5 +668,159 @@ class SiteSettingControllerTest extends TestCase
         $this->assertSame($expectedImagePath, $siteSetting->fresh()->site_image);
         Storage::disk('public')->assertExists($expectedIconPath);
         Storage::disk('public')->assertExists($expectedImagePath);
+    }
+
+    public function test_store_and_update_save_front_url_and_api_url(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'front_url' => 'https://www.example.com',
+            'api_url' => 'https://api.example.com/api',
+        ])->assertSessionHasNoErrors();
+
+        $siteSetting = SiteSetting::where('site_title', 'テストサイト')->firstOrFail();
+        $this->assertSame('https://www.example.com', $siteSetting->front_url);
+        $this->assertSame('https://api.example.com/api', $siteSetting->api_url);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'front_url' => 'https://front.example.com',
+            'api_url' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('https://front.example.com', $siteSetting->fresh()->front_url);
+        $this->assertNull($siteSetting->fresh()->api_url);
+    }
+
+    public function test_store_rejects_invalid_front_url_and_api_url(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'front_url' => 'javascript:alert(1)',
+            'api_url' => 'https://example.com/'.str_repeat('a', 255),
+        ]);
+
+        $response->assertSessionHasErrors(['front_url', 'api_url']);
+    }
+
+    public function test_store_creates_top_slider_images_resized_to_16_9_with_random_filenames(): void
+    {
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'top_slider_images' => [
+                ['image' => UploadedFile::fake()->image('first.jpg', 1000, 1000), 'url' => 'https://example.com/campaign'],
+                ['image' => UploadedFile::fake()->image('second.png', 3000, 1000)],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $images = TopSliderImage::query()->ordered()->get();
+        $this->assertCount(2, $images);
+        $this->assertSame([0, 1], $images->pluck('sort_order')->all());
+        $this->assertSame('https://example.com/campaign', $images[0]->url);
+        $this->assertNull($images[1]->url);
+        $this->assertMatchesRegularExpression('#^image/top_image/[A-Za-z0-9]{40}\.jpg$#', $images[0]->top_image);
+        $this->assertMatchesRegularExpression('#^image/top_image/[A-Za-z0-9]{40}\.png$#', $images[1]->top_image);
+
+        foreach ($images as $image) {
+            Storage::disk('public')->assertExists($image->top_image);
+            $this->assertSame([1920, 1080], array_slice(getimagesizefromstring(Storage::disk('public')->get($image->top_image)), 0, 2));
+        }
+    }
+
+    public function test_store_crops_top_slider_image_to_the_selected_area(): void
+    {
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+
+        // 左半分が赤、右半分が青の画像を作り、右半分だけを切り抜く
+        $source = imagecreatetruecolor(3200, 900);
+        imagefilledrectangle($source, 0, 0, 1599, 899, imagecolorallocate($source, 255, 0, 0));
+        imagefilledrectangle($source, 1600, 0, 3199, 899, imagecolorallocate($source, 0, 0, 255));
+        $path = tempnam(sys_get_temp_dir(), 'slider').'.png';
+        imagepng($source, $path);
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'top_slider_images' => [
+                [
+                    'image' => new UploadedFile($path, 'split.png', 'image/png', null, true),
+                    'crop_x' => 1600,
+                    'crop_y' => 0,
+                    'crop_width' => 1600,
+                    'crop_height' => 900,
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $stored = imagecreatefromstring(Storage::disk('public')->get(TopSliderImage::firstOrFail()->top_image));
+        $this->assertSame(['red' => 0, 'green' => 0, 'blue' => 255, 'alpha' => 0], imagecolorsforindex($stored, imagecolorat($stored, 10, 10)));
+    }
+
+    public function test_store_rejects_top_slider_image_row_without_image_or_with_invalid_url(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'top_slider_images' => [
+                ['url' => 'https://example.com'],
+                ['image' => UploadedFile::fake()->image('slide.jpg'), 'url' => 'javascript:alert(1)'],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['top_slider_images.0.image', 'top_slider_images.1.url']);
+        $this->assertDatabaseCount('top_slider_images', 0);
+    }
+
+    public function test_update_syncs_top_slider_images_creating_updating_and_deleting_rows(): void
+    {
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create();
+        $kept = TopSliderImage::factory()->create(['top_image' => 'image/top_image/kept.jpg', 'url' => 'https://example.com/old', 'sort_order' => 0]);
+        $replaced = TopSliderImage::factory()->create(['top_image' => 'image/top_image/old.jpg', 'sort_order' => 1]);
+        $removed = TopSliderImage::factory()->create(['sort_order' => 2]);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+            'site_title' => $siteSetting->site_title,
+            'top_slider_images' => [
+                ['image' => UploadedFile::fake()->image('new.jpg', 1920, 1080), 'sort_order' => 0],
+                ['id' => $replaced->id, 'image' => UploadedFile::fake()->image('replace.jpg', 1920, 1080), 'sort_order' => 1],
+                ['id' => $kept->id, 'url' => '', 'sort_order' => 2],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('image/top_image/kept.jpg', $kept->fresh()->top_image);
+        $this->assertNull($kept->fresh()->url);
+        $this->assertSame(2, $kept->fresh()->sort_order);
+        $this->assertNotSame('image/top_image/old.jpg', $replaced->fresh()->top_image);
+        Storage::disk('public')->assertExists($replaced->fresh()->top_image);
+        $this->assertSoftDeleted($removed);
+        $this->assertSame(0, TopSliderImage::query()->whereNotIn('id', [$kept->id, $replaced->id])->sole()->sort_order);
+    }
+
+    public function test_edit_and_show_display_top_slider_images(): void
+    {
+        $actor = Administrator::factory()->create();
+        $siteSetting = SiteSetting::factory()->create(['front_url' => 'https://front.example.com']);
+        $topSliderImage = TopSliderImage::factory()->create(['url' => 'https://example.com/slide-link']);
+
+        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting))
+            ->assertOk()
+            ->assertSee($topSliderImage->top_image)
+            ->assertSee('https://example.com/slide-link');
+
+        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting))
+            ->assertOk()
+            ->assertSee('https://front.example.com')
+            ->assertSee($topSliderImage->top_image)
+            ->assertSee('https://example.com/slide-link');
     }
 }

@@ -123,5 +123,13 @@
     "質問(簡易版)": "Question (simple)",
     "質問・回答": "Questions & answers",
     "質問文": "Question text",
-    "分岐する質問がない回答は、その回答文を表示して終わります。": "Answers without a branch question show their answer text and end the flow."
+    "分岐する質問がない回答は、その回答文を表示して終わります。": "Answers without a branch question show their answer text and end the flow.",
+    "フロントのURL": "Front-end URL",
+    "APIのURL": "API URL",
+    "トップスライダー画像": "Top slider images",
+    "公開側トップのスライダーに、この順で表示します。": "Shown in this order in the slider on the public top page.",
+    "画像": "Image",
+    "リンク先URL": "Link URL",
+    "画像を選ぶと16:9の枠が表示されます。枠の移動・拡大縮小で表示する範囲を調整してください(1920×1080で保存します)。": "After choosing an image, a 16:9 frame appears. Move or resize the frame to adjust the visible area (saved at 1920×1080).",
+    "トップスライダー画像が登録されていません。": "No top slider images have been registered."
 }

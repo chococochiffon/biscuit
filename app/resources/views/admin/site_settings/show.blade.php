@@ -19,6 +19,20 @@
                 <dt class="col-4 text-muted fw-normal">{{ __('説明') }}</dt>
                 <dd class="col-8">{{ $siteSetting->description }}</dd>
 
+                <dt class="col-4 text-muted fw-normal">{{ __('フロントのURL') }}</dt>
+                <dd class="col-8 text-break">
+                    @if ($siteSetting->front_url)
+                        <a href="{{ $siteSetting->front_url }}" target="_blank" rel="noopener">{{ $siteSetting->front_url }}</a>
+                    @endif
+                </dd>
+
+                <dt class="col-4 text-muted fw-normal">{{ __('APIのURL') }}</dt>
+                <dd class="col-8 text-break">
+                    @if ($siteSetting->api_url)
+                        <a href="{{ $siteSetting->api_url }}" target="_blank" rel="noopener">{{ $siteSetting->api_url }}</a>
+                    @endif
+                </dd>
+
                 <dt class="col-4 text-muted fw-normal">{{ __('サイトアイコン') }}</dt>
                 <dd class="col-8">
                     <img
@@ -39,6 +53,37 @@
                     >
                 </dd>
             </dl>
+        </div>
+
+        <h2 class="h6 mt-4 mb-3">{{ __('トップスライダー画像') }}</h2>
+
+        <div class="card" style="max-width: 40rem;">
+            <table class="table table-hover mb-0 align-middle">
+                <thead>
+                    <tr>
+                        <th>{{ __('画像') }}</th>
+                        <th>{{ __('リンク先URL') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse ($topSliderImages as $topSliderImage)
+                        <tr>
+                            <td style="width: 200px;">
+                                <img src="{{ $topSliderImage->top_image_url }}" alt="{{ __('トップスライダー画像') }}" class="img-thumbnail" style="width: 192px; height: 108px; object-fit: cover;">
+                            </td>
+                            <td class="text-break">
+                                @if ($topSliderImage->url)
+                                    <a href="{{ $topSliderImage->url }}" target="_blank" rel="noopener">{{ $topSliderImage->url }}</a>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="2" class="text-center text-muted py-4">{{ __('トップスライダー画像が登録されていません。') }}</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
 
         <h2 class="h6 mt-4 mb-3">{{ __('SNSリンク') }}</h2>

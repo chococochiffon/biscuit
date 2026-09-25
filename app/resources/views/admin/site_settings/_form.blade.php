@@ -25,6 +25,32 @@
     <textarea id="description" name="description" rows="4" class="form-control">{{ old('description', $siteSetting->description ?? '') }}</textarea>
 </div>
 
+<div class="mb-3">
+    <label for="front_url" class="form-label">{{ __('フロントのURL') }}</label>
+    <input
+        id="front_url"
+        type="url"
+        name="front_url"
+        value="{{ old('front_url', $siteSetting->front_url ?? '') }}"
+        maxlength="255"
+        placeholder="https://"
+        class="form-control"
+    >
+</div>
+
+<div class="mb-3">
+    <label for="api_url" class="form-label">{{ __('APIのURL') }}</label>
+    <input
+        id="api_url"
+        type="url"
+        name="api_url"
+        value="{{ old('api_url', $siteSetting->api_url ?? '') }}"
+        maxlength="255"
+        placeholder="https://"
+        class="form-control"
+    >
+</div>
+
 @php
     $existingSiteIconUrl = isset($siteSetting) && $siteSetting->site_icon
         ? Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_icon)
@@ -71,6 +97,59 @@
             <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
         </div>
     </div>
+</div>
+
+@php
+    $oldTopSliderImages = old('top_slider_images');
+    $topSliderImageUrls = ($topSliderImages ?? collect())->mapWithKeys(fn ($topSliderImage) => [$topSliderImage->id => $topSliderImage->top_image_url]);
+
+    // 入力エラーで戻った場合、選択していた画像ファイルは引き継げないため、既存行だけ保存済みの画像を表示する
+    $topSliderImageRows = $oldTopSliderImages !== null
+        ? collect($oldTopSliderImages)->values()->map(fn ($row, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $row['id'] ?? null,
+            'imageUrl' => isset($row['id']) ? $topSliderImageUrls->get((int) $row['id']) : null,
+            'url' => $row['url'] ?? null,
+            'sortOrder' => $row['sort_order'] ?? $i,
+        ])
+        : ($topSliderImages ?? collect())->values()->map(fn ($topSliderImage, $i) => (object) [
+            'index' => (string) $i,
+            'id' => $topSliderImage->id,
+            'imageUrl' => $topSliderImage->top_image_url,
+            'url' => $topSliderImage->url,
+            'sortOrder' => $topSliderImage->sort_order,
+        ]);
+@endphp
+
+<div class="mb-3" data-role="repeater">
+    <label class="form-label mb-0">{{ __('トップスライダー画像') }}</label>
+    <div class="form-text mb-2">{{ __('公開側トップのスライダーに、この順で表示します。') }}</div>
+
+    <div data-role="repeater-rows" data-next-index="{{ $topSliderImageRows->count() }}">
+        @foreach ($topSliderImageRows as $row)
+            @include('admin.site_settings._top_slider_image_row', [
+                'index' => $row->index,
+                'id' => $row->id,
+                'imageUrl' => $row->imageUrl,
+                'url' => $row->url,
+                'sortOrder' => $row->sortOrder,
+            ])
+        @endforeach
+    </div>
+
+    <button type="button" class="btn btn-outline-secondary btn-sm" data-role="repeater-add">
+        {{ __('+ 行を追加') }}
+    </button>
+
+    <template data-role="repeater-template">
+        @include('admin.site_settings._top_slider_image_row', [
+            'index' => '__INDEX__',
+            'id' => null,
+            'imageUrl' => null,
+            'url' => null,
+            'sortOrder' => 0,
+        ])
+    </template>
 </div>
 
 @php

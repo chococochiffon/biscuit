@@ -5,7 +5,9 @@ namespace Tests\Feature\API;
 use App\Enums\SocialService;
 use App\Models\SiteSetting;
 use App\Models\SocialLink;
+use App\Models\TopSliderImage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SiteSettingControllerTest extends TestCase
@@ -37,6 +39,35 @@ class SiteSettingControllerTest extends TestCase
         $response->assertJsonPath('data.social_links.0.name', 'YouTube');
         $response->assertJsonPath('data.social_links.0.url', 'https://www.youtube.com/@example');
         $response->assertJsonPath('data.social_links.1.service', 'github');
+    }
+
+    public function test_show_includes_front_url_and_api_url(): void
+    {
+        SiteSetting::factory()->create(['front_url' => 'https://www.example.com', 'api_url' => 'https://api.example.com/api']);
+
+        $response = $this->getJson(route('api.site-setting.show'));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.front_url', 'https://www.example.com');
+        $response->assertJsonPath('data.api_url', 'https://api.example.com/api');
+    }
+
+    public function test_show_includes_top_slider_images_in_sort_order(): void
+    {
+        SiteSetting::factory()->create();
+        $second = TopSliderImage::factory()->create(['top_image' => 'image/top_image/second.jpg', 'sort_order' => 1]);
+        $first = TopSliderImage::factory()->create(['top_image' => 'image/top_image/first.jpg', 'url' => 'https://example.com/campaign', 'sort_order' => 0]);
+        TopSliderImage::factory()->create(['sort_order' => 2])->delete();
+
+        $response = $this->getJson(route('api.site-setting.show'));
+
+        $response->assertOk();
+        $response->assertJsonCount(2, 'data.top_slider_images');
+        $response->assertJsonPath('data.top_slider_images.0.id', $first->id);
+        $response->assertJsonPath('data.top_slider_images.0.image_url', Storage::disk('public')->url('image/top_image/first.jpg'));
+        $response->assertJsonPath('data.top_slider_images.0.url', 'https://example.com/campaign');
+        $response->assertJsonPath('data.top_slider_images.1.id', $second->id);
+        $response->assertJsonPath('data.top_slider_images.1.url', null);
     }
 
     public function test_show_returns_404_when_site_setting_is_not_registered(): void
