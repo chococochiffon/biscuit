@@ -20,7 +20,7 @@ docker compose up -d
 
 ローカルの `.env`（デフォルト）は Dockerized MySQL ではなく SQLite（`DB_CONNECTION=sqlite`）を使う設定になっています。MySQL コンテナを使いたい場合は `DB_*` 系の環境変数を `db` サービス向けに書き換えてください。
 
-初回セットアップは `app/` の中で標準的な Laravel の手順（`composer install`、`.env` 作成、`key:generate`、`migrate` など）を行います。`composer run setup` は install・`.env` コピー・キー生成・migrate・npm install/build の大部分を一括で行います。
+初回セットアップは `app/` の中で標準的な Laravel の手順（`composer install`、`.env` 作成、`key:generate`、`migrate` など）を行います。`composer run setup` は install・`.env` コピー・キー生成・migrate・npm install/build の大部分を一括で行います。アップロード画像（`public` ディスク）の表示には `php artisan storage:link` も必要です。既存の `public/storage` はコンテナ内の絶対パス（`/var/www/app/storage/app/public`）を指すシンボリックリンクなので、コンテナ内（`docker compose exec app php artisan storage:link`）で作成してください（ホスト側からはリンク切れに見えますが正常です）。
 
 `docker compose exec app <command>` で `artisan`/`pint` などをコンテナ内から実行できますが、コンテナ内プロセスは root で動くため、`make:*` などファイルを生成するコマンドを叩くとホスト側で root 所有のファイルが作られます。編集できない場合は `docker compose exec -u root app chown -R $(id -u):$(id -g) <path>` で所有権をホストユーザーに戻してください。同様に `docker compose exec app php artisan test` などでビューがコンパイルされると `storage/framework/views`（や `bootstrap/cache`）に root 所有のファイルができ、php-fpm（www-data）が更新できずブラウザ表示時に `touch(): Utime failed: Operation not permitted`（`BladeCompiler.php`）になる。コンテナ内でテスト等を実行した後は `docker compose exec -u root app chown -R www-data:www-data storage/framework bootstrap/cache` で所有者を戻すこと。また `docker compose exec` 経由の git はリポジトリルートの `.git` を見つけられない（`app/` だけがマウントされているため）ので、`--dirty` を使う Pint はホスト側の git か、対象ファイルを明示指定して実行する必要があります。
 
