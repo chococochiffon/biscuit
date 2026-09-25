@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initImageDropzones();
     initDateTimePickers();
     initArticleApprovalControls();
+    initQuestionAnswerForm();
 });
 
 /**
@@ -1402,5 +1403,87 @@ function initArticleApprovalControls() {
             approval: bulkSelect.value,
             'article_ids[]': articleIds,
         });
+    });
+}
+
+/**
+ * Q&A の作成・編集フォームを初期化する。
+ * 形式(type)のラジオで簡易版/分岐ありの入力欄(fieldset[data-type-section])を切り替え、
+ * 選んでいない側は disabled にして送信しない。分岐ありでは、質問ブロック(question-block)に回答行(answer-row)を追加・削除し、
+ * 回答行に分岐先の質問ブロックを入れ子で追加・削除する。入力名は各ブロック・行の data-name を接頭辞にして組み立てる。
+ */
+function initQuestionAnswerForm() {
+    const form = document.querySelector('[data-role="question-answer-form"]');
+
+    if (!form) {
+        return;
+    }
+
+    const typeInputs = form.querySelectorAll('input[name="type"]');
+    const sections = form.querySelectorAll('[data-type-section]');
+
+    function applyType() {
+        const checked = form.querySelector('input[name="type"]:checked');
+
+        sections.forEach((section) => {
+            const active = checked !== null && section.dataset.typeSection === checked.value;
+            section.hidden = !active;
+            section.disabled = !active;
+        });
+    }
+
+    typeInputs.forEach((input) => input.addEventListener('change', applyType));
+    applyType();
+
+    const answerTemplate = form.querySelector('[data-role="answer-template"]');
+    const questionTemplate = form.querySelector('[data-role="question-template"]');
+
+    // バリデーションエラーで戻ったときに既存の行と入力名が重ならないよう、時刻を含めた番号にする
+    let counter = 0;
+    const nextIndex = () => `n${Date.now()}_${counter++}`;
+
+    function render(template, name) {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = template.innerHTML.replaceAll('__NAME__', name).trim();
+
+        return wrapper.firstElementChild;
+    }
+
+    function addAnswer(questionBlock) {
+        const rows = questionBlock.querySelector(':scope > .card-body > [data-role="answer-rows"]');
+        rows.appendChild(render(answerTemplate, `${questionBlock.dataset.name}[answers][${nextIndex()}]`));
+    }
+
+    form.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-role]');
+
+        if (!button) {
+            return;
+        }
+
+        switch (button.dataset.role) {
+            case 'add-answer':
+                addAnswer(button.closest('[data-role="question-block"]'));
+                break;
+            case 'remove-answer':
+                button.closest('[data-role="answer-row"]').remove();
+                break;
+            case 'add-branch': {
+                const row = button.closest('[data-role="answer-row"]');
+                const questionBlock = render(questionTemplate, `${row.dataset.name}[question]`);
+
+                row.querySelector(':scope > [data-role="branch-container"]').appendChild(questionBlock);
+                addAnswer(questionBlock);
+                button.classList.add('d-none');
+                break;
+            }
+            case 'remove-branch': {
+                const row = button.closest('[data-role="answer-row"]');
+
+                button.closest('[data-role="question-block"]').remove();
+                row.querySelector(':scope > [data-role="add-branch"]').classList.remove('d-none');
+                break;
+            }
+        }
     });
 }
