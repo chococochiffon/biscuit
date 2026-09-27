@@ -10,7 +10,6 @@ use App\Support\CallContent\SinglePageContentSource;
 use App\Support\CallContent\UserDetailContentSource;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
 /**
@@ -26,21 +25,6 @@ class CallContentResolver
         private readonly SinglePageContentSource $singlePageContentSource = new SinglePageContentSource,
         private readonly UserDetailContentSource $userDetailContentSource = new UserDetailContentSource,
     ) {}
-
-    /**
-     * 複数のCallContentをそれぞれ解決する。
-     *
-     * @param  iterable<CallContent>  $callContents
-     * @return Collection<int, Model|EloquentCollection<int, Model>|null> CallContentのidをキーに、
-     *                                                                    単一表示は該当モデル1件(存在しなければnull)、
-     *                                                                    一覧表示はモデルのコレクションを値に持つ
-     */
-    public function resolveMany(iterable $callContents): Collection
-    {
-        return EloquentCollection::make($callContents)
-            ->loadMissing('contentModelRelation')
-            ->mapWithKeys(fn (CallContent $callContent) => [$callContent->id => $this->resolve($callContent)]);
-    }
 
     /**
      * 1件のCallContentを解決する。
