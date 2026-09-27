@@ -31,6 +31,7 @@ paths:
   - app/resources/views/admin/single_pages/_form.blade.php
   - app/resources/css/admin.css
   - app/resources/js/admin.js
+  - app/resources/js/admin/**
   - app/database/seeders/TopSliderImageSeeder.php
   - app/tests/Feature/**/SiteSetting*
   - app/tests/Feature/**/UserControllerTest.php

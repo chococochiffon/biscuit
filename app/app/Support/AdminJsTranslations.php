@@ -3,14 +3,14 @@
 namespace App\Support;
 
 /**
- * 管理画面の JS(resources/js/admin.js)で表示する文言。
+ * 管理画面の JS(resources/js/admin.js と resources/js/admin/*.js)で表示する文言。
  * レイアウトで現在の言語に翻訳して window.adminTranslations に渡し、JS では t('日本語の原文') で参照する。
  * キーは lang/en.json と同じく日本語の原文で、:name などの置き換え記号は JS 側で埋める。
  */
 class AdminJsTranslations
 {
     /**
-     * JS で使う文言のキー(admin.js に t('...') を足したらここにも追加する)。
+     * JS で使う文言のキー(管理画面の JS に t('...') を足したらここにも追加する)。
      *
      * @var list<string>
      */
