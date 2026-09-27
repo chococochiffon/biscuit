@@ -6,75 +6,49 @@
 <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=plastic" alt="">
 </p>
 
-# laravel コマンド
 ## インストール
+
 ```
 ❯ composer create-project --prefer-dist laravel/laravel .
 ```
 
-ターミナルへ入り以下実行
+## storage の権限
+
+`storage` と `bootstrap/cache` は php-fpm（`www-data`）が書き込むため、所有者と権限をコンテナ内で設定します。
 
 ```
-❯ chmod -R 775 /var/www/app/storage
+❯ docker compose exec -u root app chown -R www-data:www-data storage bootstrap/cache
 ```
 ```
-❯ chown -R www-data:www-data /var/www/app/storage
-```
-```
-❯ chmod -R guo+w storage
-```
-```
-❯ chown -R www-data:www-data /var/www/app/storage
-```
-```
-❯ php artisan storage:link
+❯ docker compose exec -u root app chmod -R 775 storage bootstrap/cache
 ```
 
-
-## 実行
-```
-❯ docker compose up -d
-```
-
-ターミナルへ入り以下実行
+アップロード画像を表示するため、`public/storage` のシンボリックリンクもコンテナ内で作成します（リンク先がコンテナ内の絶対パスになるため、ホスト側からはリンク切れに見えますが正常です）。
 
 ```
-❯ docker compose up -d
-```
-```
-❯ composer install
-```
-```
-❯ npm install
+❯ docker compose exec app php artisan storage:link
 ```
 
-## コントローラー
-### API
+`docker compose exec app php artisan test` などをコンテナ内で root のまま実行すると、`storage/framework` や `bootstrap/cache` に root 所有のファイルができ、画面表示時に書き込みエラー（`touch(): Utime failed`）になります。その場合は所有者を戻してください。
+
 ```
-❯ php artisan make:controller API/CcccccController --resource
-```
-### WEB
-```
-❯ php artisan make:controller CcccccController --resource
-```
-### DB
-```
-❯ php artisan make:model Mmmmm -mfs
-```
-```
-php artisan make:migration create_ttttt_table --table=ttttt
+❯ docker compose exec -u root app chown -R www-data:www-data storage/framework bootstrap/cache
 ```
 
 ## マイグレーション
+
+コマンドはコンテナ内で実行します。シーダーが画像を保存するため、`www-data` として実行してください（root で実行すると、保存した画像が root 所有になります）。
+
 ### 実行
 ```
-❯ php artisan migrate
-```
-### リフレッシュ
-```
-❯ php artisan migrate:refresh --seed
+❯ docker compose exec -u www-data app php artisan migrate
 ```
 
-https://qiita.com/hitotch/items/2e816bc1423d00562dc2
+### リフレッシュ（初期データの投入）
+データベースを作り直し、初期データ（管理者・サイト設定・トップスライダー画像・固定ページ・記事とタグ・Q&A など）を投入します。**既存のデータはすべて消えます。**
 
-https://qiita.com/hitotch/items/2e816bc1423d00562dc2
+```
+❯ docker compose exec -u www-data app php artisan migrate:refresh --seed
+```
+
+初期データの管理者は `admin@example.com` / `password` でログインできます。
