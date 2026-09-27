@@ -1,4 +1,4 @@
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
+import { Modal } from 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import Quill from 'quill';
 import flatpickr from 'flatpickr';
 import { Japanese } from 'flatpickr/dist/l10n/ja.js';
@@ -1284,13 +1284,224 @@ function bindImageDropzone(dropzone) {
 }
 
 /**
- * 16:9 の切り抜き範囲を指定して画像をアップロードするUI(トップスライダー画像のフォーム)を初期化する。
- * data-role="image-cropper" の中のファイル入力(image-cropper-input)で画像を選ぶと Cropper.js の枠を表示し、
- * 枠の範囲(元画像のピクセル基準)を隠しinput(image-cropper-x/y/width/height)へ設定する。
- * リピーターで後から追加される行にも対応するため、change イベントは document で受け取る。
+ * 切り抜き範囲を指定して画像をアップロードするUI(トップスライダー画像・ユーザーのアイコン画像のフォーム)を初期化する。
+ * data-role="image-cropper" の中のドロップゾーン(image-cropper-dropzone)へのドラッグ&ドロップ、またはクリックして
+ * ファイル入力(image-cropper-input)で画像を選ぶと、切り抜き用のモーダル
+ * (admin.partials._image_cropper_modal)を開いて Cropper.js で範囲と画像の拡大・縮小を調整させる。
+ * 「決定」で枠の範囲(元画像のピクセル基準)を隠しinput(image-cropper-x/y/width/height)へ設定し、
+ * 切り抜いた結果をプレビュー(image-cropper-image)に表示する。決定後は「切り抜きを編集」(image-cropper-edit)で開き直せる。
+ * 最初の選択でモーダルを閉じた場合は、ファイルの選択を取り消す。
+ * 枠の比率は保存サイズ(data-output-width / data-output-height)から決める。
+ * リピーターで後から追加される行にも対応するため、各イベントは document で受け取る。
  */
 function initImageCroppers() {
-    const croppers = new WeakMap();
+    const modalElement = document.getElementById('image-cropper-modal');
+
+    if (!modalElement) {
+        return;
+    }
+
+    const modal = Modal.getOrCreateInstance(modalElement);
+    const modalImage = modalElement.querySelector('[data-role="image-cropper-modal-image"]');
+    const help = modalElement.querySelector('[data-role="image-cropper-modal-help"]');
+    const fieldKeys = ['x', 'y', 'width', 'height'];
+
+    // 入力欄ごとに、選んだ画像(data URL)と決定済みの切り抜き範囲(未決定なら null)を覚えておく
+    const selections = new WeakMap();
+    let cropper = null;
+    let currentWrapper = null;
+    // 開いているモーダルで編集中の選択(開いている間に同じ欄で別の画像を選び直すと、別の選択に置き換わる)
+    let currentSelection = null;
+    let applied = false;
+    // 閉じている途中(背景のフェード中)に次の画像を選んだ場合は、閉じ終わってから開く
+    let hiding = false;
+    let pendingWrapper = null;
+
+    function outputSize(wrapper) {
+        return { width: Number(wrapper.dataset.outputWidth), height: Number(wrapper.dataset.outputHeight) };
+    }
+
+    function field(wrapper, key) {
+        return wrapper.querySelector(`[data-role="image-cropper-${key}"]`);
+    }
+
+    // ファイルの選択を取り消し、保存済みの画像(あれば)の表示に戻す
+    function clearSelection(wrapper) {
+        const image = wrapper.querySelector('[data-role="image-cropper-image"]');
+
+        selections.delete(wrapper);
+        wrapper.querySelector('[data-role="image-cropper-input"]').value = '';
+        fieldKeys.forEach((key) => {
+            field(wrapper, key).value = '';
+        });
+        image.src = image.dataset.originalSrc || '';
+        showPreview(wrapper, Boolean(image.dataset.originalSrc));
+        wrapper.querySelector('[data-role="image-cropper-edit"]').style.display = 'none';
+    }
+
+    // ドロップゾーン内の表示を、プレビュー画像と「クリックまたはドラッグ&ドロップ」の案内で切り替える
+    function showPreview(wrapper, visible) {
+        wrapper.querySelector('[data-role="image-cropper-frame"]').style.display = visible ? '' : 'none';
+        wrapper.querySelector('[data-role="image-cropper-placeholder"]').style.display = visible ? 'none' : '';
+    }
+
+    function open(wrapper) {
+        if (hiding) {
+            pendingWrapper = wrapper;
+
+            return;
+        }
+
+        const { width, height } = outputSize(wrapper);
+
+        currentWrapper = wrapper;
+        currentSelection = selections.get(wrapper);
+        applied = false;
+        modalImage.src = selections.get(wrapper).src;
+        help.textContent = help.dataset.template.replace(':size', `${width}×${height}`);
+        modal.show();
+    }
+
+    modalElement.addEventListener('shown.bs.modal', () => {
+        const { width, height } = outputSize(currentWrapper);
+
+        cropper = new Cropper(modalImage, {
+            aspectRatio: width / height,
+            viewMode: 1,
+            dragMode: 'move',
+            autoCropArea: 1,
+            data: selections.get(currentWrapper).data ?? undefined,
+        });
+    });
+
+    modalElement.addEventListener('hide.bs.modal', () => {
+        hiding = true;
+    });
+
+    modalElement.addEventListener('hidden.bs.modal', () => {
+        cropper?.destroy();
+        cropper = null;
+
+        // 一度も決定していない画像のままモーダルを閉じた場合は、選択自体を取り消す
+        // (閉じている間に選び直された新しい画像の選択は残す)
+        if (!applied && !currentSelection.data && selections.get(currentWrapper) === currentSelection) {
+            clearSelection(currentWrapper);
+        }
+
+        currentWrapper = null;
+        currentSelection = null;
+        hiding = false;
+
+        if (pendingWrapper) {
+            const wrapper = pendingWrapper;
+
+            pendingWrapper = null;
+            open(wrapper);
+        }
+    });
+
+    modalElement.querySelector('[data-role="image-cropper-modal-apply"]').addEventListener('click', () => {
+        const wrapper = currentWrapper;
+        const { width, height } = outputSize(wrapper);
+        const data = cropper.getData(true);
+
+        // 整数に丸めると比率が 1px ずれることがあるため、高さを幅と保存サイズの比率から求め直す
+        data.height = Math.round(data.width * height / width);
+        const image = wrapper.querySelector('[data-role="image-cropper-image"]');
+
+        selections.get(wrapper).data = data;
+        fieldKeys.forEach((key) => {
+            field(wrapper, key).value = String(data[key]);
+        });
+
+        image.src = cropper.getCroppedCanvas({ maxWidth: 960, maxHeight: 960 }).toDataURL();
+        showPreview(wrapper, true);
+        wrapper.querySelector('[data-role="image-cropper-edit"]').style.display = '';
+
+        applied = true;
+        modal.hide();
+    });
+
+    modalElement.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-role="image-cropper-modal-zoom"], [data-role="image-cropper-modal-reset"]');
+
+        if (!button || !cropper) {
+            return;
+        }
+
+        if (button.dataset.role === 'image-cropper-modal-zoom') {
+            cropper.zoom(Number(button.dataset.zoomRatio));
+        } else {
+            cropper.reset();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        const button = event.target.closest('[data-role="image-cropper-edit"]');
+        const wrapper = button?.closest('[data-role="image-cropper"]');
+
+        if (wrapper && selections.has(wrapper)) {
+            open(wrapper);
+        }
+    });
+
+    // ドロップゾーンのクリック・Enter/Space でファイル選択を開く(ファイル入力自体のクリックは二重に開かないよう除く)
+    function openFileDialog(dropzone) {
+        dropzone.querySelector('[data-role="image-cropper-input"]').click();
+    }
+
+    document.addEventListener('click', (event) => {
+        const dropzone = event.target.closest('[data-role="image-cropper-dropzone"]');
+
+        if (dropzone && !event.target.closest('[data-role="image-cropper-input"]')) {
+            openFileDialog(dropzone);
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
+
+        if (dropzone && event.target === dropzone && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            openFileDialog(dropzone);
+        }
+    });
+
+    // ドロップされたファイルをファイル入力に移し、選択したときと同じく change イベントで切り抜きモーダルを開く
+    document.addEventListener('dragover', (event) => {
+        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
+
+        if (dropzone) {
+            event.preventDefault();
+            dropzone.classList.add('is-dragover');
+        }
+    });
+
+    document.addEventListener('dragleave', (event) => {
+        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
+
+        if (dropzone && !dropzone.contains(event.relatedTarget)) {
+            dropzone.classList.remove('is-dragover');
+        }
+    });
+
+    document.addEventListener('drop', (event) => {
+        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
+
+        if (!dropzone) {
+            return;
+        }
+
+        event.preventDefault();
+        dropzone.classList.remove('is-dragover');
+
+        const input = dropzone.querySelector('[data-role="image-cropper-input"]');
+
+        if (event.dataTransfer.files.length) {
+            input.files = event.dataTransfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
 
     document.addEventListener('change', (event) => {
         const input = event.target.closest('[data-role="image-cropper-input"]');
@@ -1300,41 +1511,21 @@ function initImageCroppers() {
         }
 
         const wrapper = input.closest('[data-role="image-cropper"]');
-        const frame = wrapper.querySelector('[data-role="image-cropper-frame"]');
-        const image = wrapper.querySelector('[data-role="image-cropper-image"]');
-        const fields = ['x', 'y', 'width', 'height'].map((key) => [key, wrapper.querySelector(`[data-role="image-cropper-${key}"]`)]);
         const file = input.files?.[0];
 
-        croppers.get(wrapper)?.destroy();
-        croppers.delete(wrapper);
-        fields.forEach(([, field]) => {
-            field.value = '';
-        });
-
-        // 選択を取り消した場合は保存済みの画像(あれば)の表示に戻す
         if (!file || !file.type.startsWith('image/')) {
-            image.src = image.dataset.originalSrc || '';
-            frame.style.display = image.dataset.originalSrc ? '' : 'none';
+            clearSelection(wrapper);
 
             return;
         }
 
         const reader = new FileReader();
         reader.onload = () => {
-            image.src = reader.result;
-            frame.style.display = '';
-
-            croppers.set(wrapper, new Cropper(image, {
-                aspectRatio: 16 / 9,
-                viewMode: 1,
-                autoCropArea: 1,
-                zoomable: false,
-                crop(cropEvent) {
-                    fields.forEach(([key, field]) => {
-                        field.value = String(Math.round(cropEvent.detail[key]));
-                    });
-                },
-            }));
+            selections.set(wrapper, { src: reader.result, data: null });
+            fieldKeys.forEach((key) => {
+                field(wrapper, key).value = '';
+            });
+            open(wrapper);
         };
         reader.readAsDataURL(file);
     });

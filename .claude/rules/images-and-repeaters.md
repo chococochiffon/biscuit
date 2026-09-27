@@ -22,6 +22,8 @@ paths:
   - app/app/Http/Resources/UserSkillResource.php
   - app/resources/views/admin/site_settings/**
   - app/resources/views/admin/users/**
+  - app/resources/views/admin/partials/_image_cropper_modal.blade.php
+  - app/resources/css/admin.css
   - app/resources/js/admin.js
   - app/database/seeders/TopSliderImageSeeder.php
   - app/tests/Feature/**/SiteSetting*
@@ -34,7 +36,9 @@ paths:
 
 - `SinglePage`（ヘッダー画像）・`SiteSetting`（サイトアイコン・サイト画像）・`UserDetail`（`User` と 1 対 1、`User::detail()`）は、画像を `public` ディスクへ `年月日時分秒_テーブル名_id` 命名で保存する共通パターンを持つ。
 - サイト設定の `site_image` は OGP 用。公開側トップのスライダー画像は別テーブル `TopSliderImage`（`top_image`・リンク先 `url`（任意）・`sort_order`）で管理する。
-- スライダー画像は管理画面で Cropper.js（`admin.js` の `initImageCroppers()`）により 16:9 の切り抜き範囲を選ぶ。範囲（`crop_x`/`crop_y`/`crop_width`/`crop_height`、元画像のピクセル基準。未指定なら中央）で切り抜いて 1920×1080 に縮小し、`image/top_image` にランダムな文字列のファイル名で保存する。
+- スライダー画像とユーザー詳細のアイコン画像（`user_image`）は、管理画面のドロップゾーン（`data-role="image-cropper-dropzone"`、見た目は `image-dropzone` と共通）へのドラッグ&ドロップまたはクリックで画像を選ぶと共通の切り抜きモーダル（`admin.partials._image_cropper_modal`、1 画面に 1 つ include する）が開き、Cropper.js（`admin.js` の `initImageCroppers()`）で切り抜く範囲と画像の拡大・縮小（ボタン・マウスホイール）を調整する。枠の比率は入力欄の `data-output-width`/`data-output-height`（保存サイズ）から決まり、「決定」で範囲（元画像のピクセル基準）を隠し input に入れて切り抜き結果をプレビュー表示する。決定後は「切り抜きを編集」で開き直せ、最初の選択でモーダルを閉じるとファイルの選択を取り消す。範囲が未指定なら中央で切り抜く。
+  - スライダー画像: 範囲は `top_slider_images[n][crop_x/crop_y/crop_width/crop_height]`。1920×1080 に縮小し、`image/top_image` にランダムな文字列のファイル名で保存する。
+  - アイコン画像: 範囲は `user_detail[user_image_crop][x/y/width/height]`。250×250（`UserDetail::USER_IMAGE_SIZE`）に縮小し、`image/user` に `年月日時分秒_user_details_id` 命名で保存する。
 - 画像の切り抜き・縮小は記事サムネイルと共通の `Support\ImageResizer`（GD）を使う。
 
 ## 埋め込みリピーター

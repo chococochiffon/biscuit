@@ -20,25 +20,40 @@
         </span>
     </div>
 
-    <div class="col-md-6" data-role="image-cropper">
+    <div
+        class="col-md-6"
+        data-role="image-cropper"
+        data-output-width="{{ \App\Models\TopSliderImage::IMAGE_WIDTH }}"
+        data-output-height="{{ \App\Models\TopSliderImage::IMAGE_HEIGHT }}"
+    >
         <label class="form-label small">{{ __('画像') }}</label>
-        <input
-            type="file"
-            name="top_slider_images[{{ $index }}][image]"
-            accept="image/*"
-            class="form-control form-control-sm"
-            data-role="image-cropper-input"
-            @required(! $id)
-        >
+        <div class="image-dropzone" data-role="image-cropper-dropzone" tabindex="0" role="button" aria-label="{{ __('トップスライダー画像を選択') }}">
+            <input
+                type="file"
+                name="top_slider_images[{{ $index }}][image]"
+                accept="image/*"
+                class="d-none"
+                data-role="image-cropper-input"
+            >
+
+            <div class="image-dropzone-preview" data-role="image-cropper-frame" @if (! $imageUrl) style="display: none;" @endif>
+                <img src="{{ $imageUrl }}" data-original-src="{{ $imageUrl }}" alt="{{ __('トップスライダー画像') }}" data-role="image-cropper-image">
+            </div>
+
+            <div class="image-dropzone-placeholder" data-role="image-cropper-placeholder" @if ($imageUrl) style="display: none;" @endif>
+                <i class="bi bi-cloud-arrow-up"></i>
+                <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
+            </div>
+        </div>
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_x]" data-role="image-cropper-x">
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_y]" data-role="image-cropper-y">
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_width]" data-role="image-cropper-width">
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_height]" data-role="image-cropper-height">
 
-        <div class="image-cropper-frame mt-2" data-role="image-cropper-frame" @if (! $imageUrl) style="display: none;" @endif>
-            <img src="{{ $imageUrl }}" data-original-src="{{ $imageUrl }}" alt="{{ __('トップスライダー画像') }}" data-role="image-cropper-image">
-        </div>
-        <div class="form-text">{{ __('画像を選ぶと16:9の枠が表示されます。枠の移動・拡大縮小で表示する範囲を調整してください(1920×1080で保存します)。') }}</div>
+        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" data-role="image-cropper-edit" style="display: none;">
+            <i class="bi bi-crop"></i> {{ __('切り抜きを編集') }}
+        </button>
+        <div class="form-text">{{ __('画像を選ぶと切り抜き画面が開きます(:sizeで保存します)。', ['size' => \App\Models\TopSliderImage::IMAGE_WIDTH.'×'.\App\Models\TopSliderImage::IMAGE_HEIGHT]) }}</div>
     </div>
 
     <div class="col">

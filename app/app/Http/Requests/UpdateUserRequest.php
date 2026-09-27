@@ -41,6 +41,12 @@ class UpdateUserRequest extends FormRequest
             'user_detail.nick_name' => ['required', 'string', 'max:255'],
             'user_detail.birthday' => ['required', 'date'],
             'user_detail.user_image' => ['nullable', 'image', 'max:10240'],
+            // アイコン画像の切り抜き範囲(元画像のピクセル基準。未指定なら中央で切り抜く)
+            'user_detail.user_image_crop' => ['nullable', 'array'],
+            'user_detail.user_image_crop.x' => ['nullable', 'numeric', 'min:0'],
+            'user_detail.user_image_crop.y' => ['nullable', 'numeric', 'min:0'],
+            'user_detail.user_image_crop.width' => ['nullable', 'numeric', 'min:1'],
+            'user_detail.user_image_crop.height' => ['nullable', 'numeric', 'min:1'],
             'user_detail.comment' => ['nullable', 'string'],
             'user_detail.view_flag' => ['nullable', 'boolean'],
             'user_detail.name_settings' => ['required', new Enum(UserDetailNameSetting::class)],

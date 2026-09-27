@@ -26,12 +26,12 @@
                 <dt class="col-4 text-muted fw-normal">{{ __('生年月日') }}</dt>
                 <dd class="col-8">{{ $user->detail->birthday->format('Y/m/d') }}</dd>
 
-                <dt class="col-4 text-muted fw-normal">{{ __('ユーザー画像') }}</dt>
+                <dt class="col-4 text-muted fw-normal">{{ __('アイコン画像') }}</dt>
                 <dd class="col-8">
                     @if ($user->detail->user_image)
                         <img
                             src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($user->detail->user_image) }}"
-                            alt="{{ __('ユーザー画像') }}"
+                            alt="{{ __('アイコン画像') }}"
                             class="img-thumbnail"
                             style="width: 120px; height: 120px; object-fit: cover;"
                         >

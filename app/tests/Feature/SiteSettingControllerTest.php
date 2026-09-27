@@ -826,6 +826,18 @@ class SiteSettingControllerTest extends TestCase
         $response->assertSee('最大3件まで登録できます。');
     }
 
+    public function test_create_screen_has_top_slider_image_cropper_modal_with_output_size(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.create'));
+
+        $response->assertSee('data-output-width="1920"', false)
+            ->assertSee('data-output-height="1080"', false)
+            ->assertSee('id="image-cropper-modal"', false)
+            ->assertSee('data-role="image-cropper-dropzone"', false);
+    }
+
     public function test_update_syncs_top_slider_images_creating_updating_and_deleting_rows(): void
     {
         Storage::fake('public');
