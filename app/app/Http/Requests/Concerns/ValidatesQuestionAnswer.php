@@ -60,6 +60,20 @@ trait ValidatesQuestionAnswer
     }
 
     /**
+     * 回答(分岐)の件数の上限を超えたときのメッセージを、送信された入れ子の各質問の answers に対して組み立てる。
+     * (メッセージキーのワイルドカード「*」はドット区切りの 1 階層分にしか当てはまらないため、キーを列挙する)
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return collect(array_keys($this->rules()))
+            ->filter(fn (string $key) => Str::afterLast($key, '.') === 'answers')
+            ->mapWithKeys(fn (string $key) => ["{$key}.max" => __('1つの質問に登録できる回答は:max件までです。')])
+            ->all();
+    }
+
+    /**
      * 質問 1 件とその回答(分岐先の質問を含む)のルールを、送信された入れ子の形に合わせて組み立てる。
      *
      * @return array<string, array<mixed>>
@@ -73,7 +87,7 @@ trait ValidatesQuestionAnswer
         $rules = [
             "{$key}.id" => ['nullable', 'integer'],
             "{$key}.question_text" => ['required', 'string', 'max:65535'],
-            "{$key}.answers" => ['required', 'array', 'min:1'],
+            "{$key}.answers" => ['required', 'array', 'min:1', 'max:'.config('limits.question_answers')],
         ];
 
         $answers = is_array($question) && is_array($question['answers'] ?? null) ? $question['answers'] : [];

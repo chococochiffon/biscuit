@@ -779,6 +779,53 @@ class SiteSettingControllerTest extends TestCase
         $this->assertDatabaseCount('top_slider_images', 0);
     }
 
+    public function test_store_rejects_top_slider_images_over_the_limit(): void
+    {
+        Storage::fake('public');
+        config(['limits.top_slider_images' => 2]);
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'top_slider_images' => [
+                ['image' => UploadedFile::fake()->image('first.jpg')],
+                ['image' => UploadedFile::fake()->image('second.jpg')],
+                ['image' => UploadedFile::fake()->image('third.jpg')],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['top_slider_images' => 'トップスライダー画像は2枚まで登録できます。']);
+        $this->assertDatabaseCount('top_slider_images', 0);
+    }
+
+    public function test_store_accepts_top_slider_images_up_to_the_limit(): void
+    {
+        Storage::fake('public');
+        config(['limits.top_slider_images' => 2]);
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'top_slider_images' => [
+                ['image' => UploadedFile::fake()->image('first.jpg')],
+                ['image' => UploadedFile::fake()->image('second.jpg')],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('top_slider_images', 2);
+    }
+
+    public function test_create_screen_passes_top_slider_image_limit_to_the_repeater(): void
+    {
+        config(['limits.top_slider_images' => 3]);
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.create'));
+
+        $response->assertSee('data-role="repeater" data-max-rows="3"', false);
+        $response->assertSee('最大3件まで登録できます。');
+    }
+
     public function test_update_syncs_top_slider_images_creating_updating_and_deleting_rows(): void
     {
         Storage::fake('public');

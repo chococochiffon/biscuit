@@ -131,6 +131,40 @@ class QuestionAnswerControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_rejects_answers_over_the_limit_at_any_depth(): void
+    {
+        config(['limits.question_answers' => 2]);
+        $actor = Administrator::factory()->create();
+
+        $response = $this->storeBranch($actor, [
+            'question' => [
+                'question_text' => 'お探しの商品は?',
+                'answers' => [
+                    ['answer_text' => '本'],
+                    ['answer_text' => null, 'question' => [
+                        'question_text' => 'ジャンルは?',
+                        'answers' => [['answer_text' => '小説'], ['answer_text' => '漫画'], ['answer_text' => '雑誌']],
+                    ]],
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['question.answers.1.question.answers' => '1つの質問に登録できる回答は2件までです。']);
+        $response->assertSessionDoesntHaveErrors('question.answers');
+        $this->assertDatabaseCount('question_answers', 0);
+    }
+
+    public function test_create_screen_passes_answer_limit_to_the_form(): void
+    {
+        config(['limits.question_answers' => 3]);
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.question-answers.create'));
+
+        $response->assertSee('data-max-answers="3"', false);
+        $response->assertSee('1つの質問に登録できる回答は3件までです。');
+    }
+
     public function test_store_simple_requires_both_short_texts(): void
     {
         $actor = Administrator::factory()->create();

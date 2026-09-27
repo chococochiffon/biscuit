@@ -75,11 +75,13 @@
             @endphp
 
             <div class="mb-3">
-                <label class="form-label">{{ __('詳細') }}</label>
+                <label class="form-label mb-0">{{ __('詳細') }}</label>
+                <div class="form-text mb-2">{{ __('最大:max件まで登録できます。', ['max' => config('limits.single_page_details')]) }}</div>
 
                 <div
                     id="single-page-detail-rows"
                     data-next-index="{{ $detailRows->count() }}"
+                    data-max-rows="{{ config('limits.single_page_details') }}"
                 >
                     @foreach ($detailRows as $row)
                         @include('admin.single_pages._detail_row', [
