@@ -34,7 +34,7 @@ docker compose up -d
 - `php artisan migrate` / `php artisan migrate:refresh --seed` — マイグレーションの実行/リフレッシュ。`DatabaseSeeder` はテストユーザー（`test@example.com`）・管理者・デフォルト画像（`DefaultImageSeeder`。`Article::DEFAULT_THUMBNAIL_PATH` など画像未設定時に使うパスへ、`database/seeders/images/` の同名ファイルをコピーする。既存ファイルは上書きしない）・サイト設定・トップスライダー画像（`database/seeders/images/` のサンプル画像をアップロード時と同じく 1920×1080 に加工して `image/top_image` へ保存。登録済みのスライダー画像があれば登録しない。登録の前に、どのレコード（論理削除済みを含む）からも参照されていない `image/top_image` のファイルを削除するため、`migrate:refresh --seed` を繰り返しても古い画像はたまらない）・固定ページ・記事とタグ（`ArticleSeeder`。公開済み・公開開始日時は投入日時で、タグは記事ごとに `firstOrCreate` して紐づける）・`ContentModelRelation`・呼び出しコンテンツ・Q&A のサンプルを投入する。`DatabaseSeeder` は `WithoutModelEvents` でモデルイベントを止めて各シーダーを実行するため、`HasPath` による `path` の組み立てなどイベント頼みの処理はシーダー側で明示的に行う必要がある。
 - `npm run dev` / `npm run build` — Vite の開発サーバー起動 / 本番ビルド。
 
-スキャフォールディングの規約（`README.md` より）: API コントローラーは `php artisan make:controller API/XxxController --resource`、管理画面側は `php artisan make:controller XxxController --resource`、モデルは `php artisan make:model Xxx -mfs`（マイグレーション・ファクトリー・シーダーを同時生成）。
+スキャフォールディングの規約: API コントローラーは `php artisan make:controller API/XxxController --resource`、管理画面側は `php artisan make:controller XxxController --resource`、モデルは `php artisan make:model Xxx -mfs`（マイグレーション・ファクトリー・シーダーを同時生成）。
 
 ## アーキテクチャ上のポイント
 
