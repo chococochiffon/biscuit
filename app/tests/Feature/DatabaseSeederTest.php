@@ -52,4 +52,39 @@ class DatabaseSeederTest extends TestCase
 
         $this->assertSame(3, TopSliderImage::count());
     }
+
+    public function test_top_slider_image_seeder_deletes_only_unreferenced_image_files(): void
+    {
+        Storage::fake('public');
+        $disk = Storage::disk('public');
+        $disk->put('image/top_image/orphan.png', 'orphan');
+        $disk->put('image/top_image/active.png', 'active');
+        $disk->put('image/top_image/trashed.png', 'trashed');
+        $disk->put('image/other.png', 'other');
+        TopSliderImage::factory()->create(['top_image' => 'image/top_image/active.png']);
+        TopSliderImage::factory()->create(['top_image' => 'image/top_image/trashed.png'])->delete();
+
+        $this->seed(TopSliderImageSeeder::class);
+
+        $disk->assertMissing('image/top_image/orphan.png');
+        $disk->assertExists(['image/top_image/active.png', 'image/top_image/trashed.png', 'image/other.png']);
+        // 登録済みのスライダー画像があるため、サンプルは追加しない
+        $this->assertCount(2, $disk->files('image/top_image'));
+    }
+
+    public function test_top_slider_image_seeder_replaces_old_image_files_after_database_refresh(): void
+    {
+        Storage::fake('public');
+        $disk = Storage::disk('public');
+        // migrate:refresh 後と同じく、レコードはなく前回のファイルだけが残っている状態
+        $disk->put('image/top_image/old.png', 'old');
+
+        $this->seed(TopSliderImageSeeder::class);
+
+        $disk->assertMissing('image/top_image/old.png');
+        $this->assertEqualsCanonicalizing(
+            TopSliderImage::query()->pluck('top_image')->all(),
+            $disk->files('image/top_image')
+        );
+    }
 }
