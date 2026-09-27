@@ -36,32 +36,27 @@
             </div>
 
             @php
-                $oldDetails = old('details');
-
-                $detailRows = $oldDetails !== null
-                    ? collect($oldDetails)->values()->map(fn ($row, $i) => (object) [
-                        'index' => (string) $i,
-                        'id' => $row['id'] ?? null,
+                $detailRows = \App\Support\RepeaterRows::build(
+                    'details',
+                    ($singlePage ?? null)?->details ?? [],
+                    fn (array $row) => [
                         'subTitle' => $row['sub_title'] ?? '',
                         'contents' => $row['contents'] ?? '',
-                        'sortOrder' => $row['sort_order'] ?? $i,
-                    ])
-                    : ($singlePage->details ?? collect())->values()->map(fn ($detail, $i) => (object) [
-                        'index' => (string) $i,
-                        'id' => $detail->id,
+                    ],
+                    fn ($detail) => [
                         'subTitle' => $detail->sub_title,
                         'contents' => $detail->contents,
-                        'sortOrder' => $detail->sort_order,
-                    ]);
+                    ],
+                );
 
                 // 新規登録時(入力値の復元もない場合)は空の詳細ブロックを1つ表示する
-                if (! isset($singlePage) && $oldDetails === null) {
+                if (! isset($singlePage) && old('details') === null) {
                     $detailRows = collect([(object) [
                         'index' => '0',
                         'id' => null,
+                        'sortOrder' => 0,
                         'subTitle' => '',
                         'contents' => '',
-                        'sortOrder' => 0,
                     ]]);
                 }
             @endphp

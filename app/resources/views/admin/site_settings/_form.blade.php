@@ -78,25 +78,21 @@
 
     <div class="col-lg-6">
         @php
-            $oldTopSliderImages = old('top_slider_images');
             $topSliderImageUrls = ($topSliderImages ?? collect())->mapWithKeys(fn ($topSliderImage) => [$topSliderImage->id => $topSliderImage->top_image_url]);
 
             // 入力エラーで戻った場合、選択していた画像ファイルは引き継げないため、既存行だけ保存済みの画像を表示する
-            $topSliderImageRows = $oldTopSliderImages !== null
-                ? collect($oldTopSliderImages)->values()->map(fn ($row, $i) => (object) [
-                    'index' => (string) $i,
-                    'id' => $row['id'] ?? null,
+            $topSliderImageRows = \App\Support\RepeaterRows::build(
+                'top_slider_images',
+                $topSliderImages ?? [],
+                fn (array $row) => [
                     'imageUrl' => isset($row['id']) ? $topSliderImageUrls->get((int) $row['id']) : null,
                     'url' => $row['url'] ?? null,
-                    'sortOrder' => $row['sort_order'] ?? $i,
-                ])
-                : ($topSliderImages ?? collect())->values()->map(fn ($topSliderImage, $i) => (object) [
-                    'index' => (string) $i,
-                    'id' => $topSliderImage->id,
+                ],
+                fn ($topSliderImage) => [
                     'imageUrl' => $topSliderImage->top_image_url,
                     'url' => $topSliderImage->url,
-                    'sortOrder' => $topSliderImage->sort_order,
-                ]);
+                ],
+            );
         @endphp
 
         <div class="mb-3" data-role="repeater" data-max-rows="{{ config('limits.top_slider_images') }}">
@@ -134,25 +130,20 @@
         </div>
 
         @php
-            $oldSocialLinks = old('social_links');
-
-            $socialLinkRows = $oldSocialLinks !== null
-                ? collect($oldSocialLinks)->values()->map(fn ($row, $i) => (object) [
-                    'index' => (string) $i,
-                    'id' => $row['id'] ?? null,
-                    'service' => isset($row['service']) && $row['service'] !== '' ? (int) $row['service'] : null,
+            $socialLinkRows = \App\Support\RepeaterRows::build(
+                'social_links',
+                $socialLinks ?? [],
+                fn (array $row) => [
+                    'service' => \App\Support\RepeaterRows::intOrNull($row['service'] ?? null),
                     'name' => $row['name'] ?? null,
                     'url' => $row['url'] ?? null,
-                    'sortOrder' => $row['sort_order'] ?? $i,
-                ])
-                : ($socialLinks ?? collect())->values()->map(fn ($socialLink, $i) => (object) [
-                    'index' => (string) $i,
-                    'id' => $socialLink->id,
+                ],
+                fn ($socialLink) => [
                     'service' => $socialLink->service->value,
                     'name' => $socialLink->name,
                     'url' => $socialLink->url,
-                    'sortOrder' => $socialLink->sort_order,
-                ]);
+                ],
+            );
         @endphp
 
         <div class="mb-3" data-role="repeater">
@@ -191,24 +182,19 @@
 </div>
 
 @php
-    $oldCallContents = old('call_contents');
-
-    $callContentRows = $oldCallContents !== null
-        ? collect($oldCallContents)->values()->map(fn ($row, $i) => (object) [
-            'index' => (string) $i,
-            'id' => $row['id'] ?? null,
-            'callType' => isset($row['call_type']) && $row['call_type'] !== '' ? (int) $row['call_type'] : null,
+    $callContentRows = \App\Support\RepeaterRows::build(
+        'call_contents',
+        $callContents ?? [],
+        fn (array $row) => [
+            'callType' => \App\Support\RepeaterRows::intOrNull($row['call_type'] ?? null),
             'callName' => $row['call_name'] ?? null,
             'title' => $row['title'] ?? null,
             'subtitle' => $row['subtitle'] ?? null,
-            'contentModelRelationId' => isset($row['content_model_relation_id']) && $row['content_model_relation_id'] !== '' ? (int) $row['content_model_relation_id'] : null,
+            'contentModelRelationId' => \App\Support\RepeaterRows::intOrNull($row['content_model_relation_id'] ?? null),
             'viewCount' => $row['view_count'] ?? 1,
-            'place' => isset($row['place']) && $row['place'] !== '' ? (int) $row['place'] : null,
-            'sortOrder' => $row['sort_order'] ?? $i,
-        ])
-        : ($callContents ?? collect())->values()->map(fn ($callContent, $i) => (object) [
-            'index' => (string) $i,
-            'id' => $callContent->id,
+            'place' => \App\Support\RepeaterRows::intOrNull($row['place'] ?? null),
+        ],
+        fn ($callContent) => [
             'callType' => $callContent->call_type->value,
             'callName' => $callContent->call_name,
             'title' => $callContent->title,
@@ -216,8 +202,8 @@
             'contentModelRelationId' => $callContent->content_model_relation_id,
             'viewCount' => $callContent->view_count,
             'place' => $callContent->place->value,
-            'sortOrder' => $callContent->sort_order,
-        ]);
+        ],
+    );
 @endphp
 
 <div class="mb-3">

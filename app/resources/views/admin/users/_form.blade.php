@@ -178,23 +178,18 @@
         </div>
 
         @php
-            $oldSkills = old('user_detail.skills');
-
-            $skillRows = $oldSkills !== null
-                ? collect($oldSkills)->values()->map(fn ($row, $i) => (object) [
-                    'index' => (string) $i,
-                    'id' => $row['id'] ?? null,
+            $skillRows = \App\Support\RepeaterRows::build(
+                'user_detail.skills',
+                ($user ?? null)?->detail?->skills ?? [],
+                fn (array $row) => [
                     'name' => $row['name'] ?? null,
                     'level' => $row['level'] ?? null,
-                    'sortOrder' => $row['sort_order'] ?? $i,
-                ])
-                : (($user ?? null)?->detail?->skills ?? collect())->values()->map(fn ($skill, $i) => (object) [
-                    'index' => (string) $i,
-                    'id' => $skill->id,
+                ],
+                fn ($skill) => [
                     'name' => $skill->name,
                     'level' => $skill->level,
-                    'sortOrder' => $skill->sort_order,
-                ]);
+                ],
+            );
         @endphp
 
         <div class="mb-3" data-role="repeater">
