@@ -25,6 +25,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
+ * 画面上の文言を、レイアウトから渡された翻訳(window.adminTranslations。キーは日本語の原文)で返す。
+ * 翻訳がなければ原文のまま返す。:name などの置き換え記号は replacements の値で埋める。
+ * 使う文言は App\Support\AdminJsTranslations::KEYS にも追加する。
+ */
+function t(key, replacements = {}) {
+    const text = window.adminTranslations?.[key] ?? key;
+
+    return Object.entries(replacements).reduce((result, [name, value]) => result.replaceAll(`:${name}`, String(value)), text);
+}
+
+/**
  * タグ検索・選択UI(記事の作成・編集フォーム)を初期化する。
  * 選択済みタグはバッジで表示し、×ボタンで選択解除できる。
  */
@@ -62,7 +73,7 @@ function initTagSelector() {
             removeButton.type = 'button';
             removeButton.className = 'btn-close btn-close-white';
             removeButton.style.fontSize = '0.6rem';
-            removeButton.setAttribute('aria-label', 'タグを削除');
+            removeButton.setAttribute('aria-label', t('タグを削除'));
             removeButton.addEventListener('click', () => {
                 selected = selected.filter((selectedName) => selectedName !== name);
                 render();
@@ -220,7 +231,7 @@ function initTagManagerModal() {
         editingTagId = null;
         editingTagName = null;
         input.value = '';
-        submitButton.textContent = '登録';
+        submitButton.textContent = t('登録');
     }
 
     function renderTags(tags) {
@@ -239,14 +250,14 @@ function initTagManagerModal() {
             deleteButton.type = 'button';
             deleteButton.className = 'btn-close';
             deleteButton.style.fontSize = '0.6rem';
-            deleteButton.setAttribute('aria-label', 'タグを削除');
+            deleteButton.setAttribute('aria-label', t('タグを削除'));
             chip.appendChild(deleteButton);
 
             chip.addEventListener('click', () => {
                 editingTagId = tag.id;
                 editingTagName = tag.tag_name;
                 input.value = tag.tag_name;
-                submitButton.textContent = '更新';
+                submitButton.textContent = t('更新');
                 clearError();
                 input.focus();
             });
@@ -254,7 +265,7 @@ function initTagManagerModal() {
             deleteButton.addEventListener('click', async (event) => {
                 event.stopPropagation();
 
-                if (!window.confirm(`「${tag.tag_name}」を削除してよろしいですか?`)) {
+                if (!window.confirm(t('「:name」を削除してよろしいですか?', { name: tag.tag_name }))) {
                     return;
                 }
 
@@ -284,7 +295,7 @@ function initTagManagerModal() {
         });
 
         if (!response.ok) {
-            showError('タグの削除に失敗しました。');
+            showError(t('タグの削除に失敗しました。'));
 
             return;
         }
@@ -327,7 +338,7 @@ function initTagManagerModal() {
                 const data = await response.json();
                 showError(Object.values(data.errors ?? {}).flat().join(' '));
             } else {
-                showError('タグの保存に失敗しました。');
+                showError(t('タグの保存に失敗しました。'));
             }
 
             return;
@@ -419,7 +430,7 @@ function initContentEditor() {
             });
 
             if (!response.ok) {
-                window.alert('画像のアップロードに失敗しました。');
+                window.alert(t('画像のアップロードに失敗しました。'));
 
                 return;
             }
@@ -645,7 +656,7 @@ function applyPlaceConstraints(row, constraints) {
 
     if (previousCallTypeValue && callTypeSelect.selectedOptions[0]?.hidden) {
         callTypeSelect.value = '';
-        setFieldError(callTypeSelect, callTypeError, '選択した表示箇所ではこの呼び出し方は選択できなくなりました。呼び出し方を選び直してください。');
+        setFieldError(callTypeSelect, callTypeError, t('選択した表示箇所ではこの呼び出し方は選択できなくなりました。呼び出し方を選び直してください。'));
     } else {
         setFieldError(callTypeSelect, callTypeError, null);
     }
@@ -697,7 +708,7 @@ function applyCallTypeConstraints(row, constraints) {
 
     if (previousRelationValue && relationSelect.selectedOptions[0]?.hidden) {
         relationSelect.value = '';
-        setFieldError(relationSelect, relationError, '選択した表示箇所・呼び出し方ではこのデータ種別は選択できなくなりました。データ種別を選び直してください。');
+        setFieldError(relationSelect, relationError, t('選択した表示箇所・呼び出し方ではこのデータ種別は選択できなくなりました。データ種別を選び直してください。'));
     } else {
         setFieldError(relationSelect, relationError, null);
     }
@@ -826,7 +837,7 @@ function initContentModelRelationManagerModal() {
         contentTypeSelect.selectedIndex = 0;
         modelNameInput.value = '';
         tableNameSelect.value = '';
-        submitButton.textContent = '登録';
+        submitButton.textContent = t('登録');
     }
 
     function ensureTableNameOption(tableName) {
@@ -863,14 +874,14 @@ function initContentModelRelationManagerModal() {
             editButton.type = 'button';
             editButton.className = 'btn btn-sm btn-outline-secondary';
             editButton.innerHTML = '<i class="bi bi-pencil"></i>';
-            editButton.setAttribute('aria-label', '編集');
+            editButton.setAttribute('aria-label', t('編集'));
             editButton.addEventListener('click', () => {
                 editingId = relation.id;
                 contentTypeSelect.value = String(relation.content_type);
                 modelNameInput.value = relation.model_name;
                 ensureTableNameOption(relation.table_name);
                 tableNameSelect.value = relation.table_name;
-                submitButton.textContent = '更新';
+                submitButton.textContent = t('更新');
                 clearError();
                 modelNameInput.focus();
             });
@@ -880,9 +891,9 @@ function initContentModelRelationManagerModal() {
             deleteButton.type = 'button';
             deleteButton.className = 'btn btn-sm btn-outline-danger';
             deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
-            deleteButton.setAttribute('aria-label', '削除');
+            deleteButton.setAttribute('aria-label', t('削除'));
             deleteButton.addEventListener('click', async () => {
-                if (!window.confirm(`「${relation.content_type_label} / ${relation.model_name}」を削除してよろしいですか?`)) {
+                if (!window.confirm(t('「:name」を削除してよろしいですか?', { name: `${relation.content_type_label} / ${relation.model_name}` }))) {
                     return;
                 }
 
@@ -916,9 +927,9 @@ function initContentModelRelationManagerModal() {
         if (!response.ok) {
             if (response.status === 422) {
                 const data = await response.json();
-                showError(data.message ?? 'このデータ種別の紐付けは使用されているため削除できません。');
+                showError(data.message ?? t('このデータ種別の紐付けは使用されているため削除できません。'));
             } else {
-                showError('データ種別の紐付けの削除に失敗しました。');
+                showError(t('データ種別の紐付けの削除に失敗しました。'));
             }
 
             return;
@@ -962,7 +973,7 @@ function initContentModelRelationManagerModal() {
                 const data = await response.json();
                 showError(Object.values(data.errors ?? {}).flat().join(' '));
             } else {
-                showError('データ種別の紐付けの保存に失敗しました。');
+                showError(t('データ種別の紐付けの保存に失敗しました。'));
             }
 
             return;
@@ -1477,7 +1488,7 @@ function initArticleApprovalControls() {
             .map((checkbox) => checkbox.value);
 
         if (articleIds.length === 0) {
-            window.alert('記事を選択してください。');
+            window.alert(t('記事を選択してください。'));
 
             return;
         }

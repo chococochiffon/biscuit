@@ -8,6 +8,10 @@
         <title>@yield('title', __('管理画面')) - {{ config('app.name', 'Laravel') }}</title>
 
         {{ \Illuminate\Support\Facades\Vite::fonts('nunito') }}
+        {{-- admin.js で表示する文言(現在の言語に翻訳済み。JS では t('日本語の原文') で参照する) --}}
+        <script>
+            window.adminTranslations = @json(\App\Support\AdminJsTranslations::translated());
+        </script>
         @vite(['resources/css/admin.css', 'resources/js/admin.js'])
     </head>
     <body class="bg-light">
