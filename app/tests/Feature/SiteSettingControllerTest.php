@@ -186,6 +186,25 @@ class SiteSettingControllerTest extends TestCase
         $this->assertDatabaseCount('social_links', 0);
     }
 
+    public function test_create_screen_restores_submitted_rows_after_a_validation_error(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->from(route('admin.site-settings.create'))->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'social_links' => [
+                5 => ['service' => SocialService::GitHub->value, 'name' => '入力したGitHub', 'url' => 'javascript:alert(1)'],
+            ],
+        ])->assertRedirect(route('admin.site-settings.create'));
+
+        $response = $this->get(route('admin.site-settings.create'));
+
+        // 入力名の番号は 0 から振り直し、入力した値と選択したサービスを復元する
+        $response->assertOk()
+            ->assertSeeInOrder(['name="social_links[0][name]"', 'value="入力したGitHub"'], false)
+            ->assertSee('value="'.SocialService::GitHub->value.'" selected', false);
+    }
+
     public function test_update_syncs_social_links_creating_updating_and_deleting_rows(): void
     {
         $this->actingAsAdmin();
