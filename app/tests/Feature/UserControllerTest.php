@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\UserDetailNameSetting;
-use App\Models\Administrator;
 use App\Models\User;
 use App\Models\UserDetail;
 use App\Models\UserSkill;
@@ -42,10 +41,10 @@ class UserControllerTest extends TestCase
 
     public function test_index_displays_users(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $user = User::factory()->has(UserDetail::factory(), 'detail')->create(['name' => 'Jane Doe']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.users.index'));
+        $response = $this->get(route('admin.users.index'));
 
         $response->assertOk();
         $response->assertSee($user->name);
@@ -53,18 +52,18 @@ class UserControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.users.create'));
+        $response = $this->get(route('admin.users.create'));
 
         $response->assertOk();
     }
 
     public function test_store_creates_user_with_detail(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $response = $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => 'new-user@example.com',
             'password' => 'password123',
@@ -89,9 +88,9 @@ class UserControllerTest extends TestCase
 
     public function test_store_creates_skills_in_row_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => 'skill-user@example.com',
             'password' => 'password123',
@@ -112,9 +111,9 @@ class UserControllerTest extends TestCase
 
     public function test_store_rejects_skill_level_out_of_range(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $response = $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => 'skill-user@example.com',
             'password' => 'password123',
@@ -130,12 +129,12 @@ class UserControllerTest extends TestCase
 
     public function test_update_syncs_skills_creating_updating_and_deleting_rows(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
         $kept = UserSkill::factory()->for($target->detail)->create(['name' => '旧スキル', 'level' => 10, 'sort_order' => 0]);
         $removed = UserSkill::factory()->for($target->detail)->create(['sort_order' => 1]);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+        $this->put(route('admin.users.update', $target), [
             'name' => $target->name,
             'email' => $target->email,
             'user_detail' => $this->validUserDetailPayload([
@@ -156,11 +155,11 @@ class UserControllerTest extends TestCase
 
     public function test_update_rejects_skill_belonging_to_another_user(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
         $othersSkill = UserSkill::factory()->create(['name' => '他人のスキル']);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+        $response = $this->put(route('admin.users.update', $target), [
             'name' => $target->name,
             'email' => $target->email,
             'user_detail' => $this->validUserDetailPayload([
@@ -174,11 +173,11 @@ class UserControllerTest extends TestCase
 
     public function test_show_displays_skills(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
         UserSkill::factory()->for($target->detail)->create(['name' => '表示確認用スキル']);
 
-        $this->actingAs($actor, 'admin')->get(route('admin.users.show', $target))
+        $this->get(route('admin.users.show', $target))
             ->assertOk()
             ->assertSee('表示確認用スキル');
     }
@@ -187,10 +186,10 @@ class UserControllerTest extends TestCase
     {
         $this->freezeTime();
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $file = UploadedFile::fake()->image('photo.jpg');
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $response = $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => 'new-user@example.com',
             'password' => 'password123',
@@ -209,9 +208,9 @@ class UserControllerTest extends TestCase
     public function test_store_resizes_user_image_to_square_icon_from_center_when_crop_is_not_specified(): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => 'new-user@example.com',
             'password' => 'password123',
@@ -226,7 +225,7 @@ class UserControllerTest extends TestCase
     public function test_update_crops_user_image_to_the_selected_area(): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
 
         // 左半分が赤、右半分が青の画像を作り、右半分の正方形だけを切り抜く
@@ -236,7 +235,7 @@ class UserControllerTest extends TestCase
         $sourcePath = tempnam(sys_get_temp_dir(), 'icon').'.png';
         imagepng($source, $sourcePath);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+        $this->put(route('admin.users.update', $target), [
             'name' => $target->name,
             'email' => $target->email,
             'user_detail' => $this->validUserDetailPayload([
@@ -252,9 +251,9 @@ class UserControllerTest extends TestCase
 
     public function test_store_rejects_invalid_user_image_crop(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $response = $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => 'new-user@example.com',
             'password' => 'password123',
@@ -273,9 +272,9 @@ class UserControllerTest extends TestCase
 
     public function test_create_screen_places_user_detail_in_right_column_with_icon_image_cropper_modal(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.users.create'));
+        $response = $this->get(route('admin.users.create'));
 
         $response->assertOk()
             ->assertSeeInOrder(['col-lg-6', 'id="password_confirmation"', 'col-lg-6', 'ユーザー詳細', 'id="user_detail_first_name"'], false)
@@ -289,19 +288,19 @@ class UserControllerTest extends TestCase
 
     public function test_store_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), []);
+        $response = $this->post(route('admin.users.store'), []);
 
         $response->assertSessionHasErrors(['name', 'email', 'password', 'user_detail']);
     }
 
     public function test_store_fails_when_email_already_exists(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $existing = User::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+        $response = $this->post(route('admin.users.store'), [
             'name' => '検証太郎',
             'email' => $existing->email,
             'password' => 'password123',
@@ -314,10 +313,10 @@ class UserControllerTest extends TestCase
 
     public function test_show_displays_user(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.users.show', $target));
+        $response = $this->get(route('admin.users.show', $target));
 
         $response->assertOk();
         $response->assertSee($target->email);
@@ -325,22 +324,22 @@ class UserControllerTest extends TestCase
 
     public function test_edit_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.users.edit', $target));
+        $response = $this->get(route('admin.users.edit', $target));
 
         $response->assertOk();
     }
 
     public function test_update_modifies_user_and_detail_without_changing_password(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()
             ->has(UserDetail::factory(), 'detail')
             ->create(['password' => Hash::make('original-password')]);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+        $response = $this->put(route('admin.users.update', $target), [
             'name' => 'Updated Name',
             'email' => $target->email,
             'user_detail' => $this->validUserDetailPayload(['nick_name' => '更新後ニックネーム']),
@@ -356,12 +355,12 @@ class UserControllerTest extends TestCase
 
     public function test_update_changes_password_when_provided(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()
             ->has(UserDetail::factory(), 'detail')
             ->create(['password' => Hash::make('original-password')]);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+        $this->put(route('admin.users.update', $target), [
             'name' => $target->name,
             'email' => $target->email,
             'password' => 'new-password',
@@ -374,11 +373,11 @@ class UserControllerTest extends TestCase
 
     public function test_update_fails_when_email_belongs_to_another_user(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
         $other = User::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+        $response = $this->put(route('admin.users.update', $target), [
             'name' => $target->name,
             'email' => $other->email,
             'user_detail' => $this->validUserDetailPayload(),
@@ -389,10 +388,10 @@ class UserControllerTest extends TestCase
 
     public function test_destroy_deletes_user(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
 
-        $response = $this->actingAs($actor, 'admin')->delete(route('admin.users.destroy', $target));
+        $response = $this->delete(route('admin.users.destroy', $target));
 
         $response->assertRedirect(route('admin.users.index'));
         $this->assertSoftDeleted('users', ['id' => $target->id]);

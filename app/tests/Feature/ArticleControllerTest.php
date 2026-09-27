@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\ArticleApprovalStatus;
-use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\SinglePage;
 use App\Models\Tag;
@@ -28,11 +27,11 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_displays_articles(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $user = User::factory()->create(['name' => 'Jane Doe']);
         $article = Article::factory()->for($user)->create(['title' => 'テスト記事']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $response->assertSee($article->title);
@@ -41,10 +40,10 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_displays_columns_in_expected_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $response->assertSeeInOrder(['<table', 'サムネイル', 'タイトル', '公開開始', '公開終了', 'ステータス', '投稿者', '更新日時'], false);
@@ -52,9 +51,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_collapses_search_form_when_not_searching(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertSee('id="article-search-body" class="collapse"', false);
         $response->assertSee('aria-expanded="false"', false);
@@ -63,9 +62,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_expands_search_form_while_searching(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['title' => 'Laravel']));
+        $response = $this->get(route('admin.articles.index', ['title' => 'Laravel']));
 
         $response->assertSee('id="article-search-body" class="collapse show"', false);
         $response->assertSee('aria-expanded="true"', false);
@@ -74,28 +73,28 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_keeps_search_form_collapsed_when_only_sort_is_specified(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'title_asc']));
+        $response = $this->get(route('admin.articles.index', ['sort' => 'title_asc']));
 
         $response->assertSee('id="article-search-body" class="collapse"', false);
     }
 
     public function test_index_displays_path(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertSee('/news/first-post');
     }
 
     public function test_index_displays_search_fields_in_expected_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $response->assertSeeInOrder(['id="search-title"', 'id="search-publication_start-from"', 'id="search-publication_end-from"', 'id="search-approval"'], false);
@@ -103,9 +102,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_header_link_toggles_sort_direction(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'title_asc', 'title' => 'Laravel']));
+        $response = $this->get(route('admin.articles.index', ['sort' => 'title_asc', 'title' => 'Laravel']));
 
         $response->assertOk();
         // 並び中の項目は方向を反転し、検索条件は引き継ぐ
@@ -116,11 +115,11 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_orders_articles_by_updated_at_desc_by_default(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $older = Article::factory()->create(['updated_at' => now()->subDay()]);
         $newer = Article::factory()->create(['updated_at' => now()]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $this->assertSame([$newer->id, $older->id], $response->viewData('articles')->pluck('id')->all());
@@ -128,20 +127,20 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_can_sort_by_publication_start(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $later = Article::factory()->create(['publication_start_datetime' => '2026-10-10 00:00:00']);
         $earlier = Article::factory()->create(['publication_start_datetime' => '2026-10-01 00:00:00']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'publication_start_asc']));
+        $response = $this->get(route('admin.articles.index', ['sort' => 'publication_start_asc']));
 
         $this->assertSame([$earlier->id, $later->id], $response->viewData('articles')->pluck('id')->all());
     }
 
     public function test_index_ignores_unknown_sort_and_falls_back_to_default(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', ['sort' => 'unknown', 'approval' => 'invalid']));
+        $response = $this->get(route('admin.articles.index', ['sort' => 'unknown', 'approval' => 'invalid']));
 
         $response->assertOk();
         $this->assertSame('updated_at_desc', $response->viewData('sort'));
@@ -149,12 +148,12 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_searches_by_title_and_approval(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $hit = Article::factory()->published()->create(['title' => 'Laravel入門']);
         Article::factory()->create(['title' => 'Laravel応用', 'approval' => ArticleApprovalStatus::Draft]);
         Article::factory()->published()->create(['title' => 'PHP入門']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', [
+        $response = $this->get(route('admin.articles.index', [
             'title' => 'Laravel',
             'approval' => ArticleApprovalStatus::Published->value,
         ]));
@@ -164,7 +163,7 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_searches_by_publication_period(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $hit = Article::factory()->create([
             'publication_start_datetime' => '2026-10-05 10:00:00',
             'publication_end_datetime' => '2026-12-31 23:59:00',
@@ -178,7 +177,7 @@ class ArticleControllerTest extends TestCase
             'publication_end_datetime' => null,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index', [
+        $response = $this->get(route('admin.articles.index', [
             'publication_start_from' => '2026-10-01',
             'publication_start_to' => '2026-10-31',
             'publication_end_from' => '2026-12-01',
@@ -190,13 +189,13 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_displays_publication_datetimes(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create([
             'publication_start_datetime' => '2026-10-01 09:00:00',
             'publication_end_datetime' => '2026-10-31 23:59:30',
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $response->assertSee('公開開始');
@@ -208,13 +207,13 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_displays_not_set_when_publication_end_datetime_is_null(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create([
             'publication_start_datetime' => '2026-10-01 09:00:00',
             'publication_end_datetime' => null,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $response->assertSee('未設定');
@@ -222,10 +221,10 @@ class ArticleControllerTest extends TestCase
 
     public function test_index_displays_administrator_for_null_user(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->byAdministrator()->create(['title' => '管理者記事']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.index'));
+        $response = $this->get(route('admin.articles.index'));
 
         $response->assertOk();
         $response->assertSee('管理者');
@@ -233,18 +232,18 @@ class ArticleControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.create'));
+        $response = $this->get(route('admin.articles.create'));
 
         $response->assertOk();
     }
 
     public function test_store_creates_article_published_with_null_user_id(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $response = $this->post(route('admin.articles.store'), [
             'title' => '新しい記事',
             'content' => '<p>本文です</p>',
             'publication_start_datetime' => now()->format('Y-m-d H:i'),
@@ -260,9 +259,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), []);
+        $response = $this->post(route('admin.articles.store'), []);
 
         $response->assertSessionHasErrors(['title', 'content']);
     }
@@ -271,10 +270,10 @@ class ArticleControllerTest extends TestCase
     {
         $this->freezeTime();
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $file = UploadedFile::fake()->image('photo.jpg');
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $response = $this->post(route('admin.articles.store'), [
             'title' => 'サムネイル記事',
             'content' => '<p>本文</p>',
             'thumbnail' => $file,
@@ -307,9 +306,9 @@ class ArticleControllerTest extends TestCase
     public function test_store_resizes_thumbnail_to_closest_aspect_ratio(int $sourceWidth, int $sourceHeight, int $expectedWidth, int $expectedHeight): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $this->post(route('admin.articles.store'), [
             'title' => 'サムネイル記事',
             'content' => '<p>本文</p>',
             'thumbnail' => UploadedFile::fake()->image('photo.jpg', $sourceWidth, $sourceHeight),
@@ -324,9 +323,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_builds_path_from_parent_path_and_slug(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => '/news/', 'slug' => 'first-post']))
+        $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => '/news/', 'slug' => 'first-post']))
             ->assertRedirect(route('admin.articles.index'));
 
         $article = Article::where('slug', 'first-post')->firstOrFail();
@@ -336,9 +335,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_uses_article_id_in_path_when_slug_is_empty(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => '']))
+        $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => '']))
             ->assertRedirect(route('admin.articles.index'));
 
         $article = Article::where('title', 'URL記事')->firstOrFail();
@@ -348,10 +347,10 @@ class ArticleControllerTest extends TestCase
 
     public function test_update_switches_path_to_article_id_when_slug_is_cleared(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), $this->validArticlePayload([
+        $this->put(route('admin.articles.update', $target), $this->validArticlePayload([
             'parent_path' => 'news',
             'slug' => '',
             'approval' => $target->approval->value,
@@ -362,10 +361,10 @@ class ArticleControllerTest extends TestCase
 
     public function test_update_allows_keeping_its_own_path(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), $this->validArticlePayload([
+        $response = $this->put(route('admin.articles.update', $target), $this->validArticlePayload([
             'parent_path' => 'news',
             'slug' => 'first-post',
             'approval' => $target->approval->value,
@@ -376,32 +375,32 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_rejects_numeric_slug(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => '123']));
+        $response = $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => '123']));
 
         $response->assertSessionHasErrors('slug');
     }
 
     public function test_store_rejects_path_used_by_another_article_or_single_page(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create(['parent_path' => 'news', 'slug' => 'first-post']);
         SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
 
-        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => 'first-post']))
+        $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'news', 'slug' => 'first-post']))
             ->assertSessionHasErrors('slug');
-        $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'company', 'slug' => 'about']))
+        $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'company', 'slug' => 'about']))
             ->assertSessionHasErrors('slug');
     }
 
     public function test_create_screen_uses_parent_path_of_latest_article_as_default(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create(['parent_path' => 'blog']);
         Article::factory()->create(['parent_path' => 'news']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.create'));
+        $response = $this->get(route('admin.articles.create'));
 
         $response->assertSee('name="parent_path"', false);
         $response->assertSee('value="news"', false);
@@ -409,10 +408,10 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_creates_new_tags_and_attaches_existing_ones(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $existingTag = Tag::factory()->create(['tag_name' => 'Laravel']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $response = $this->post(route('admin.articles.store'), [
             'title' => 'タグ記事',
             'content' => '<p>本文</p>',
             'tags' => ['Laravel', 'NewTag'],
@@ -429,32 +428,32 @@ class ArticleControllerTest extends TestCase
 
     public function test_show_screen_does_not_exist(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create();
 
         $this->assertFalse(Route::has('admin.articles.show'));
-        $this->actingAs($actor, 'admin')->get('/admin/articles/'.$target->id)->assertMethodNotAllowed();
+        $this->get('/admin/articles/'.$target->id)->assertMethodNotAllowed();
     }
 
     public function test_edit_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.articles.edit', $target));
+        $response = $this->get(route('admin.articles.edit', $target));
 
         $response->assertOk();
     }
 
     public function test_update_modifies_article_and_keeps_existing_user_id(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $user = User::factory()->create();
         $target = Article::factory()->for($user)->create([
             'approval' => ArticleApprovalStatus::Draft,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), [
+        $response = $this->put(route('admin.articles.update', $target), [
             'title' => '更新後のタイトル',
             'content' => '<p>更新後の本文</p>',
             'approval' => ArticleApprovalStatus::Published->value,
@@ -473,11 +472,11 @@ class ArticleControllerTest extends TestCase
     {
         $this->freezeTime();
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create();
         $file = UploadedFile::fake()->image('new.png', 1600, 900);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), [
+        $response = $this->put(route('admin.articles.update', $target), [
             'title' => $target->title,
             'content' => $target->content,
             'approval' => $target->approval->value,
@@ -495,13 +494,13 @@ class ArticleControllerTest extends TestCase
 
     public function test_update_syncs_tags(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create();
         $keptTag = Tag::factory()->create(['tag_name' => 'Kept']);
         $removedTag = Tag::factory()->create(['tag_name' => 'Removed']);
         $target->tags()->sync([$keptTag->id, $removedTag->id]);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.articles.update', $target), [
+        $response = $this->put(route('admin.articles.update', $target), [
             'title' => $target->title,
             'content' => $target->content,
             'approval' => $target->approval->value,
@@ -517,9 +516,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_persists_publication_start_and_end_datetimes(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $response = $this->post(route('admin.articles.store'), [
             'title' => '公開期間付き記事',
             'content' => '<p>本文</p>',
             'publication_start_datetime' => '2026-10-01 09:00',
@@ -535,9 +534,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_fails_validation_without_publication_start_datetime(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $response = $this->post(route('admin.articles.store'), [
             'title' => '公開開始日時なし記事',
             'content' => '<p>本文</p>',
         ]);
@@ -547,9 +546,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_store_fails_validation_when_publication_end_datetime_is_before_start(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.articles.store'), [
+        $response = $this->post(route('admin.articles.store'), [
             'title' => '公開期間逆転記事',
             'content' => '<p>本文</p>',
             'publication_start_datetime' => '2026-10-10 00:00',
@@ -572,11 +571,11 @@ class ArticleControllerTest extends TestCase
 
     public function test_approval_update_changes_only_the_approval_of_the_target_article(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft, 'title' => '対象記事']);
         $other = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft]);
 
-        $response = $this->actingAs($actor, 'admin')->patch(route('admin.articles.approval', $target), [
+        $response = $this->patch(route('admin.articles.approval', $target), [
             'approval' => ArticleApprovalStatus::Published->value,
         ]);
 
@@ -588,11 +587,11 @@ class ArticleControllerTest extends TestCase
 
     public function test_bulk_approval_update_changes_only_the_selected_articles(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $selected = Article::factory()->count(2)->create(['approval' => ArticleApprovalStatus::Draft]);
         $notSelected = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft]);
 
-        $response = $this->actingAs($actor, 'admin')->patch(route('admin.articles.bulk-approval'), [
+        $response = $this->patch(route('admin.articles.bulk-approval'), [
             'article_ids' => $selected->pluck('id')->all(),
             'approval' => ArticleApprovalStatus::Published->value,
         ]);
@@ -606,9 +605,9 @@ class ArticleControllerTest extends TestCase
 
     public function test_bulk_approval_update_fails_validation_without_article_ids(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->patch(route('admin.articles.bulk-approval'), [
+        $response = $this->patch(route('admin.articles.bulk-approval'), [
             'approval' => ArticleApprovalStatus::Published->value,
         ]);
 
@@ -617,10 +616,10 @@ class ArticleControllerTest extends TestCase
 
     public function test_destroy_deletes_article(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Article::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->delete(route('admin.articles.destroy', $target));
+        $response = $this->delete(route('admin.articles.destroy', $target));
 
         $response->assertRedirect(route('admin.articles.index'));
         $this->assertSoftDeleted('articles', ['id' => $target->id]);
@@ -629,10 +628,10 @@ class ArticleControllerTest extends TestCase
     public function test_content_image_upload_stores_file_and_returns_url(): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $file = UploadedFile::fake()->image('inline.jpg');
 
-        $response = $this->actingAs($actor, 'admin')->postJson(route('admin.articles.content-images'), [
+        $response = $this->postJson(route('admin.articles.content-images'), [
             'image' => $file,
         ]);
 

@@ -6,7 +6,6 @@ use App\Enums\CallContentPlace;
 use App\Enums\CallContentType;
 use App\Enums\CallType;
 use App\Enums\SocialService;
-use App\Models\Administrator;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\SiteSetting;
@@ -30,18 +29,18 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.create'));
+        $response = $this->get(route('admin.site-settings.create'));
 
         $response->assertOk();
     }
 
     public function test_store_creates_site_setting(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'description' => 'サイトの説明文',
         ]);
@@ -53,9 +52,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), []);
+        $response = $this->post(route('admin.site-settings.store'), []);
 
         $response->assertSessionHasErrors(['site_title']);
     }
@@ -64,11 +63,11 @@ class SiteSettingControllerTest extends TestCase
     {
         $this->freezeTime();
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $icon = UploadedFile::fake()->image('icon.png');
         $image = UploadedFile::fake()->image('image.jpg');
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => '画像付きサイト',
             'site_icon' => $icon,
             'site_image' => $image,
@@ -87,7 +86,7 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_saves_call_content_sort_order_from_form_or_row_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
         $row = fn (string $callName, ?int $sortOrder) => array_filter([
             'call_type' => CallType::Link->value,
@@ -98,7 +97,7 @@ class SiteSettingControllerTest extends TestCase
             'sort_order' => $sortOrder,
         ], fn ($value) => $value !== null);
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [$row('並び順指定', 5), $row('並び順なし', null)],
         ])->assertSessionHasNoErrors();
@@ -109,7 +108,7 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_saves_call_content_title_and_subtitle(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
         $row = fn (string $callName, array $headings) => [
             'call_type' => CallType::Link->value,
@@ -120,7 +119,7 @@ class SiteSettingControllerTest extends TestCase
             ...$headings,
         ];
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 $row('見出しあり', ['title' => 'About', 'subtitle' => 'このサイトについて']),
@@ -134,10 +133,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_rejects_call_content_title_longer_than_255_characters(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [[
                 'call_type' => CallType::Link->value,
@@ -155,9 +154,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_creates_social_links_in_row_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'social_links' => [
                 ['service' => SocialService::YouTube->value, 'name' => 'YouTube', 'url' => 'https://www.youtube.com/@example'],
@@ -173,9 +172,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_rejects_social_link_with_invalid_url_or_service(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'social_links' => [
                 ['service' => SocialService::GitHub->value, 'name' => 'GitHub', 'url' => 'javascript:alert(1)'],
@@ -189,12 +188,12 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_update_syncs_social_links_creating_updating_and_deleting_rows(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $kept = SocialLink::factory()->create(['service' => SocialService::GitHub, 'name' => '旧GitHub', 'sort_order' => 0]);
         $removed = SocialLink::factory()->create(['sort_order' => 1]);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
             'social_links' => [
                 ['service' => SocialService::Amazon->value, 'name' => 'ほしいものリスト', 'url' => 'https://www.amazon.jp/hz/wishlist/ls/example', 'sort_order' => 0],
@@ -210,21 +209,21 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_show_displays_social_links(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         SocialLink::factory()->create(['name' => '表示確認用リンク']);
 
-        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting))
+        $this->get(route('admin.site-settings.show', $siteSetting))
             ->assertOk()
             ->assertSee('表示確認用リンク');
     }
 
     public function test_store_creates_call_contents_together_with_site_setting(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -264,10 +263,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_when_content_model_relation_content_type_is_not_allowed_for_call_type(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -285,10 +284,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_when_call_type_is_not_allowed_for_place(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::SinglePage, 'model_name' => 'SinglePage']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -307,11 +306,11 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_when_content_model_relation_is_not_allowed_for_place_and_call_type(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
 
         // リンクリストはTopで選択可能だが、TopでArticleのリンクリストは許可されていない(Othersのみ)
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -330,10 +329,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_when_view_count_is_not_fixed_to_one_for_call_type(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -351,13 +350,13 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_when_skill_list_call_type_uses_a_relation_other_than_user_detail(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create([
             'content_type' => CallContentType::Custom,
             'model_name' => 'Recipe',
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -375,13 +374,13 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_creates_call_content_with_skill_list_call_type_and_user_detail_relation(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create([
             'content_type' => CallContentType::Custom,
             'model_name' => 'UserDetail',
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -405,13 +404,13 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_fails_when_archive_call_type_uses_a_relation_other_than_article(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create([
             'content_type' => CallContentType::Custom,
             'model_name' => 'Recipe',
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -429,13 +428,13 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_creates_call_content_with_archive_call_type_and_article_relation(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create([
             'content_type' => CallContentType::Article,
             'model_name' => 'Article',
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
                 [
@@ -459,7 +458,7 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_update_changes_and_clears_call_content_title_and_subtitle(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
         $callContent = CallContent::factory()->create([
@@ -471,7 +470,7 @@ class SiteSettingControllerTest extends TestCase
             'subtitle' => '旧小見出し',
         ]);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
             'call_contents' => [[
                 'id' => $callContent->id,
@@ -492,7 +491,7 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_update_syncs_call_contents_creating_updating_and_deleting_rows(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
         $otherRelation = ContentModelRelation::factory()->create(['content_type' => CallContentType::SinglePage, 'model_name' => 'SinglePage']);
@@ -504,7 +503,7 @@ class SiteSettingControllerTest extends TestCase
         ]);
         $removed = CallContent::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $response = $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
             'call_contents' => [
                 [
@@ -542,11 +541,11 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_update_removes_all_call_contents_when_none_are_submitted(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $existing = CallContent::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $response = $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
         ]);
 
@@ -556,11 +555,11 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_edit_screen_displays_existing_call_contents(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         CallContent::factory()->create(['call_name' => '編集画面確認用モデル']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting));
+        $response = $this->get(route('admin.site-settings.edit', $siteSetting));
 
         $response->assertOk();
         $response->assertSee('編集画面確認用モデル');
@@ -568,10 +567,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_show_displays_site_setting(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create(['site_title' => '表示確認サイト']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting));
+        $response = $this->get(route('admin.site-settings.show', $siteSetting));
 
         $response->assertOk();
         $response->assertSee('表示確認サイト');
@@ -579,10 +578,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_show_does_not_display_the_content_model_relations_link(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting));
+        $response = $this->get(route('admin.site-settings.show', $siteSetting));
 
         $response->assertOk();
         $response->assertDontSee(route('admin.content-model-relations.index'), false);
@@ -590,7 +589,7 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_show_displays_call_contents(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::OriginalText,
@@ -599,7 +598,7 @@ class SiteSettingControllerTest extends TestCase
             'place' => CallContentPlace::Inside,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting));
+        $response = $this->get(route('admin.site-settings.show', $siteSetting));
 
         $response->assertOk();
         $response->assertSee($callContent->call_type->label());
@@ -610,20 +609,20 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_edit_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting));
+        $response = $this->get(route('admin.site-settings.edit', $siteSetting));
 
         $response->assertOk();
     }
 
     public function test_update_modifies_site_setting(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create(['site_title' => '更新前サイト']);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $response = $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => '更新後サイト',
             'description' => '更新後の説明文',
         ]);
@@ -635,10 +634,10 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_update_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $response = $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => '',
         ]);
 
@@ -649,12 +648,12 @@ class SiteSettingControllerTest extends TestCase
     {
         $this->freezeTime();
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $icon = UploadedFile::fake()->image('new-icon.png');
         $image = UploadedFile::fake()->image('new-image.jpg');
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $response = $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
             'site_icon' => $icon,
             'site_image' => $image,
@@ -672,9 +671,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_and_update_save_front_url_and_api_url(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'front_url' => 'https://www.example.com',
             'api_url' => 'https://api.example.com/api',
@@ -684,7 +683,7 @@ class SiteSettingControllerTest extends TestCase
         $this->assertSame('https://www.example.com', $siteSetting->front_url);
         $this->assertSame('https://api.example.com/api', $siteSetting->api_url);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
             'front_url' => 'https://front.example.com',
             'api_url' => '',
@@ -696,9 +695,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_rejects_invalid_front_url_and_api_url(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'front_url' => 'javascript:alert(1)',
             'api_url' => 'https://example.com/'.str_repeat('a', 255),
@@ -710,9 +709,9 @@ class SiteSettingControllerTest extends TestCase
     public function test_store_creates_top_slider_images_resized_to_16_9_with_random_filenames(): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'top_slider_images' => [
                 ['image' => UploadedFile::fake()->image('first.jpg', 1000, 1000), 'url' => 'https://example.com/campaign'],
@@ -737,7 +736,7 @@ class SiteSettingControllerTest extends TestCase
     public function test_store_crops_top_slider_image_to_the_selected_area(): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
         // 左半分が赤、右半分が青の画像を作り、右半分だけを切り抜く
         $source = imagecreatetruecolor(3200, 900);
@@ -746,7 +745,7 @@ class SiteSettingControllerTest extends TestCase
         $path = tempnam(sys_get_temp_dir(), 'slider').'.png';
         imagepng($source, $path);
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'top_slider_images' => [
                 [
@@ -765,9 +764,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_store_rejects_top_slider_image_row_without_image_or_with_invalid_url(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'top_slider_images' => [
                 ['url' => 'https://example.com'],
@@ -783,9 +782,9 @@ class SiteSettingControllerTest extends TestCase
     {
         Storage::fake('public');
         config(['limits.top_slider_images' => 2]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'top_slider_images' => [
                 ['image' => UploadedFile::fake()->image('first.jpg')],
@@ -802,9 +801,9 @@ class SiteSettingControllerTest extends TestCase
     {
         Storage::fake('public');
         config(['limits.top_slider_images' => 2]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.site-settings.store'), [
+        $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'top_slider_images' => [
                 ['image' => UploadedFile::fake()->image('first.jpg')],
@@ -818,9 +817,9 @@ class SiteSettingControllerTest extends TestCase
     public function test_create_screen_passes_top_slider_image_limit_to_the_repeater(): void
     {
         config(['limits.top_slider_images' => 3]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.create'));
+        $response = $this->get(route('admin.site-settings.create'));
 
         $response->assertSee('data-role="repeater" data-max-rows="3"', false);
         $response->assertSee('最大3件まで登録できます。');
@@ -828,9 +827,9 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_create_screen_has_top_slider_image_cropper_modal_with_output_size(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.site-settings.create'));
+        $response = $this->get(route('admin.site-settings.create'));
 
         $response->assertSee('data-output-width="1920"', false)
             ->assertSee('data-output-height="1080"', false)
@@ -841,13 +840,13 @@ class SiteSettingControllerTest extends TestCase
     public function test_update_syncs_top_slider_images_creating_updating_and_deleting_rows(): void
     {
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create();
         $kept = TopSliderImage::factory()->create(['top_image' => 'image/top_image/kept.jpg', 'url' => 'https://example.com/old', 'sort_order' => 0]);
         $replaced = TopSliderImage::factory()->create(['top_image' => 'image/top_image/old.jpg', 'sort_order' => 1]);
         $removed = TopSliderImage::factory()->create(['sort_order' => 2]);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.site-settings.update', $siteSetting), [
+        $this->put(route('admin.site-settings.update', $siteSetting), [
             'site_title' => $siteSetting->site_title,
             'top_slider_images' => [
                 ['image' => UploadedFile::fake()->image('new.jpg', 1920, 1080), 'sort_order' => 0],
@@ -867,16 +866,16 @@ class SiteSettingControllerTest extends TestCase
 
     public function test_edit_and_show_display_top_slider_images(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $siteSetting = SiteSetting::factory()->create(['front_url' => 'https://front.example.com']);
         $topSliderImage = TopSliderImage::factory()->create(['url' => 'https://example.com/slide-link']);
 
-        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.edit', $siteSetting))
+        $this->get(route('admin.site-settings.edit', $siteSetting))
             ->assertOk()
             ->assertSee($topSliderImage->top_image)
             ->assertSee('https://example.com/slide-link');
 
-        $this->actingAs($actor, 'admin')->get(route('admin.site-settings.show', $siteSetting))
+        $this->get(route('admin.site-settings.show', $siteSetting))
             ->assertOk()
             ->assertSee('https://front.example.com')
             ->assertSee($topSliderImage->top_image)
