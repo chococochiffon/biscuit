@@ -52,6 +52,26 @@ class TagControllerTest extends TestCase
         $response->assertSee($tag->tag_name);
     }
 
+    public function test_index_shows_delete_button_for_each_tag_and_empty_row_without_tags(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->get(route('admin.tags.index'))
+            ->assertOk()
+            ->assertSee('タグが登録されていません。');
+
+        $tag = Tag::factory()->create();
+
+        $this->get(route('admin.tags.index'))
+            ->assertOk()
+            ->assertSeeInOrder([
+                'action="'.route('admin.tags.destroy', $tag).'"',
+                'onsubmit="return confirm(',
+                'name="_method" value="DELETE"',
+            ], false)
+            ->assertDontSee('タグが登録されていません。');
+    }
+
     public function test_create_screen_can_be_rendered(): void
     {
         $this->actingAsAdmin();

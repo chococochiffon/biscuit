@@ -124,22 +124,11 @@
                         <td class="text-end">
                             <a href="{{ route('admin.articles.edit', $article) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
-                            <form
-                                method="POST"
-                                action="{{ route('admin.articles.destroy', $article) }}"
-                                class="d-inline"
-                                onsubmit="return confirm('{{ __('削除してよろしいですか?') }}');"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('削除') }}</button>
-                            </form>
+                            <x-admin.delete-button :action="route('admin.articles.destroy', $article)" />
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="10" class="text-center text-muted py-4">{{ __('該当する記事がありません。') }}</td>
-                    </tr>
+                    <x-admin.empty-row colspan="10">{{ __('該当する記事がありません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>

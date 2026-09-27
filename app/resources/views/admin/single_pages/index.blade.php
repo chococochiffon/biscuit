@@ -95,22 +95,11 @@
                         <td class="text-end">
                             <a href="{{ route('admin.single-pages.edit', $singlePage) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
-                            <form
-                                method="POST"
-                                action="{{ route('admin.single-pages.destroy', $singlePage) }}"
-                                class="d-inline"
-                                onsubmit="return confirm('{{ __('削除してよろしいですか?') }}');"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('削除') }}</button>
-                            </form>
+                            <x-admin.delete-button :action="route('admin.single-pages.destroy', $singlePage)" />
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="{{ $canReorder ? 9 : 8 }}" class="text-center text-muted py-4">{{ __('該当する固定ページがありません。') }}</td>
-                    </tr>
+                    <x-admin.empty-row :colspan="$canReorder ? 9 : 8">{{ __('該当する固定ページがありません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>
