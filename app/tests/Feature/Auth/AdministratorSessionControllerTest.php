@@ -73,6 +73,24 @@ class AdministratorSessionControllerTest extends TestCase
         $response->assertSessionHasErrors('email');
     }
 
+    public function test_login_screen_shows_error_after_failed_login(): void
+    {
+        $administrator = Administrator::factory()->create([
+            'password' => Hash::make('password'),
+        ]);
+
+        $response = $this->from(route('admin.login'))
+            ->followingRedirects()
+            ->post(route('admin.login.store'), [
+                'email' => $administrator->email,
+                'password' => 'wrong-password',
+            ]);
+
+        $response->assertOk()
+            ->assertSee('<div class="alert alert-danger">', false)
+            ->assertSeeText(__('auth.failed'));
+    }
+
     public function test_guests_are_redirected_to_login_when_accessing_protected_admin_routes(): void
     {
         $response = $this->get(route('admin.index'));
