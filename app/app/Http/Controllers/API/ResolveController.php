@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Enums\ArticleApprovalStatus;
 use App\Enums\CallContentPlace;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ArticleResource;
@@ -73,14 +72,13 @@ class ResolveController extends Controller
     {
         $singlePage = SinglePage::query()
             ->where('path', $path)
-            ->withinPublicationPeriod()
+            ->published()
             ->with('details')
             ->first();
 
         return $singlePage ?? Article::query()
             ->where('path', $path)
-            ->where('approval', ArticleApprovalStatus::Published)
-            ->withinPublicationPeriod()
+            ->published()
             ->with(['user', 'tags'])
             ->firstOrFail();
     }

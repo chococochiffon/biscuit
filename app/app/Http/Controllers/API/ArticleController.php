@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Enums\ArticleApprovalStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ArticleResource;
 use App\Models\Article;
@@ -29,8 +28,7 @@ class ArticleController extends Controller
     public function index(): AnonymousResourceCollection
     {
         $articles = Article::query()
-            ->where('approval', ArticleApprovalStatus::Published)
-            ->withinPublicationPeriod()
+            ->published()
             ->with(['user', 'tags'])
             ->latest('created_at')
             ->paginate(20);

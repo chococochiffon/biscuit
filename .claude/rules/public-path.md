@@ -31,6 +31,6 @@ paths:
 `GET /api/resolve?path=...`（`API\ResolveController`）がフロントのルーターとして動く。
 
 - `/` なら `type=top` とトップの呼び出しコンテンツを返す。
-- それ以外はパスから固定ページを、なければ公開済みの記事を解決する。どちらも `HasPublicationPeriod` の `withinPublicationPeriod` スコープで公開期間内のものに限る。
+- それ以外はパスから固定ページを、なければ公開済みの記事を解決する。どちらもモデルの `published()` スコープ（記事は公開ステータスが「公開」かつ公開期間内、固定ページは公開期間内。記事一覧 API・呼び出しコンテンツと共通の条件）で絞り込む。
 - `type`（`single_page`/`article`）・本文（`data`）・本文内の呼び出しコンテンツ（`call_contents`）を返す。呼び出しコンテンツとの組み合わせ方は `call-content.md` を参照。
 - 記事・固定ページの 1 件取得はこの `resolve` に一本化している（`GET /api/articles` はページ送り用の一覧のみ）。
