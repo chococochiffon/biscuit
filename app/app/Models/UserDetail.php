@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UserDetailNameSetting;
+use App\Support\ImageResizer;
 use Database\Factories\UserDetailFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -30,9 +31,14 @@ class UserDetail extends Model
     use HasFactory, SoftDeletes;
 
     /**
-     * ユーザー画像の保存先ディレクトリ(公開ディスク基準)。
+     * アイコン画像(user_image)の保存先ディレクトリ(公開ディスク基準)。
      */
     public const USER_IMAGE_DIRECTORY = 'image/user';
+
+    /**
+     * アイコン画像の保存サイズ(正方形の一辺)。切り抜いた範囲をこのサイズへ拡大・縮小する。
+     */
+    public const USER_IMAGE_SIZE = 250;
 
     /**
      * Get the attributes that should be cast.
@@ -65,14 +71,20 @@ class UserDetail extends Model
     }
 
     /**
-     * ユーザー画像を保存し、公開ディスク基準の保存パスを返す。
+     * アイコン画像を指定範囲(未指定なら中央)で正方形に切り抜いて規定サイズで保存し、公開ディスク基準の保存パスを返す。
+     *
+     * @param  array{x: int|float, y: int|float, width: int|float, height: int|float}|null  $crop
      */
-    public function storeUserImage(UploadedFile $file): string
+    public function storeUserImage(UploadedFile $file, ?array $crop = null): string
     {
-        Storage::disk('public')->makeDirectory(self::USER_IMAGE_DIRECTORY);
+        $extension = ImageResizer::extensionFor($file);
+        $path = self::USER_IMAGE_DIRECTORY.'/'.now()->format('YmdHis').'_'.$this->getTable().'_'.$this->id.'.'.$extension;
 
-        $filename = now()->format('YmdHis').'_'.$this->getTable().'_'.$this->id.'.'.$file->extension();
+        Storage::disk('public')->put(
+            $path,
+            ImageResizer::cropAndResize($file->getRealPath(), $extension, self::USER_IMAGE_SIZE, self::USER_IMAGE_SIZE, $crop)
+        );
 
-        return $file->storeAs(self::USER_IMAGE_DIRECTORY, $filename, 'public');
+        return $path;
     }
 }

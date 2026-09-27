@@ -3,14 +3,14 @@
 @section('title', __('ユーザーの編集'))
 
 @section('content')
-    <h1 class="h5 mb-4 mx-auto" style="max-width: 32rem;">{{ __('ユーザーの編集') }}</h1>
+    <h1 class="h5 mb-4 mx-auto" style="max-width: 80rem;">{{ __('ユーザーの編集') }}</h1>
 
     <form
         method="POST"
         action="{{ route('admin.users.update', $user) }}"
         enctype="multipart/form-data"
         class="mx-auto"
-        style="max-width: 32rem;"
+        style="max-width: 80rem;"
     >
         @csrf
         @method('PUT')

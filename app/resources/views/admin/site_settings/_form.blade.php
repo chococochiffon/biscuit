@@ -301,3 +301,5 @@
 </div>
 
 @include('admin.content_model_relations._manager_modal', ['tableNames' => $tableNames ?? []])
+
+@include('admin.partials._image_cropper_modal')

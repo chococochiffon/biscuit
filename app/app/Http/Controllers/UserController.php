@@ -46,9 +46,7 @@ class UserController extends Controller
 
         $detail = $user->detail()->create($this->userDetailAttributes($request));
 
-        if ($request->hasFile('user_detail.user_image')) {
-            $detail->update(['user_image' => $detail->storeUserImage($request->file('user_detail.user_image'))]);
-        }
+        $this->storeUserImage($request, $detail);
 
         $this->syncSkills($detail, $request->validated('user_detail.skills', []));
 
@@ -93,9 +91,7 @@ class UserController extends Controller
 
         $detail = $user->detail()->updateOrCreate([], $this->userDetailAttributes($request));
 
-        if ($request->hasFile('user_detail.user_image')) {
-            $detail->update(['user_image' => $detail->storeUserImage($request->file('user_detail.user_image'))]);
-        }
+        $this->storeUserImage($request, $detail);
 
         $this->syncSkills($detail, $request->validated('user_detail.skills', []));
 
@@ -128,6 +124,26 @@ class UserController extends Controller
             'view_flag' => $request->boolean('user_detail.view_flag'),
             'name_settings' => $request->validated('user_detail.name_settings'),
         ];
+    }
+
+    /**
+     * アイコン画像が送信されていれば、指定された切り抜き範囲(1つでも未指定なら中央)で保存してユーザー詳細に設定する。
+     */
+    private function storeUserImage(StoreUserRequest|UpdateUserRequest $request, UserDetail $detail): void
+    {
+        if (! $request->hasFile('user_detail.user_image')) {
+            return;
+        }
+
+        $crop = collect(['x', 'y', 'width', 'height'])
+            ->mapWithKeys(fn (string $key) => [$key => $request->validated("user_detail.user_image_crop.{$key}")]);
+
+        $detail->update([
+            'user_image' => $detail->storeUserImage(
+                $request->file('user_detail.user_image'),
+                $crop->contains(fn ($value) => blank($value)) ? null : $crop->map(fn ($value) => (float) $value)->all()
+            ),
+        ]);
     }
 
     /**

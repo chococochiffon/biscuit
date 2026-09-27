@@ -206,6 +206,87 @@ class UserControllerTest extends TestCase
         Storage::disk('public')->assertExists($expectedPath);
     }
 
+    public function test_store_resizes_user_image_to_square_icon_from_center_when_crop_is_not_specified(): void
+    {
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+            'name' => '検証太郎',
+            'email' => 'new-user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'user_detail' => $this->validUserDetailPayload(['user_image' => UploadedFile::fake()->image('wide.png', 1600, 900)]),
+        ])->assertSessionHasNoErrors();
+
+        $path = User::where('email', 'new-user@example.com')->firstOrFail()->detail->user_image;
+        $this->assertSame([250, 250], array_slice(getimagesizefromstring(Storage::disk('public')->get($path)), 0, 2));
+    }
+
+    public function test_update_crops_user_image_to_the_selected_area(): void
+    {
+        Storage::fake('public');
+        $actor = Administrator::factory()->create();
+        $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
+
+        // 左半分が赤、右半分が青の画像を作り、右半分の正方形だけを切り抜く
+        $source = imagecreatetruecolor(1000, 500);
+        imagefilledrectangle($source, 0, 0, 499, 499, imagecolorallocate($source, 255, 0, 0));
+        imagefilledrectangle($source, 500, 0, 999, 499, imagecolorallocate($source, 0, 0, 255));
+        $sourcePath = tempnam(sys_get_temp_dir(), 'icon').'.png';
+        imagepng($source, $sourcePath);
+
+        $this->actingAs($actor, 'admin')->put(route('admin.users.update', $target), [
+            'name' => $target->name,
+            'email' => $target->email,
+            'user_detail' => $this->validUserDetailPayload([
+                'user_image' => new UploadedFile($sourcePath, 'split.png', 'image/png', null, true),
+                'user_image_crop' => ['x' => 500, 'y' => 0, 'width' => 500, 'height' => 500],
+            ]),
+        ])->assertSessionHasNoErrors();
+
+        $stored = imagecreatefromstring(Storage::disk('public')->get($target->detail()->firstOrFail()->user_image));
+        $this->assertSame([250, 250], [imagesx($stored), imagesy($stored)]);
+        $this->assertSame(['red' => 0, 'green' => 0, 'blue' => 255, 'alpha' => 0], imagecolorsforindex($stored, imagecolorat($stored, 10, 10)));
+    }
+
+    public function test_store_rejects_invalid_user_image_crop(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.users.store'), [
+            'name' => '検証太郎',
+            'email' => 'new-user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'user_detail' => $this->validUserDetailPayload([
+                'user_image_crop' => ['x' => -1, 'y' => 'abc', 'width' => 0, 'height' => 100],
+            ]),
+        ]);
+
+        $response->assertSessionHasErrors([
+            'user_detail.user_image_crop.x',
+            'user_detail.user_image_crop.y',
+            'user_detail.user_image_crop.width',
+        ]);
+    }
+
+    public function test_create_screen_places_user_detail_in_right_column_with_icon_image_cropper_modal(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.users.create'));
+
+        $response->assertOk()
+            ->assertSeeInOrder(['col-lg-6', 'id="password_confirmation"', 'col-lg-6', 'ユーザー詳細', 'id="user_detail_first_name"'], false)
+            ->assertSee('data-output-width="250"', false)
+            ->assertSee('data-output-height="250"', false)
+            ->assertSee('id="image-cropper-modal"', false)
+            ->assertSee('data-role="image-cropper-dropzone"', false)
+            ->assertSee('アイコン画像')
+            ->assertDontSee('ユーザー画像');
+    }
+
     public function test_store_fails_validation_with_missing_fields(): void
     {
         $actor = Administrator::factory()->create();
