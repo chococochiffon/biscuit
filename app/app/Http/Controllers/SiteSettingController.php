@@ -13,6 +13,7 @@ use App\Models\TopSliderImage;
 use App\Rules\AllowedTableName;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class SiteSettingController extends Controller
@@ -38,24 +39,28 @@ class SiteSettingController extends Controller
      */
     public function store(StoreSiteSettingRequest $request): RedirectResponse
     {
-        $siteSetting = SiteSetting::create([
-            'site_title' => $request->validated('site_title'),
-            'description' => $request->validated('description'),
-            'front_url' => $request->validated('front_url'),
-            'api_url' => $request->validated('api_url'),
-        ]);
+        $siteSetting = DB::transaction(function () use ($request) {
+            $siteSetting = SiteSetting::create([
+                'site_title' => $request->validated('site_title'),
+                'description' => $request->validated('description'),
+                'front_url' => $request->validated('front_url'),
+                'api_url' => $request->validated('api_url'),
+            ]);
 
-        if ($request->hasFile('site_icon')) {
-            $siteSetting->update(['site_icon' => $siteSetting->storeSiteIcon($request->file('site_icon'))]);
-        }
+            if ($request->hasFile('site_icon')) {
+                $siteSetting->update(['site_icon' => $siteSetting->storeSiteIcon($request->file('site_icon'))]);
+            }
 
-        if ($request->hasFile('site_image')) {
-            $siteSetting->update(['site_image' => $siteSetting->storeSiteImage($request->file('site_image'))]);
-        }
+            if ($request->hasFile('site_image')) {
+                $siteSetting->update(['site_image' => $siteSetting->storeSiteImage($request->file('site_image'))]);
+            }
 
-        $this->syncCallContents($request->validated('call_contents', []));
-        $this->syncSocialLinks($request->validated('social_links', []));
-        $this->syncTopSliderImages($request->validated('top_slider_images', []));
+            $this->syncCallContents($request->validated('call_contents', []));
+            $this->syncSocialLinks($request->validated('social_links', []));
+            $this->syncTopSliderImages($request->validated('top_slider_images', []));
+
+            return $siteSetting;
+        });
 
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', __('サイト設定を登録しました。'));
     }
@@ -91,26 +96,28 @@ class SiteSettingController extends Controller
      */
     public function update(UpdateSiteSettingRequest $request, SiteSetting $siteSetting): RedirectResponse
     {
-        $siteSetting->fill([
-            'site_title' => $request->validated('site_title'),
-            'description' => $request->validated('description'),
-            'front_url' => $request->validated('front_url'),
-            'api_url' => $request->validated('api_url'),
-        ]);
+        DB::transaction(function () use ($request, $siteSetting) {
+            $siteSetting->fill([
+                'site_title' => $request->validated('site_title'),
+                'description' => $request->validated('description'),
+                'front_url' => $request->validated('front_url'),
+                'api_url' => $request->validated('api_url'),
+            ]);
 
-        if ($request->hasFile('site_icon')) {
-            $siteSetting->site_icon = $siteSetting->storeSiteIcon($request->file('site_icon'));
-        }
+            if ($request->hasFile('site_icon')) {
+                $siteSetting->site_icon = $siteSetting->storeSiteIcon($request->file('site_icon'));
+            }
 
-        if ($request->hasFile('site_image')) {
-            $siteSetting->site_image = $siteSetting->storeSiteImage($request->file('site_image'));
-        }
+            if ($request->hasFile('site_image')) {
+                $siteSetting->site_image = $siteSetting->storeSiteImage($request->file('site_image'));
+            }
 
-        $siteSetting->save();
+            $siteSetting->save();
 
-        $this->syncCallContents($request->validated('call_contents', []));
-        $this->syncSocialLinks($request->validated('social_links', []));
-        $this->syncTopSliderImages($request->validated('top_slider_images', []));
+            $this->syncCallContents($request->validated('call_contents', []));
+            $this->syncSocialLinks($request->validated('social_links', []));
+            $this->syncTopSliderImages($request->validated('top_slider_images', []));
+        });
 
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', __('サイト設定を更新しました。'));
     }
