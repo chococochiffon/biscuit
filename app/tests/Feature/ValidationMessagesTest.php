@@ -47,4 +47,21 @@ class ValidationMessagesTest extends TestCase
         $this->assertSame('&laquo; 前へ', __('pagination.previous'));
         $this->assertSame('次へ &raquo;', __('pagination.next'));
     }
+
+    public function test_pagination_summary_is_shown_in_the_word_order_of_each_language(): void
+    {
+        $this->actingAsAdmin();
+        Tag::factory()->count(21)->create();
+
+        $this->get(route('admin.tags.index'))
+            ->assertOk()
+            ->assertSee('<span class="fw-semibold">21</span> 件中 <span class="fw-semibold">1</span>〜<span class="fw-semibold">20</span> 件を表示', false)
+            ->assertSee('次へ &raquo;', false);
+
+        $this->withSession(['locale' => 'en'])
+            ->get(route('admin.tags.index'))
+            ->assertOk()
+            ->assertSee('Showing <span class="fw-semibold">1</span> to <span class="fw-semibold">20</span> of <span class="fw-semibold">21</span> results', false)
+            ->assertSee('Next &raquo;', false);
+    }
 }
