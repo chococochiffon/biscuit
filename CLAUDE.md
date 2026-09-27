@@ -18,7 +18,7 @@ docker compose up -d
 
 起動するコンテナ（`app`/`nginx`/`db`/`phpmyadmin`）の詳細は `docker-compose.yml` を参照。
 
-ローカルの `.env`（デフォルト）は Dockerized MySQL ではなく SQLite（`DB_CONNECTION=sqlite`）を使う設定になっています。MySQL コンテナを使いたい場合は `DB_*` 系の環境変数を `db` サービス向けに書き換えてください。
+ローカルの `.env` は Docker Compose の MySQL（`db` サービス。`DB_CONNECTION=mysql`・`DB_HOST=db`・`DB_DATABASE=biscuit`）を使う設定で、`.env.example` にも同じ値を入れてあるため、`.env.example` をコピーすればそのまま使えます。`biscuit` DB は `docker-compose.yml` の `MYSQL_DATABASE` により MySQL の初回起動時（`docker/db/data` が空のとき）に作成されます。
 
 初回セットアップは `app/` の中で標準的な Laravel の手順（`composer install`、`.env` 作成、`key:generate`、`migrate` など）を行います。`composer run setup` は install・`.env` コピー・キー生成・migrate・npm install/build の大部分を一括で行います。アップロード画像（`public` ディスク）の表示には `php artisan storage:link` も必要です。既存の `public/storage` はコンテナ内の絶対パス（`/var/www/app/storage/app/public`）を指すシンボリックリンクなので、コンテナ内（`docker compose exec app php artisan storage:link`）で作成してください（ホスト側からはリンク切れに見えますが正常です）。
 
@@ -31,7 +31,7 @@ docker compose up -d
 - `php artisan dev`（または `composer dev`）— アプリ本体・キューリスナー・Vite dev サーバーを同時起動。
 - `php artisan test`（または `composer test`）— テストスイート全体を実行（実行前に config をクリアする）。特定のテストのみ実行する場合は `php artisan test --filter=testName`、ファイル指定は `php artisan test tests/Feature/ExampleTest.php`。`vendor/bin/phpunit` でも同じ引数が使える。テストは管理画面 CRUD が `tests/Feature/*ControllerTest.php`、API が `tests/Feature/API/`、管理者ログインが `tests/Feature/Auth/` に置かれている。
 - `vendor/bin/pint`（または `vendor/bin/pint --dirty --format agent`）— Laravel Pint によるコード整形。PHP ファイルを変更した後は必ず実行すること。
-- `php artisan migrate` / `php artisan migrate:refresh --seed` — マイグレーションの実行/リフレッシュ。`DatabaseSeeder` はテストユーザー（`test@example.com`）・管理者・サイト設定・トップスライダー画像（`storage/app/public/image/` に置いたサンプル画像をアップロード時と同じく 1920×1080 に加工して `image/top_image` へ保存。サンプル画像自体は git 管理外で、登録済みのスライダー画像があれば何もしない）・固定ページ・記事とタグ（`ArticleSeeder`。公開済み・公開開始日時は投入日時で、タグは記事ごとに `firstOrCreate` して紐づける。`TagSeeder` は空）・`ContentModelRelation`・呼び出しコンテンツ・Q&A のサンプルを投入する。`DatabaseSeeder` は `WithoutModelEvents` でモデルイベントを止めて各シーダーを実行するため、`HasPath` による `path` の組み立てなどイベント頼みの処理はシーダー側で明示的に行う必要がある。
+- `php artisan migrate` / `php artisan migrate:refresh --seed` — マイグレーションの実行/リフレッシュ。`DatabaseSeeder` はテストユーザー（`test@example.com`）・管理者・デフォルト画像（`DefaultImageSeeder`。`Article::DEFAULT_THUMBNAIL_PATH` など画像未設定時に使うパスへ、`database/seeders/images/` の同名ファイルをコピーする。既存ファイルは上書きしない）・サイト設定・トップスライダー画像（`database/seeders/images/` のサンプル画像をアップロード時と同じく 1920×1080 に加工して `image/top_image` へ保存。登録済みのスライダー画像があれば何もしない）・固定ページ・記事とタグ（`ArticleSeeder`。公開済み・公開開始日時は投入日時で、タグは記事ごとに `firstOrCreate` して紐づける。`TagSeeder` は空）・`ContentModelRelation`・呼び出しコンテンツ・Q&A のサンプルを投入する。`DatabaseSeeder` は `WithoutModelEvents` でモデルイベントを止めて各シーダーを実行するため、`HasPath` による `path` の組み立てなどイベント頼みの処理はシーダー側で明示的に行う必要がある。
 - `npm run dev` / `npm run build` — Vite の開発サーバー起動 / 本番ビルド。
 
 スキャフォールディングの規約（`README.md` より）: API コントローラーは `php artisan make:controller API/XxxController --resource`、管理画面側は `php artisan make:controller XxxController --resource`、モデルは `php artisan make:model Xxx -mfs`（マイグレーション・ファクトリー・シーダーを同時生成）。
@@ -42,7 +42,7 @@ docker compose up -d
 - ルーティング: Web ルートは `routes/web.php`、API ルートは `routes/api.php`、Artisan コマンドは `routes/console.php`。`routes/api.php` は `App\Http\Controllers\API\*` 配下のコントローラーで `articles`・`call-contents`・`question-answers`（`Route::apiResource(...)->only(['index'])`）と `site-setting`・`resolve`（単発の `GET`）の読み取り専用エンドポイントを提供し、`bootstrap/app.php` の `withRouting()` に登録済み。レスポンス整形は `app/Http/Resources/*Resource.php`（Eloquent API Resource）を使う。エンドポイントには `darkaonline/l5-swagger` 用の `OpenApi\Attributes`（`#[OA\Get(...)]`）を付与しており、ドキュメントは `/api/documentation` で確認できる（`config/l5-swagger.php` の `generate_always` はデフォルト `false` のため、属性を変更したら `php artisan l5-swagger:generate` で再生成する。本番環境では `Http/Middleware/EnsureApiDocsAreEnabled` により 404 になる）。
 - `bootstrap/app.php` は `shouldRenderJsonWhen` により、`api/*` 配下へのリクエストまたは JSON を期待するリクエストに対してすでに JSON 形式のエラーレスポンスを返すよう設定済み。
 - オートロード設定（`app/composer.json`）: `App\` → `app/app/`（`app` が二重になっている点に注意）、`Database\Factories\` → `app/database/factories/`、`Database\Seeders\` → `app/database/seeders/`。
-- 開発環境（`.env`）・テスト環境（`phpunit.xml`）ともにデフォルトの DB ドライバは SQLite。テストはインメモリ SQLite、配列キャッシュ/セッション/メール、同期キューを使用する。
+- DB は開発環境（`.env`）が MySQL、テスト環境（`phpunit.xml`）がインメモリ SQLite。テストは配列キャッシュ/セッション/メール、同期キューも使用する。マイグレーションは両方のドライバで動く必要がある。`DatabaseSeeder` の通し実行は `DatabaseSeederTest` で確認しているが、MySQL 上の実行はテストでカバーしないため、シーダーやマイグレーションを変えたときはローカルの MySQL でも確認する。
 - 認証は `web`（`User` モデル）と `admin`（`Administrator` モデル）の 2 系統が独立して存在する（`config/auth.php` の `guards`/`providers`）。管理者のログイン/ログアウトは `Auth\AdministratorSessionController` が `/admin/login`・`/admin/logout` を担当し、ログイン試行のレート制限は `AppServiceProvider` の `admin-login` リミッターで定義。未ログイン時/ログイン済み時のリダイレクト先（`admin.login`/`admin.index`）は `bootstrap/app.php` の `redirectGuestsTo()`/`redirectUsersTo()` でリクエストパス（`admin*`）ベースに出し分けている。
 - 管理画面ルートの書き方（`routes/web.php`。新しいルートを足すときも必ず従うこと）:
   - `Route::prefix('admin')` グループに入っているのはログイン/ログアウトだけ。各 CRUD は `'admin/xxx'` のパスで個別に定義し、`->names('admin.xxx')->middleware('auth:admin')` をそれぞれに付ける。
