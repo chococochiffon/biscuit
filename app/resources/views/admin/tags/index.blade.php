@@ -30,22 +30,11 @@
                         <td class="text-end">
                             <a href="{{ route('admin.tags.edit', $tag) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
-                            <form
-                                method="POST"
-                                action="{{ route('admin.tags.destroy', $tag) }}"
-                                class="d-inline"
-                                onsubmit="return confirm('{{ __('削除してよろしいですか?') }}');"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('削除') }}</button>
-                            </form>
+                            <x-admin.delete-button :action="route('admin.tags.destroy', $tag)" />
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="2" class="text-center text-muted py-4">{{ __('タグが登録されていません。') }}</td>
-                    </tr>
+                    <x-admin.empty-row colspan="2">{{ __('タグが登録されていません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>

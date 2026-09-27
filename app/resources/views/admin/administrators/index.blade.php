@@ -38,22 +38,11 @@
                         <td class="text-end">
                             <a href="{{ route('admin.edit', $administrator) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
-                            <form
-                                method="POST"
-                                action="{{ route('admin.destroy', $administrator) }}"
-                                class="d-inline"
-                                onsubmit="return confirm('{{ __('削除してよろしいですか?') }}');"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('削除') }}</button>
-                            </form>
+                            <x-admin.delete-button :action="route('admin.destroy', $administrator)" />
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="5" class="text-center text-muted py-4">{{ __('管理者が登録されていません。') }}</td>
-                    </tr>
+                    <x-admin.empty-row colspan="5">{{ __('管理者が登録されていません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>

@@ -34,22 +34,11 @@
                         <td class="text-end">
                             <a href="{{ route('admin.content-model-relations.edit', $contentModelRelation) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
-                            <form
-                                method="POST"
-                                action="{{ route('admin.content-model-relations.destroy', $contentModelRelation) }}"
-                                class="d-inline"
-                                onsubmit="return confirm('{{ __('削除してよろしいですか?') }}');"
-                            >
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('削除') }}</button>
-                            </form>
+                            <x-admin.delete-button :action="route('admin.content-model-relations.destroy', $contentModelRelation)" />
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td colspan="4" class="text-center text-muted py-4">{{ __('データ種別の紐付けが登録されていません。') }}</td>
-                    </tr>
+                    <x-admin.empty-row colspan="4">{{ __('データ種別の紐付けが登録されていません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>

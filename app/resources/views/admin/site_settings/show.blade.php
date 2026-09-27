@@ -83,9 +83,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="2" class="text-center text-muted py-4">{{ __('トップスライダー画像が登録されていません。') }}</td>
-                                </tr>
+                                <x-admin.empty-row colspan="2">{{ __('トップスライダー画像が登録されていません。') }}</x-admin.empty-row>
                             @endforelse
                         </tbody>
                     </table>
@@ -110,9 +108,7 @@
                                     <td class="text-break"><a href="{{ $socialLink->url }}" target="_blank" rel="noopener">{{ $socialLink->url }}</a></td>
                                 </tr>
                             @empty
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-4">{{ __('SNSリンクが登録されていません。') }}</td>
-                                </tr>
+                                <x-admin.empty-row colspan="3">{{ __('SNSリンクが登録されていません。') }}</x-admin.empty-row>
                             @endforelse
                         </tbody>
                     </table>
@@ -150,9 +146,7 @@
                             <td>{{ $callContent->view_count }}</td>
                         </tr>
                     @empty
-                        <tr>
-                            <td colspan="6" class="text-center text-muted py-4">{{ __('API設定が登録されていません。') }}</td>
-                        </tr>
+                        <x-admin.empty-row colspan="6">{{ __('API設定が登録されていません。') }}</x-admin.empty-row>
                     @endforelse
                 </tbody>
             </table>
