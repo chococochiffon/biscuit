@@ -3,7 +3,6 @@
 namespace App\Support\CallContent;
 
 use App\Models\SinglePage;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -18,7 +17,7 @@ class SinglePageContentSource
      */
     public function getShortSentence(): Collection
     {
-        return $this->publishedQuery()
+        return SinglePage::query()->published()
             ->where('top_page_view', true)
             ->orderBy('sort_order')
             ->take(5)
@@ -30,7 +29,7 @@ class SinglePageContentSource
      */
     public function getOriginalText(): ?SinglePage
     {
-        return $this->publishedQuery()
+        return SinglePage::query()->published()
             ->with('details')
             ->orderBy('sort_order')
             ->first();
@@ -43,7 +42,7 @@ class SinglePageContentSource
      */
     public function getLinkList(): Collection
     {
-        return $this->publishedQuery()
+        return SinglePage::query()->published()
             ->where('top_page_view', true)
             ->orderBy('sort_order')
             ->take(10)
@@ -55,16 +54,6 @@ class SinglePageContentSource
      */
     public function getLink(): ?SinglePage
     {
-        return $this->publishedQuery()->orderBy('sort_order')->first();
-    }
-
-    /**
-     * 公開期間内の固定ページのクエリ。
-     *
-     * @return Builder<SinglePage>
-     */
-    private function publishedQuery(): Builder
-    {
-        return SinglePage::query()->withinPublicationPeriod();
+        return SinglePage::query()->published()->orderBy('sort_order')->first();
     }
 }

@@ -2,9 +2,7 @@
 
 namespace App\Support\CallContent;
 
-use App\Enums\ArticleApprovalStatus;
 use App\Models\Article;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -17,7 +15,7 @@ class ArticleContentSource
      */
     public function getOriginalText(): ?Article
     {
-        return $this->publishedQuery()->latest()->first();
+        return Article::query()->published()->latest()->first();
     }
 
     /**
@@ -27,7 +25,7 @@ class ArticleContentSource
      */
     public function getLinkList(int $count): Collection
     {
-        return $this->publishedQuery()->latest()->take($count)->get();
+        return Article::query()->published()->latest()->take($count)->get();
     }
 
     /**
@@ -35,7 +33,7 @@ class ArticleContentSource
      */
     public function getLink(): ?Article
     {
-        return $this->publishedQuery()->latest()->first();
+        return Article::query()->published()->latest()->first();
     }
 
     /**
@@ -45,18 +43,6 @@ class ArticleContentSource
      */
     public function getArchive(int $count): Collection
     {
-        return $this->publishedQuery()->latest()->take($count)->get();
-    }
-
-    /**
-     * 公開済み(approval=Published)かつ公開期間内の記事のクエリ。
-     *
-     * @return Builder<Article>
-     */
-    private function publishedQuery(): Builder
-    {
-        return Article::query()
-            ->where('approval', ArticleApprovalStatus::Published)
-            ->withinPublicationPeriod();
+        return Article::query()->published()->latest()->take($count)->get();
     }
 }

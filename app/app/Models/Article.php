@@ -9,6 +9,8 @@ use App\Models\Concerns\HasPublicImages;
 use Database\Factories\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -77,6 +79,16 @@ class Article extends Model
             ->first();
 
         return $this->storeNamedImage($file, self::THUMBNAIL_DIRECTORY, $size);
+    }
+
+    /**
+     * 公開側に表示する記事(公開ステータスが「公開」かつ公開期間内)に絞り込む。
+     * 記事一覧 API・パス解決 API・呼び出しコンテンツで共通の条件。
+     */
+    #[Scope]
+    protected function published(Builder $query): void
+    {
+        $query->where('approval', ArticleApprovalStatus::Published)->withinPublicationPeriod();
     }
 
     /**

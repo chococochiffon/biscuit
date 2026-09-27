@@ -8,6 +8,8 @@ use App\Models\Concerns\HasPublicImages;
 use Database\Factories\SinglePageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -58,6 +60,15 @@ class SinglePage extends Model
     protected function headerImageUrl(): Attribute
     {
         return Attribute::get(fn () => self::publicImageUrl($this->header_image));
+    }
+
+    /**
+     * 公開側に表示する固定ページ(公開期間内)に絞り込む。記事の published() と揃えた名前にしている。
+     */
+    #[Scope]
+    protected function published(Builder $query): void
+    {
+        $query->withinPublicationPeriod();
     }
 
     /**
