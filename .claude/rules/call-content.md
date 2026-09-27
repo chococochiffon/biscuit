@@ -13,6 +13,7 @@ paths:
   - app/app/Http/Controllers/API/CallContentController.php
   - app/resources/views/admin/site_settings/**
   - app/resources/js/admin.js
+  - app/resources/js/admin/**
   - app/tests/Feature/**/CallContent*
 ---
 
