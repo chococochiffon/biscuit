@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\UserDetail;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class UserController extends Controller
@@ -40,17 +41,19 @@ class UserController extends Controller
      */
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $user = User::create([
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-            'password' => $request->validated('password'),
-        ]);
+        DB::transaction(function () use ($request) {
+            $user = User::create([
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+                'password' => $request->validated('password'),
+            ]);
 
-        $detail = $user->detail()->create($this->userDetailAttributes($request));
+            $detail = $user->detail()->create($this->userDetailAttributes($request));
 
-        $this->storeUserImage($request, $detail);
+            $this->storeUserImage($request, $detail);
 
-        $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+            $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+        });
 
         return redirect()->route('admin.users.index')->with('status', __('ユーザーを登録しました。'));
     }
@@ -80,22 +83,24 @@ class UserController extends Controller
      */
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
-        $data = [
-            'name' => $request->validated('name'),
-            'email' => $request->validated('email'),
-        ];
+        DB::transaction(function () use ($request, $user) {
+            $data = [
+                'name' => $request->validated('name'),
+                'email' => $request->validated('email'),
+            ];
 
-        if ($password = $request->validated('password')) {
-            $data['password'] = $password;
-        }
+            if ($password = $request->validated('password')) {
+                $data['password'] = $password;
+            }
 
-        $user->update($data);
+            $user->update($data);
 
-        $detail = $user->detail()->updateOrCreate([], $this->userDetailAttributes($request));
+            $detail = $user->detail()->updateOrCreate([], $this->userDetailAttributes($request));
 
-        $this->storeUserImage($request, $detail);
+            $this->storeUserImage($request, $detail);
 
-        $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+            $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+        });
 
         return redirect()->route('admin.users.index')->with('status', __('ユーザーを更新しました。'));
     }

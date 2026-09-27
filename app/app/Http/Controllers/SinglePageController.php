@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -52,23 +53,25 @@ class SinglePageController extends Controller
      */
     public function store(StoreSinglePageRequest $request): RedirectResponse
     {
-        $singlePage = SinglePage::create([
-            'title' => $request->validated('title'),
-            'short_sentences' => $request->validated('short_sentences'),
-            'parent_path' => $request->validated('parent_path'),
-            'slug' => $request->validated('slug'),
-            'top_page_view' => $request->boolean('top_page_view'),
-            'link_list_view' => $request->boolean('link_list_view'),
-            'sort_order' => (SinglePage::max('sort_order') ?? -1) + 1,
-            'publication_start_datetime' => $request->validated('publication_start_datetime'),
-            'publication_end_datetime' => $request->validated('publication_end_datetime'),
-        ]);
+        DB::transaction(function () use ($request) {
+            $singlePage = SinglePage::create([
+                'title' => $request->validated('title'),
+                'short_sentences' => $request->validated('short_sentences'),
+                'parent_path' => $request->validated('parent_path'),
+                'slug' => $request->validated('slug'),
+                'top_page_view' => $request->boolean('top_page_view'),
+                'link_list_view' => $request->boolean('link_list_view'),
+                'sort_order' => (SinglePage::max('sort_order') ?? -1) + 1,
+                'publication_start_datetime' => $request->validated('publication_start_datetime'),
+                'publication_end_datetime' => $request->validated('publication_end_datetime'),
+            ]);
 
-        if ($request->hasFile('header_image')) {
-            $singlePage->update(['header_image' => $singlePage->storeHeaderImage($request->file('header_image'))]);
-        }
+            if ($request->hasFile('header_image')) {
+                $singlePage->update(['header_image' => $singlePage->storeHeaderImage($request->file('header_image'))]);
+            }
 
-        $this->syncDetails($singlePage, $request->validated('details', []));
+            $this->syncDetails($singlePage, $request->validated('details', []));
+        });
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを登録しました。'));
     }
@@ -88,24 +91,26 @@ class SinglePageController extends Controller
      */
     public function update(UpdateSinglePageRequest $request, SinglePage $singlePage): RedirectResponse
     {
-        $singlePage->fill([
-            'title' => $request->validated('title'),
-            'short_sentences' => $request->validated('short_sentences'),
-            'parent_path' => $request->validated('parent_path'),
-            'slug' => $request->validated('slug'),
-            'top_page_view' => $request->boolean('top_page_view'),
-            'link_list_view' => $request->boolean('link_list_view'),
-            'publication_start_datetime' => $request->validated('publication_start_datetime'),
-            'publication_end_datetime' => $request->validated('publication_end_datetime'),
-        ]);
+        DB::transaction(function () use ($request, $singlePage) {
+            $singlePage->fill([
+                'title' => $request->validated('title'),
+                'short_sentences' => $request->validated('short_sentences'),
+                'parent_path' => $request->validated('parent_path'),
+                'slug' => $request->validated('slug'),
+                'top_page_view' => $request->boolean('top_page_view'),
+                'link_list_view' => $request->boolean('link_list_view'),
+                'publication_start_datetime' => $request->validated('publication_start_datetime'),
+                'publication_end_datetime' => $request->validated('publication_end_datetime'),
+            ]);
 
-        if ($request->hasFile('header_image')) {
-            $singlePage->header_image = $singlePage->storeHeaderImage($request->file('header_image'));
-        }
+            if ($request->hasFile('header_image')) {
+                $singlePage->header_image = $singlePage->storeHeaderImage($request->file('header_image'));
+            }
 
-        $singlePage->save();
+            $singlePage->save();
 
-        $this->syncDetails($singlePage, $request->validated('details', []));
+            $this->syncDetails($singlePage, $request->validated('details', []));
+        });
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを更新しました。'));
     }
@@ -134,9 +139,12 @@ class SinglePageController extends Controller
 
         $offset = (int) ($validated['offset'] ?? 0);
 
-        foreach (array_values($validated['order']) as $index => $id) {
-            SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
-        }
+        // 途中で失敗しても並び順が中途半端にならないよう、まとめて保存する
+        DB::transaction(function () use ($validated, $offset) {
+            foreach (array_values($validated['order']) as $index => $id) {
+                SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
+            }
+        });
 
         return redirect()->route('admin.single-pages.index', ['sort' => self::REORDERABLE_SORT])->with('status', __('並び替えを保存しました。'));
     }

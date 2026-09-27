@@ -11,6 +11,7 @@ use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
@@ -53,23 +54,25 @@ class ArticleController extends Controller
      */
     public function store(StoreArticleRequest $request): RedirectResponse
     {
-        $article = Article::create([
-            'title' => $request->validated('title'),
-            'content' => $request->validated('content'),
-            'thumbnail' => Article::DEFAULT_THUMBNAIL_PATH,
-            'parent_path' => $request->validated('parent_path'),
-            'slug' => $request->validated('slug'),
-            'user_id' => null,
-            'approval' => ArticleApprovalStatus::Published,
-            'publication_start_datetime' => $request->validated('publication_start_datetime'),
-            'publication_end_datetime' => $request->validated('publication_end_datetime'),
-        ]);
+        DB::transaction(function () use ($request) {
+            $article = Article::create([
+                'title' => $request->validated('title'),
+                'content' => $request->validated('content'),
+                'thumbnail' => Article::DEFAULT_THUMBNAIL_PATH,
+                'parent_path' => $request->validated('parent_path'),
+                'slug' => $request->validated('slug'),
+                'user_id' => null,
+                'approval' => ArticleApprovalStatus::Published,
+                'publication_start_datetime' => $request->validated('publication_start_datetime'),
+                'publication_end_datetime' => $request->validated('publication_end_datetime'),
+            ]);
 
-        if ($request->hasFile('thumbnail')) {
-            $article->update(['thumbnail' => $article->storeThumbnail($request->file('thumbnail'))]);
-        }
+            if ($request->hasFile('thumbnail')) {
+                $article->update(['thumbnail' => $article->storeThumbnail($request->file('thumbnail'))]);
+            }
 
-        $this->syncTags($article, $request->validated('tags', []));
+            $this->syncTags($article, $request->validated('tags', []));
+        });
 
         return redirect()->route('admin.articles.index')->with('status', __('記事を登録しました。'));
     }
@@ -89,23 +92,25 @@ class ArticleController extends Controller
      */
     public function update(UpdateArticleRequest $request, Article $article): RedirectResponse
     {
-        $article->fill([
-            'title' => $request->validated('title'),
-            'content' => $request->validated('content'),
-            'parent_path' => $request->validated('parent_path'),
-            'slug' => $request->validated('slug'),
-            'approval' => $request->validated('approval'),
-            'publication_start_datetime' => $request->validated('publication_start_datetime'),
-            'publication_end_datetime' => $request->validated('publication_end_datetime'),
-        ]);
+        DB::transaction(function () use ($request, $article) {
+            $article->fill([
+                'title' => $request->validated('title'),
+                'content' => $request->validated('content'),
+                'parent_path' => $request->validated('parent_path'),
+                'slug' => $request->validated('slug'),
+                'approval' => $request->validated('approval'),
+                'publication_start_datetime' => $request->validated('publication_start_datetime'),
+                'publication_end_datetime' => $request->validated('publication_end_datetime'),
+            ]);
 
-        if ($request->hasFile('thumbnail')) {
-            $article->thumbnail = $article->storeThumbnail($request->file('thumbnail'));
-        }
+            if ($request->hasFile('thumbnail')) {
+                $article->thumbnail = $article->storeThumbnail($request->file('thumbnail'));
+            }
 
-        $article->save();
+            $article->save();
 
-        $this->syncTags($article, $request->validated('tags', []));
+            $this->syncTags($article, $request->validated('tags', []));
+        });
 
         return redirect()->route('admin.articles.index')->with('status', __('記事を更新しました。'));
     }
