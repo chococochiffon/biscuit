@@ -446,51 +446,28 @@ function initCallContentRows() {
         return;
     }
 
-    const addButton = document.getElementById('call-content-add');
-    const template = document.getElementById('call-content-row-template');
     const constraints = JSON.parse(container.dataset.callTypeConstraints || '{}');
 
-    let nextIndex = Number(container.dataset.nextIndex || '0');
-    const { bindRow: bindSortableRow, updateSortOrders } = initSortableRows(container, '[data-role="call-content-row"]');
+    initEditableRows(container, {
+        rowSelector: '[data-role="call-content-row"]',
+        addButton: document.getElementById('call-content-add'),
+        template: document.getElementById('call-content-row-template'),
+        onBindRow(row) {
+            const placeSelect = row.querySelector('[data-role="place-select"]');
+            const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+            const callTypeError = row.querySelector('[data-role="call-type-error"]');
+            const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
+            const relationError = row.querySelector('[data-role="content-model-relation-error"]');
 
-    function bindRow(row) {
-        bindSortableRow(row);
-
-        row.querySelector('[data-role="remove-row"]').addEventListener('click', () => {
-            row.remove();
-            updateSortOrders();
-        });
-
-        const placeSelect = row.querySelector('[data-role="place-select"]');
-        const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
-        const callTypeError = row.querySelector('[data-role="call-type-error"]');
-        const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
-        const relationError = row.querySelector('[data-role="content-model-relation-error"]');
-
-        placeSelect.addEventListener('change', () => applyPlaceConstraints(row, constraints));
-        callTypeSelect.addEventListener('change', () => {
-            setFieldError(callTypeSelect, callTypeError, null);
-            applyCallTypeConstraints(row, constraints);
-        });
-        relationSelect.addEventListener('change', () => setFieldError(relationSelect, relationError, null));
-        applyPlaceConstraints(row, constraints);
-    }
-
-    container.querySelectorAll('[data-role="call-content-row"]').forEach(bindRow);
-
-    addButton.addEventListener('click', () => {
-        const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex));
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = html.trim();
-        const row = wrapper.firstElementChild;
-
-        container.appendChild(row);
-        bindRow(row);
-        nextIndex += 1;
-        updateSortOrders();
+            placeSelect.addEventListener('change', () => applyPlaceConstraints(row, constraints));
+            callTypeSelect.addEventListener('change', () => {
+                setFieldError(callTypeSelect, callTypeError, null);
+                applyCallTypeConstraints(row, constraints);
+            });
+            relationSelect.addEventListener('change', () => setFieldError(relationSelect, relationError, null));
+            applyPlaceConstraints(row, constraints);
+        },
     });
-
-    updateSortOrders();
 }
 
 /**
@@ -502,53 +479,76 @@ function initCallContentRows() {
  */
 function initRepeaterRows() {
     document.querySelectorAll('[data-role="repeater"]').forEach((repeater) => {
-        const container = repeater.querySelector('[data-role="repeater-rows"]');
-        const addButton = repeater.querySelector('[data-role="repeater-add"]');
-        const template = repeater.querySelector('[data-role="repeater-template"]');
-
-        let nextIndex = Number(container.dataset.nextIndex || '0');
-        const maxRows = Number(repeater.dataset.maxRows || '0');
-        const { bindRow: bindSortableRow, updateSortOrders } = initSortableRows(container, '[data-role="repeater-row"]');
-
-        function updateAddButton() {
-            if (maxRows > 0) {
-                addButton.disabled = container.querySelectorAll('[data-role="repeater-row"]').length >= maxRows;
-            }
-        }
-
-        function bindRow(row) {
-            bindSortableRow(row);
-
-            row.querySelector('[data-role="remove-row"]').addEventListener('click', () => {
-                row.remove();
-                updateSortOrders();
-                updateAddButton();
-            });
-        }
-
-        container.querySelectorAll('[data-role="repeater-row"]').forEach(bindRow);
-
-        addButton.addEventListener('click', () => {
-            const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex));
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = html.trim();
-            const row = wrapper.firstElementChild;
-
-            container.appendChild(row);
-            bindRow(row);
-            nextIndex += 1;
-            updateSortOrders();
-            updateAddButton();
+        initEditableRows(repeater.querySelector('[data-role="repeater-rows"]'), {
+            rowSelector: '[data-role="repeater-row"]',
+            addButton: repeater.querySelector('[data-role="repeater-add"]'),
+            template: repeater.querySelector('[data-role="repeater-template"]'),
+            maxRows: Number(repeater.dataset.maxRows || '0'),
         });
-
-        updateSortOrders();
-        updateAddButton();
     });
 }
 
 /**
+ * 行の追加・削除・ドラッグでの並び替えができる繰り返し入力の共通処理。
+ * 追加ボタンでテンプレート(行番号は __INDEX__。コンテナの data-next-index から採番する)の行をコンテナの末尾に追加し、
+ * 各行の削除ボタン(removeSelector)で行を削除する。maxRows(0 なら無制限)に達したら追加ボタンを無効にする。
+ * 行ごとの独自の初期化は onBindRow、削除時の後始末は onRemoveRow で行う。
+ * 返り値の updateSortOrders で、各行の並び順の隠しinputを画面上の順番に設定し直せる。
+ */
+function initEditableRows(container, {
+    rowSelector,
+    addButton,
+    template,
+    removeSelector = '[data-role="remove-row"]',
+    maxRows = 0,
+    onBindRow = () => {},
+    onRemoveRow = () => {},
+}) {
+    let nextIndex = Number(container.dataset.nextIndex || '0');
+    const { bindRow: bindSortableRow, updateSortOrders } = initSortableRows(container, rowSelector);
+
+    function updateAddButton() {
+        if (maxRows > 0) {
+            addButton.disabled = container.querySelectorAll(rowSelector).length >= maxRows;
+        }
+    }
+
+    function bindRow(row) {
+        bindSortableRow(row);
+        onBindRow(row);
+
+        row.querySelector(removeSelector).addEventListener('click', () => {
+            onRemoveRow(row);
+            row.remove();
+            updateSortOrders();
+            updateAddButton();
+        });
+    }
+
+    container.querySelectorAll(rowSelector).forEach(bindRow);
+
+    addButton.addEventListener('click', () => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = template.innerHTML.replaceAll('__INDEX__', String(nextIndex)).trim();
+        const row = wrapper.firstElementChild;
+
+        container.appendChild(row);
+        bindRow(row);
+        nextIndex += 1;
+        updateSortOrders();
+        updateAddButton();
+    });
+
+    updateSortOrders();
+    updateAddButton();
+
+    return { updateSortOrders };
+}
+
+/**
  * コンテナ内の行をハンドル(data-role="drag-handle")のドラッグで並び替えられるようにする。
- * 並び替えるたびに、各行の隠しinput(data-role="sort-order")へ画面上の順番(0始まり)を設定する。
+ * 並び替えるたびに、各行の隠しinput(data-role="sort-order")へ画面上の順番(0始まり)を設定する
+ * (隠しinputを持たない行は、DOM の順番そのものを送信に使う想定で何もしない)。
  * 返り値の bindRow で行ごとにドラッグ操作を登録し、行の追加・削除後は updateSortOrders を呼ぶ。
  */
 function initSortableRows(container, rowSelector) {
@@ -556,7 +556,11 @@ function initSortableRows(container, rowSelector) {
 
     function updateSortOrders() {
         container.querySelectorAll(rowSelector).forEach((row, index) => {
-            row.querySelector('[data-role="sort-order"]').value = String(index);
+            const input = row.querySelector('[data-role="sort-order"]');
+
+            if (input) {
+                input.value = String(index);
+            }
         });
     }
 
@@ -993,14 +997,7 @@ function initSinglePageDetailRows() {
         return;
     }
 
-    const addButton = document.getElementById('single-page-detail-add');
-    const template = document.getElementById('single-page-detail-row-template');
-    const form = container.closest('form');
-
-    let nextIndex = Number(container.dataset.nextIndex || '0');
-    const maxRows = Number(container.dataset.maxRows || '0');
     const editors = new Map();
-    let draggingRow = null;
 
     function initEditor(row) {
         const editorElement = row.querySelector('[data-role="content-editor"]');
@@ -1026,108 +1023,22 @@ function initSinglePageDetailRows() {
         editors.set(row, { quill, hiddenInput });
     }
 
-    function updateSortOrders() {
-        container.querySelectorAll('[data-role="detail-row"]').forEach((row, index) => {
-            row.querySelector('[data-role="sort-order"]').value = String(index);
-        });
-    }
-
-    function updateAddButton() {
-        if (maxRows > 0) {
-            addButton.disabled = container.querySelectorAll('[data-role="detail-row"]').length >= maxRows;
-        }
-    }
-
-    function getRowAfterElement(y) {
-        const rows = [...container.querySelectorAll('[data-role="detail-row"]:not(.dragging)')];
-
-        return rows.reduce(
-            (closest, row) => {
-                const box = row.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset, element: row };
-                }
-
-                return closest;
-            },
-            { offset: Number.NEGATIVE_INFINITY, element: null }
-        ).element;
-    }
-
-    function bindDragAndDrop(row) {
-        const handle = row.querySelector('[data-role="drag-handle"]');
-
-        handle.addEventListener('mousedown', () => {
-            row.draggable = true;
-        });
-
-        row.addEventListener('dragstart', () => {
-            draggingRow = row;
-            row.classList.add('dragging');
-        });
-
-        row.addEventListener('dragend', () => {
-            row.draggable = false;
-            row.classList.remove('dragging');
-            draggingRow = null;
-            updateSortOrders();
-        });
-    }
-
-    container.addEventListener('dragover', (event) => {
-        if (!draggingRow) {
-            return;
-        }
-
-        event.preventDefault();
-
-        const afterElement = getRowAfterElement(event.clientY);
-
-        if (afterElement == null) {
-            container.appendChild(draggingRow);
-        } else {
-            container.insertBefore(draggingRow, afterElement);
-        }
+    const { updateSortOrders } = initEditableRows(container, {
+        rowSelector: '[data-role="detail-row"]',
+        addButton: document.getElementById('single-page-detail-add'),
+        template: document.getElementById('single-page-detail-row-template'),
+        removeSelector: '[data-role="remove-detail"]',
+        maxRows: Number(container.dataset.maxRows || '0'),
+        onBindRow: initEditor,
+        onRemoveRow: (row) => editors.delete(row),
     });
 
-    function bindRow(row) {
-        initEditor(row);
-        bindDragAndDrop(row);
-
-        row.querySelector('[data-role="remove-detail"]').addEventListener('click', () => {
-            editors.delete(row);
-            row.remove();
-            updateSortOrders();
-            updateAddButton();
-        });
-    }
-
-    container.querySelectorAll('[data-role="detail-row"]').forEach(bindRow);
-
-    addButton.addEventListener('click', () => {
-        const html = template.innerHTML.replaceAll('__INDEX__', String(nextIndex));
-        const wrapper = document.createElement('div');
-        wrapper.innerHTML = html.trim();
-        const row = wrapper.firstElementChild;
-
-        container.appendChild(row);
-        bindRow(row);
-        nextIndex += 1;
-        updateSortOrders();
-        updateAddButton();
-    });
-
-    form.addEventListener('submit', () => {
+    container.closest('form').addEventListener('submit', () => {
         editors.forEach(({ quill, hiddenInput }) => {
             hiddenInput.value = quill.root.innerHTML;
         });
         updateSortOrders();
     });
-
-    updateSortOrders();
-    updateAddButton();
 }
 
 /**
@@ -1143,60 +1054,9 @@ function initSinglePageReorder() {
     }
 
     const tbody = table.querySelector('tbody');
-    let draggingRow = null;
+    const { bindRow } = initSortableRows(tbody, '[data-role="single-page-row"]');
 
-    function getRowAfterElement(y) {
-        const rows = [...tbody.querySelectorAll('[data-role="single-page-row"]:not(.dragging)')];
-
-        return rows.reduce(
-            (closest, row) => {
-                const box = row.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset, element: row };
-                }
-
-                return closest;
-            },
-            { offset: Number.NEGATIVE_INFINITY, element: null }
-        ).element;
-    }
-
-    tbody.querySelectorAll('[data-role="single-page-row"]').forEach((row) => {
-        const handle = row.querySelector('[data-role="drag-handle"]');
-
-        handle.addEventListener('mousedown', () => {
-            row.draggable = true;
-        });
-
-        row.addEventListener('dragstart', () => {
-            draggingRow = row;
-            row.classList.add('dragging');
-        });
-
-        row.addEventListener('dragend', () => {
-            row.draggable = false;
-            row.classList.remove('dragging');
-            draggingRow = null;
-        });
-    });
-
-    tbody.addEventListener('dragover', (event) => {
-        if (!draggingRow) {
-            return;
-        }
-
-        event.preventDefault();
-
-        const afterElement = getRowAfterElement(event.clientY);
-
-        if (afterElement == null) {
-            tbody.appendChild(draggingRow);
-        } else {
-            tbody.insertBefore(draggingRow, afterElement);
-        }
-    });
+    tbody.querySelectorAll('[data-role="single-page-row"]').forEach(bindRow);
 }
 
 /**
