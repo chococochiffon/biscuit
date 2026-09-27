@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(AdministratorSeeder::class);
+        $this->call(DefaultImageSeeder::class);
         $this->call(SiteSettingSeeder::class);
         $this->call(TopSliderImageSeeder::class);
         $this->call(SinglePageSeeder::class);
