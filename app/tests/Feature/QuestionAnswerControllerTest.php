@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Administrator;
 use App\Models\Answer;
 use App\Models\BranchQuestionAnswer;
 use App\Models\Question;
@@ -24,11 +23,11 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_index_displays_question_answers(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         QuestionAnswer::factory()->simple()->create(['short_question_text' => '送料はいくらですか?']);
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->storeBranch($this->branchPayload());
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.question-answers.index'));
+        $response = $this->get(route('admin.question-answers.index'));
 
         $response->assertOk();
         $response->assertSee('送料はいくらですか?');
@@ -37,18 +36,18 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.question-answers.create'));
+        $response = $this->get(route('admin.question-answers.create'));
 
         $response->assertOk();
     }
 
     public function test_store_creates_simple_question_answer_shown_on_top(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.question-answers.store'), [
+        $response = $this->post(route('admin.question-answers.store'), [
             'type' => 'simple',
             'short_question_text' => '送料はいくらですか?',
             'short_answer_text' => '全国一律500円です。',
@@ -67,9 +66,9 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_store_creates_branching_questions_and_answers(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->storeBranch($actor, $this->branchPayload());
+        $response = $this->storeBranch($this->branchPayload());
 
         $response->assertRedirect(route('admin.question-answers.index'));
 
@@ -92,9 +91,9 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_store_requires_answer_text_when_answer_has_no_branch(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->storeBranch($actor, [
+        $response = $this->storeBranch([
             'question' => [
                 'question_text' => 'お探しの商品は?',
                 'answers' => [
@@ -114,9 +113,9 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_store_requires_question_text_and_answers_of_branch_question(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->storeBranch($actor, [
+        $response = $this->storeBranch([
             'question' => [
                 'question_text' => 'お探しの商品は?',
                 'answers' => [
@@ -134,9 +133,9 @@ class QuestionAnswerControllerTest extends TestCase
     public function test_store_rejects_answers_over_the_limit_at_any_depth(): void
     {
         config(['limits.question_answers' => 2]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->storeBranch($actor, [
+        $response = $this->storeBranch([
             'question' => [
                 'question_text' => 'お探しの商品は?',
                 'answers' => [
@@ -157,9 +156,9 @@ class QuestionAnswerControllerTest extends TestCase
     public function test_create_screen_passes_answer_limit_to_the_form(): void
     {
         config(['limits.question_answers' => 3]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.question-answers.create'));
+        $response = $this->get(route('admin.question-answers.create'));
 
         $response->assertSee('data-max-answers="3"', false);
         $response->assertSee('1つの質問に登録できる回答は3件までです。');
@@ -167,9 +166,9 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_store_simple_requires_both_short_texts(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.question-answers.store'), [
+        $response = $this->post(route('admin.question-answers.store'), [
             'type' => 'simple',
             'short_question_text' => '送料はいくらですか?',
         ]);
@@ -180,16 +179,16 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_show_and_edit_screens_display_question_tree(): void
     {
-        $actor = Administrator::factory()->create();
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->actingAsAdmin();
+        $this->storeBranch($this->branchPayload());
         $questionAnswer = QuestionAnswer::query()->sole();
 
-        $this->actingAs($actor, 'admin')->get(route('admin.question-answers.show', $questionAnswer))
+        $this->get(route('admin.question-answers.show', $questionAnswer))
             ->assertOk()
             ->assertSee('ジャンルは?')
             ->assertSee('漫画');
 
-        $this->actingAs($actor, 'admin')->get(route('admin.question-answers.edit', $questionAnswer))
+        $this->get(route('admin.question-answers.edit', $questionAnswer))
             ->assertOk()
             ->assertSee('ジャンルは?')
             ->assertSee('漫画');
@@ -197,8 +196,8 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_update_keeps_submitted_rows_and_soft_deletes_removed_ones(): void
     {
-        $actor = Administrator::factory()->create();
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->actingAsAdmin();
+        $this->storeBranch($this->branchPayload());
         $questionAnswer = QuestionAnswer::query()->sole();
         $tree = $questionAnswer->questionTree();
 
@@ -207,7 +206,7 @@ class QuestionAnswerControllerTest extends TestCase
         $novel = $book['question']['answers'][0];
         $comic = $book['question']['answers'][1];
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.question-answers.update', $questionAnswer), [
+        $response = $this->put(route('admin.question-answers.update', $questionAnswer), [
             'type' => 'branch',
             'question' => [
                 'id' => $tree['id'],
@@ -243,15 +242,15 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_update_creates_new_rows_for_ids_outside_the_question_answer(): void
     {
-        $actor = Administrator::factory()->create();
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->actingAsAdmin();
+        $this->storeBranch($this->branchPayload());
         $other = QuestionAnswer::query()->sole();
         $otherTree = $other->questionTree();
 
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->storeBranch($this->branchPayload());
         $questionAnswer = QuestionAnswer::query()->latest('id')->first();
 
-        $this->actingAs($actor, 'admin')->put(route('admin.question-answers.update', $questionAnswer), [
+        $this->put(route('admin.question-answers.update', $questionAnswer), [
             'type' => 'branch',
             'question' => [
                 'id' => $otherTree['id'],
@@ -266,11 +265,11 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_update_to_simple_soft_deletes_question_tree(): void
     {
-        $actor = Administrator::factory()->create();
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->actingAsAdmin();
+        $this->storeBranch($this->branchPayload());
         $questionAnswer = QuestionAnswer::query()->sole();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.question-answers.update', $questionAnswer), [
+        $response = $this->put(route('admin.question-answers.update', $questionAnswer), [
             'type' => 'simple',
             'short_question_text' => '送料はいくらですか?',
             'short_answer_text' => '全国一律500円です。',
@@ -286,11 +285,11 @@ class QuestionAnswerControllerTest extends TestCase
 
     public function test_destroy_soft_deletes_question_answer_and_its_tree(): void
     {
-        $actor = Administrator::factory()->create();
-        $this->storeBranch($actor, $this->branchPayload());
+        $this->actingAsAdmin();
+        $this->storeBranch($this->branchPayload());
         $questionAnswer = QuestionAnswer::query()->sole();
 
-        $response = $this->actingAs($actor, 'admin')->delete(route('admin.question-answers.destroy', $questionAnswer));
+        $response = $this->delete(route('admin.question-answers.destroy', $questionAnswer));
 
         $response->assertRedirect(route('admin.question-answers.index'));
         $this->assertSoftDeleted($questionAnswer);
@@ -328,8 +327,8 @@ class QuestionAnswerControllerTest extends TestCase
      *
      * @param  array<string, mixed>  $payload
      */
-    private function storeBranch(Administrator $actor, array $payload): TestResponse
+    private function storeBranch(array $payload): TestResponse
     {
-        return $this->actingAs($actor, 'admin')->post(route('admin.question-answers.store'), ['type' => 'branch'] + $payload);
+        return $this->post(route('admin.question-answers.store'), ['type' => 'branch'] + $payload);
     }
 }

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Administrator;
 use App\Models\Tag;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -20,11 +19,11 @@ class TagControllerTest extends TestCase
 
     public function test_search_returns_matching_tags(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Tag::factory()->create(['tag_name' => 'Laravel']);
         Tag::factory()->create(['tag_name' => 'PHP']);
 
-        $response = $this->actingAs($actor, 'admin')->getJson(route('admin.tags.search', ['q' => 'lara']));
+        $response = $this->getJson(route('admin.tags.search', ['q' => 'lara']));
 
         $response->assertOk();
         $response->assertJsonFragment(['tag_name' => 'Laravel']);
@@ -33,10 +32,10 @@ class TagControllerTest extends TestCase
 
     public function test_search_without_keyword_returns_all_tags(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Tag::factory()->create(['tag_name' => 'Laravel']);
 
-        $response = $this->actingAs($actor, 'admin')->getJson(route('admin.tags.search'));
+        $response = $this->getJson(route('admin.tags.search'));
 
         $response->assertOk();
         $response->assertJsonFragment(['tag_name' => 'Laravel']);
@@ -44,10 +43,10 @@ class TagControllerTest extends TestCase
 
     public function test_index_displays_tags(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $tag = Tag::factory()->create(['tag_name' => 'Laravel']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.tags.index'));
+        $response = $this->get(route('admin.tags.index'));
 
         $response->assertOk();
         $response->assertSee($tag->tag_name);
@@ -55,18 +54,18 @@ class TagControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.tags.create'));
+        $response = $this->get(route('admin.tags.create'));
 
         $response->assertOk();
     }
 
     public function test_store_creates_tag_with_valid_data(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.tags.store'), [
+        $response = $this->post(route('admin.tags.store'), [
             'tag_name' => 'PHP',
         ]);
 
@@ -76,19 +75,19 @@ class TagControllerTest extends TestCase
 
     public function test_store_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.tags.store'), []);
+        $response = $this->post(route('admin.tags.store'), []);
 
         $response->assertSessionHasErrors(['tag_name']);
     }
 
     public function test_store_fails_when_tag_name_already_exists(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $existing = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.tags.store'), [
+        $response = $this->post(route('admin.tags.store'), [
             'tag_name' => $existing->tag_name,
         ]);
 
@@ -97,9 +96,9 @@ class TagControllerTest extends TestCase
 
     public function test_create_screen_shows_validation_errors_after_failed_store(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')
+        $this
             ->from(route('admin.tags.create'))
             ->post(route('admin.tags.store'), [])
             ->assertRedirect(route('admin.tags.create'));
@@ -111,11 +110,11 @@ class TagControllerTest extends TestCase
 
     public function test_store_succeeds_with_tag_name_of_soft_deleted_tag(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $deleted = Tag::factory()->create(['tag_name' => 'reused-tag']);
         $deleted->delete();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.tags.store'), [
+        $response = $this->post(route('admin.tags.store'), [
             'tag_name' => 'reused-tag',
         ]);
 
@@ -128,10 +127,10 @@ class TagControllerTest extends TestCase
 
     public function test_show_displays_tag(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.tags.show', $target));
+        $response = $this->get(route('admin.tags.show', $target));
 
         $response->assertOk();
         $response->assertSee($target->tag_name);
@@ -139,20 +138,20 @@ class TagControllerTest extends TestCase
 
     public function test_edit_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.tags.edit', $target));
+        $response = $this->get(route('admin.tags.edit', $target));
 
         $response->assertOk();
     }
 
     public function test_update_modifies_tag(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.tags.update', $target), [
+        $response = $this->put(route('admin.tags.update', $target), [
             'tag_name' => 'Updated Tag',
         ]);
 
@@ -162,11 +161,11 @@ class TagControllerTest extends TestCase
 
     public function test_update_fails_when_tag_name_belongs_to_another_tag(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
         $other = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.tags.update', $target), [
+        $response = $this->put(route('admin.tags.update', $target), [
             'tag_name' => $other->tag_name,
         ]);
 
@@ -175,10 +174,10 @@ class TagControllerTest extends TestCase
 
     public function test_destroy_deletes_tag(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->delete(route('admin.tags.destroy', $target));
+        $response = $this->delete(route('admin.tags.destroy', $target));
 
         $response->assertRedirect(route('admin.tags.index'));
         $this->assertSoftDeleted('tags', ['id' => $target->id]);
@@ -186,10 +185,10 @@ class TagControllerTest extends TestCase
 
     public function test_index_as_json_returns_all_tags(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $tag = Tag::factory()->create(['tag_name' => 'Laravel']);
 
-        $response = $this->actingAs($actor, 'admin')->getJson(route('admin.tags.index'));
+        $response = $this->getJson(route('admin.tags.index'));
 
         $response->assertOk();
         $response->assertJsonFragment(['id' => $tag->id, 'tag_name' => 'Laravel']);
@@ -197,9 +196,9 @@ class TagControllerTest extends TestCase
 
     public function test_store_as_json_creates_tag_and_returns_it(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->postJson(route('admin.tags.store'), [
+        $response = $this->postJson(route('admin.tags.store'), [
             'tag_name' => 'PHP',
         ]);
 
@@ -210,9 +209,9 @@ class TagControllerTest extends TestCase
 
     public function test_store_as_json_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->postJson(route('admin.tags.store'), []);
+        $response = $this->postJson(route('admin.tags.store'), []);
 
         $response->assertUnprocessable();
         $response->assertJsonValidationErrors(['tag_name']);
@@ -220,10 +219,10 @@ class TagControllerTest extends TestCase
 
     public function test_update_as_json_modifies_tag_and_returns_it(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->putJson(route('admin.tags.update', $target), [
+        $response = $this->putJson(route('admin.tags.update', $target), [
             'tag_name' => 'Updated Tag',
         ]);
 
@@ -234,10 +233,10 @@ class TagControllerTest extends TestCase
 
     public function test_destroy_as_json_deletes_tag(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Tag::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->deleteJson(route('admin.tags.destroy', $target));
+        $response = $this->deleteJson(route('admin.tags.destroy', $target));
 
         $response->assertNoContent();
         $this->assertSoftDeleted('tags', ['id' => $target->id]);

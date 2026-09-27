@@ -21,10 +21,10 @@ class AdministratorControllerTest extends TestCase
 
     public function test_index_displays_administrators(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $other = Administrator::factory()->create(['name' => 'Jane Doe']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.index'));
+        $response = $this->get(route('admin.index'));
 
         $response->assertOk();
         $response->assertSee($other->name);
@@ -32,18 +32,18 @@ class AdministratorControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.create'));
+        $response = $this->get(route('admin.create'));
 
         $response->assertOk();
     }
 
     public function test_store_creates_administrator_with_valid_data(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.store'), [
+        $response = $this->post(route('admin.store'), [
             'name' => 'New Administrator',
             'email' => 'new-administrator@example.com',
             'password' => 'password123',
@@ -60,19 +60,19 @@ class AdministratorControllerTest extends TestCase
 
     public function test_store_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.store'), []);
+        $response = $this->post(route('admin.store'), []);
 
         $response->assertSessionHasErrors(['name', 'email', 'password', 'role']);
     }
 
     public function test_store_fails_when_email_already_exists(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $existing = Administrator::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.store'), [
+        $response = $this->post(route('admin.store'), [
             'name' => 'New Administrator',
             'email' => $existing->email,
             'password' => 'password123',
@@ -85,11 +85,11 @@ class AdministratorControllerTest extends TestCase
 
     public function test_store_succeeds_with_email_of_soft_deleted_administrator(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $deleted = Administrator::factory()->create(['email' => 'reused@example.com']);
         $deleted->delete();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.store'), [
+        $response = $this->post(route('admin.store'), [
             'name' => 'New Administrator',
             'email' => 'reused@example.com',
             'password' => 'password123',
@@ -110,10 +110,10 @@ class AdministratorControllerTest extends TestCase
 
     public function test_show_displays_administrator(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Administrator::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.show', $target));
+        $response = $this->get(route('admin.show', $target));
 
         $response->assertOk();
         $response->assertSee($target->email);
@@ -121,22 +121,22 @@ class AdministratorControllerTest extends TestCase
 
     public function test_edit_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Administrator::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.edit', $target));
+        $response = $this->get(route('admin.edit', $target));
 
         $response->assertOk();
     }
 
     public function test_update_modifies_administrator_without_changing_password(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Administrator::factory()->create([
             'password' => Hash::make('original-password'),
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.update', $target), [
+        $response = $this->put(route('admin.update', $target), [
             'name' => 'Updated Name',
             'email' => $target->email,
             'role' => AdministratorRole::SuperAdmin->value,
@@ -152,12 +152,12 @@ class AdministratorControllerTest extends TestCase
 
     public function test_update_changes_password_when_provided(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Administrator::factory()->create([
             'password' => Hash::make('original-password'),
         ]);
 
-        $this->actingAs($actor, 'admin')->put(route('admin.update', $target), [
+        $this->put(route('admin.update', $target), [
             'name' => $target->name,
             'email' => $target->email,
             'password' => 'new-password',
@@ -170,11 +170,11 @@ class AdministratorControllerTest extends TestCase
 
     public function test_update_fails_when_email_belongs_to_another_administrator(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Administrator::factory()->create();
         $other = Administrator::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.update', $target), [
+        $response = $this->put(route('admin.update', $target), [
             'name' => $target->name,
             'email' => $other->email,
             'role' => $target->role->value,
@@ -185,10 +185,10 @@ class AdministratorControllerTest extends TestCase
 
     public function test_destroy_deletes_administrator(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = Administrator::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->delete(route('admin.destroy', $target));
+        $response = $this->delete(route('admin.destroy', $target));
 
         $response->assertRedirect(route('admin.index'));
         $this->assertSoftDeleted('administrators', ['id' => $target->id]);

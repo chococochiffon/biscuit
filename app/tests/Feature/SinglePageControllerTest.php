@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
@@ -26,10 +25,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_displays_single_pages(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $singlePage = SinglePage::factory()->create(['title' => '会社概要']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $response->assertSee($singlePage->title);
@@ -37,13 +36,13 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_displays_publication_datetimes(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create([
             'publication_start_datetime' => '2026-10-01 09:00:00',
             'publication_end_datetime' => '2026-10-31 23:59:30',
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $response->assertSee('公開開始');
@@ -55,13 +54,13 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_displays_not_set_when_publication_end_datetime_is_null(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create([
             'publication_start_datetime' => '2026-10-01 09:00:00',
             'publication_end_datetime' => null,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $response->assertSee('未設定');
@@ -69,10 +68,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_displays_columns_in_expected_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $response->assertSeeInOrder(['<table', 'タイトル', '概要', '公開開始', '公開終了', 'Topページへ表示する', 'リンクリストへ表示する'], false);
@@ -80,9 +79,9 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_collapses_search_form_when_not_searching(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertSee('id="single-page-search-body" class="collapse"', false);
         $response->assertSee('aria-expanded="false"', false);
@@ -91,9 +90,9 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_expands_search_form_while_searching(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['title' => '会社']));
+        $response = $this->get(route('admin.single-pages.index', ['title' => '会社']));
 
         $response->assertSee('id="single-page-search-body" class="collapse show"', false);
         $response->assertSee('aria-expanded="true"', false);
@@ -102,28 +101,28 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_keeps_search_form_collapsed_when_only_sort_is_specified(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
+        $response = $this->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
 
         $response->assertSee('id="single-page-search-body" class="collapse"', false);
     }
 
     public function test_index_displays_path(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertSee('/company/about');
     }
 
     public function test_index_displays_search_fields_in_expected_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $response->assertSeeInOrder(['id="search-title"', 'id="search-publication_start-from"', 'id="search-publication_end-from"'], false);
@@ -132,10 +131,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_shows_link_to_sort_by_display_order_when_reorder_is_disabled(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $response->assertSee('表示順で並び替え');
@@ -144,11 +143,11 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_orders_single_pages_by_updated_at_desc_by_default(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $older = SinglePage::factory()->create(['sort_order' => 0, 'updated_at' => now()->subDay()]);
         $newer = SinglePage::factory()->create(['sort_order' => 1, 'updated_at' => now()]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index'));
+        $response = $this->get(route('admin.single-pages.index'));
 
         $response->assertOk();
         $this->assertSame([$newer->id, $older->id], $response->viewData('singlePages')->pluck('id')->all());
@@ -157,11 +156,11 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_orders_single_pages_by_sort_order_and_enables_reorder(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $second = SinglePage::factory()->create(['title' => '2番目', 'sort_order' => 1]);
         $first = SinglePage::factory()->create(['title' => '1番目', 'sort_order' => 0]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'sort_order']));
+        $response = $this->get(route('admin.single-pages.index', ['sort' => 'sort_order']));
 
         $response->assertOk();
         $this->assertSame(
@@ -173,10 +172,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_disables_reorder_while_searching_even_if_sorted_by_sort_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create(['title' => '会社概要']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'sort_order', 'title' => '会社']));
+        $response = $this->get(route('admin.single-pages.index', ['sort' => 'sort_order', 'title' => '会社']));
 
         $response->assertOk();
         $response->assertDontSee('single-page-reorder-form');
@@ -184,20 +183,20 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_can_sort_by_title(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $b = SinglePage::factory()->create(['title' => 'B']);
         $a = SinglePage::factory()->create(['title' => 'A']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
+        $response = $this->get(route('admin.single-pages.index', ['sort' => 'title_asc']));
 
         $this->assertSame([$a->id, $b->id], $response->viewData('singlePages')->pluck('id')->all());
     }
 
     public function test_index_ignores_unknown_sort_and_falls_back_to_default(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['sort' => 'unknown', 'publication_start_from' => 'invalid']));
+        $response = $this->get(route('admin.single-pages.index', ['sort' => 'unknown', 'publication_start_from' => 'invalid']));
 
         $response->assertOk();
         $this->assertSame('updated_at_desc', $response->viewData('sort'));
@@ -205,18 +204,18 @@ class SinglePageControllerTest extends TestCase
 
     public function test_index_searches_by_title(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $hit = SinglePage::factory()->create(['title' => '会社概要']);
         SinglePage::factory()->create(['title' => 'お問い合わせ']);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', ['title' => '会社']));
+        $response = $this->get(route('admin.single-pages.index', ['title' => '会社']));
 
         $this->assertSame([$hit->id], $response->viewData('singlePages')->pluck('id')->all());
     }
 
     public function test_index_searches_by_publication_period(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $hit = SinglePage::factory()->create([
             'publication_start_datetime' => '2026-10-05 10:00:00',
             'publication_end_datetime' => '2026-12-31 23:59:00',
@@ -230,7 +229,7 @@ class SinglePageControllerTest extends TestCase
             'publication_end_datetime' => null,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.index', [
+        $response = $this->get(route('admin.single-pages.index', [
             'publication_start_from' => '2026-10-01',
             'publication_start_to' => '2026-10-31',
             'publication_end_from' => '2026-12-01',
@@ -242,18 +241,18 @@ class SinglePageControllerTest extends TestCase
 
     public function test_create_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+        $response = $this->get(route('admin.single-pages.create'));
 
         $response->assertOk();
     }
 
     public function test_create_screen_displays_one_empty_detail_row(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+        $response = $this->get(route('admin.single-pages.create'));
 
         // テンプレート(__INDEX__)とは別に、初期表示の空の詳細ブロックが1つだけ存在する
         $response->assertSee('name="details[0][sub_title]"', false);
@@ -263,18 +262,18 @@ class SinglePageControllerTest extends TestCase
 
     public function test_create_screen_displays_title_short_sentences_and_details_in_expected_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+        $response = $this->get(route('admin.single-pages.create'));
 
         $response->assertSeeInOrder(['id="title"', 'id="short_sentences"', 'id="single-page-detail-rows"', 'id="parent_path"'], false);
     }
 
     public function test_store_creates_single_page_with_details(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+        $response = $this->post(route('admin.single-pages.store'), [
             'title' => '会社概要',
             'short_sentences' => '会社の概要ページです',
             'parent_path' => 'company',
@@ -300,9 +299,9 @@ class SinglePageControllerTest extends TestCase
     public function test_store_rejects_details_over_the_limit(): void
     {
         config(['limits.single_page_details' => 2]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+        $response = $this->post(route('admin.single-pages.store'), [
             'title' => '会社概要',
             'slug' => 'about',
             'publication_start_datetime' => now()->format('Y-m-d H:i'),
@@ -320,9 +319,9 @@ class SinglePageControllerTest extends TestCase
     public function test_create_screen_passes_detail_limit_to_the_rows(): void
     {
         config(['limits.single_page_details' => 3]);
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+        $response = $this->get(route('admin.single-pages.create'));
 
         $response->assertSee('data-max-rows="3"', false);
         $response->assertSee('最大3件まで登録できます。');
@@ -330,11 +329,11 @@ class SinglePageControllerTest extends TestCase
 
     public function test_store_places_page_at_site_root_and_normalizes_parent_path(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['slug' => 'about']))
+        $this->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['slug' => 'about']))
             ->assertRedirect(route('admin.single-pages.index'));
-        $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => '/company/info/', 'slug' => 'history']))
+        $this->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => '/company/info/', 'slug' => 'history']))
             ->assertRedirect(route('admin.single-pages.index'));
 
         $this->assertSame('/about', SinglePage::where('slug', 'about')->value('path'));
@@ -361,29 +360,29 @@ class SinglePageControllerTest extends TestCase
     #[DataProvider('invalidPathProvider')]
     public function test_store_rejects_invalid_path_format(array $input, string $errorField): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload($input));
+        $response = $this->post(route('admin.single-pages.store'), $this->validSinglePagePayload($input));
 
         $response->assertSessionHasErrors($errorField);
     }
 
     public function test_store_rejects_path_used_by_another_active_page(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
+        $response = $this->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
 
         $response->assertSessionHasErrors('slug');
     }
 
     public function test_store_allows_path_used_by_soft_deleted_page(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about'])->delete();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
+        $response = $this->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
 
         $response->assertSessionHasNoErrors();
         $this->assertSame(1, SinglePage::where('path', '/company/about')->count());
@@ -391,10 +390,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_update_allows_keeping_its_own_path(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create(['parent_path' => 'company', 'slug' => 'about']);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
+        $response = $this->put(route('admin.single-pages.update', $target), $this->validSinglePagePayload(['parent_path' => 'company', 'slug' => 'about']));
 
         $response->assertSessionHasNoErrors();
         $this->assertSame('/company/about', $target->fresh()->path);
@@ -402,10 +401,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_store_rejects_path_used_by_article(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         Article::factory()->create(['parent_path' => 'news', 'slug' => 'topics']);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'news', 'slug' => 'topics']));
+        $response = $this->post(route('admin.single-pages.store'), $this->validSinglePagePayload(['parent_path' => 'news', 'slug' => 'topics']));
 
         $response->assertSessionHasErrors('slug');
     }
@@ -414,10 +413,10 @@ class SinglePageControllerTest extends TestCase
     {
         $this->freezeTime();
         Storage::fake('public');
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $file = UploadedFile::fake()->image('header.jpg');
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+        $response = $this->post(route('admin.single-pages.store'), [
             'slug' => 'page-1',
             'title' => 'ヘッダー画像記事',
             'short_sentences' => '概要',
@@ -435,10 +434,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_store_persists_top_page_view_link_list_view_and_assigns_next_sort_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         SinglePage::factory()->create(['sort_order' => 3]);
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+        $response = $this->post(route('admin.single-pages.store'), [
             'slug' => 'page-2',
             'title' => '新着情報',
             'short_sentences' => '新着情報ページです',
@@ -457,18 +456,18 @@ class SinglePageControllerTest extends TestCase
 
     public function test_store_fails_validation_with_missing_fields(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), []);
+        $response = $this->post(route('admin.single-pages.store'), []);
 
         $response->assertSessionHasErrors(['title', 'short_sentences', 'slug', 'publication_start_datetime']);
     }
 
     public function test_store_persists_publication_start_and_end_datetimes(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+        $response = $this->post(route('admin.single-pages.store'), [
             'slug' => 'page-4',
             'title' => '公開期間付きページ',
             'short_sentences' => '概要',
@@ -485,9 +484,9 @@ class SinglePageControllerTest extends TestCase
 
     public function test_store_fails_validation_when_publication_end_datetime_is_before_start(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+        $response = $this->post(route('admin.single-pages.store'), [
             'slug' => 'page-5',
             'title' => '公開期間逆転ページ',
             'short_sentences' => '概要',
@@ -500,29 +499,29 @@ class SinglePageControllerTest extends TestCase
 
     public function test_show_screen_does_not_exist(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
 
         $this->assertFalse(Route::has('admin.single-pages.show'));
-        $this->actingAs($actor, 'admin')->get('/admin/single-pages/'.$target->id)->assertMethodNotAllowed();
+        $this->get('/admin/single-pages/'.$target->id)->assertMethodNotAllowed();
     }
 
     public function test_edit_screen_can_be_rendered(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.edit', $target));
+        $response = $this->get(route('admin.single-pages.edit', $target));
 
         $response->assertOk();
     }
 
     public function test_edit_screen_does_not_add_empty_detail_row_when_single_page_has_no_details(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.edit', $target));
+        $response = $this->get(route('admin.single-pages.edit', $target));
 
         $response->assertDontSee('name="details[0][sub_title]"', false);
         $response->assertSee('data-next-index="0"', false);
@@ -530,10 +529,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_update_modifies_single_page(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+        $response = $this->put(route('admin.single-pages.update', $target), [
             'slug' => $target->slug,
             'title' => '更新後タイトル',
             'short_sentences' => '更新後概要',
@@ -546,10 +545,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_update_modifies_top_page_view_and_link_list_view(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create(['top_page_view' => false, 'link_list_view' => false]);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+        $response = $this->put(route('admin.single-pages.update', $target), [
             'slug' => $target->slug,
             'title' => $target->title,
             'short_sentences' => $target->short_sentences,
@@ -566,7 +565,7 @@ class SinglePageControllerTest extends TestCase
 
     public function test_update_syncs_details_creating_updating_and_deleting(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
         $kept = SinglePageDetail::factory()->create([
             'single_page_id' => $target->id,
@@ -579,7 +578,7 @@ class SinglePageControllerTest extends TestCase
             'sort_order' => 1,
         ]);
 
-        $response = $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+        $response = $this->put(route('admin.single-pages.update', $target), [
             'slug' => $target->slug,
             'title' => $target->title,
             'short_sentences' => $target->short_sentences,
@@ -601,14 +600,14 @@ class SinglePageControllerTest extends TestCase
 
     public function test_update_syncs_details_without_touching_other_pages_and_orders_rows_by_submission(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
         $other = SinglePage::factory()->create();
         $kept = SinglePageDetail::factory()->create(['single_page_id' => $target->id, 'sort_order' => 5]);
         $otherDetail = SinglePageDetail::factory()->create(['single_page_id' => $other->id, 'sub_title' => '他のページ']);
 
         // 並び順を送らない場合は、行のキー(入力名の番号。連番でなくてもよい)の順で並べる
-        $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+        $this->put(route('admin.single-pages.update', $target), [
             'slug' => $target->slug,
             'title' => $target->title,
             'short_sentences' => $target->short_sentences,
@@ -629,10 +628,10 @@ class SinglePageControllerTest extends TestCase
 
     public function test_destroy_deletes_single_page(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $target = SinglePage::factory()->create();
 
-        $response = $this->actingAs($actor, 'admin')->delete(route('admin.single-pages.destroy', $target));
+        $response = $this->delete(route('admin.single-pages.destroy', $target));
 
         $response->assertRedirect(route('admin.single-pages.index'));
         $this->assertSoftDeleted('single_pages', ['id' => $target->id]);
@@ -651,12 +650,12 @@ class SinglePageControllerTest extends TestCase
 
     public function test_reorder_persists_the_submitted_order_as_sort_order(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $a = SinglePage::factory()->create(['sort_order' => 0]);
         $b = SinglePage::factory()->create(['sort_order' => 1]);
         $c = SinglePage::factory()->create(['sort_order' => 2]);
 
-        $response = $this->actingAs($actor, 'admin')->patch(route('admin.single-pages.reorder'), [
+        $response = $this->patch(route('admin.single-pages.reorder'), [
             'order' => [$c->id, $a->id, $b->id],
         ]);
 
@@ -668,11 +667,11 @@ class SinglePageControllerTest extends TestCase
 
     public function test_reorder_applies_offset_for_the_current_page(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
         $a = SinglePage::factory()->create(['sort_order' => 20]);
         $b = SinglePage::factory()->create(['sort_order' => 21]);
 
-        $response = $this->actingAs($actor, 'admin')->patch(route('admin.single-pages.reorder'), [
+        $response = $this->patch(route('admin.single-pages.reorder'), [
             'order' => [$b->id, $a->id],
             'offset' => 20,
         ]);
@@ -684,9 +683,9 @@ class SinglePageControllerTest extends TestCase
 
     public function test_reorder_fails_validation_for_an_unknown_id(): void
     {
-        $actor = Administrator::factory()->create();
+        $this->actingAsAdmin();
 
-        $response = $this->actingAs($actor, 'admin')->patch(route('admin.single-pages.reorder'), [
+        $response = $this->patch(route('admin.single-pages.reorder'), [
             'order' => [999999],
         ]);
 
