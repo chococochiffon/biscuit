@@ -477,3 +477,8 @@ main > form {
     display: block;
     max-width: 100%;
 }
+
+/* 詳細画面の項目一覧(<x-admin.detail-row>)。最後の値の下余白をなくし、カードの余白とそろえる */
+.detail-list > dd:last-of-type {
+    margin-bottom: 0;
+}

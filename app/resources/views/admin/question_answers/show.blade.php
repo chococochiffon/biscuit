@@ -9,19 +9,15 @@
     </div>
 
     <div class="card mx-auto" style="max-width: 48rem;">
-        <dl class="row mb-0 p-3">
-            <dt class="col-3 text-muted fw-normal">{{ __('形式') }}</dt>
-            <dd class="col-9 @if (! $questionAnswer->top_view && $questionTree) mb-0 @endif">{{ $questionAnswer->top_view ? __('簡易版(トップ表示)') : __('分岐あり') }}</dd>
+        <dl class="row mb-0 p-3 detail-list">
+            <x-admin.detail-row :label="__('形式')" :label-cols="3">{{ $questionAnswer->top_view ? __('簡易版(トップ表示)') : __('分岐あり') }}</x-admin.detail-row>
 
             @if ($questionAnswer->top_view)
-                <dt class="col-3 text-muted fw-normal">{{ __('質問(簡易版)') }}</dt>
-                <dd class="col-9" style="white-space: pre-wrap;">{{ $questionAnswer->short_question_text }}</dd>
+                <x-admin.detail-row :label="__('質問(簡易版)')" :label-cols="3" style="white-space: pre-wrap;">{{ $questionAnswer->short_question_text }}</x-admin.detail-row>
 
-                <dt class="col-3 text-muted fw-normal">{{ __('回答(簡易版)') }}</dt>
-                <dd class="col-9 mb-0" style="white-space: pre-wrap;">{{ $questionAnswer->short_answer_text }}</dd>
+                <x-admin.detail-row :label="__('回答(簡易版)')" :label-cols="3" style="white-space: pre-wrap;">{{ $questionAnswer->short_answer_text }}</x-admin.detail-row>
             @elseif (! $questionTree)
-                <dt class="col-3 text-muted fw-normal">{{ __('質問・回答') }}</dt>
-                <dd class="col-9 mb-0">{{ __('未登録') }}</dd>
+                <x-admin.detail-row :label="__('質問・回答')" :label-cols="3">{{ __('未登録') }}</x-admin.detail-row>
             @endif
         </dl>
     </div>
