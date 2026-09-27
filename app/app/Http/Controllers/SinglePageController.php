@@ -2,24 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\FiltersPublishableList;
 use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreSinglePageRequest;
 use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SinglePageController extends Controller
 {
-    use SyncsSortableRows;
-
-    /**
-     * 一覧のデフォルトの並び順(更新日時の新しい順)。
-     */
-    private const DEFAULT_SORT = 'updated_at_desc';
+    use FiltersPublishableList, SyncsSortableRows;
 
     /**
      * ドラッグでの並び替えを有効にする並び順(表示順)。
@@ -33,30 +28,12 @@ class SinglePageController extends Controller
      */
     public function index(Request $request): View
     {
-        $sortOptions = $this->sortOptions();
+        [$filters, $sort, $isSearching] = $this->listFilters($request);
 
-        // 不正な検索条件でリダイレクトを繰り返さないよう、妥当な値だけを採用して残りは無視する
-        $filters = Validator::make($request->query(), [
-            'title' => ['nullable', 'string', 'max:255'],
-            'publication_start_from' => ['nullable', 'date_format:Y-m-d'],
-            'publication_start_to' => ['nullable', 'date_format:Y-m-d'],
-            'publication_end_from' => ['nullable', 'date_format:Y-m-d'],
-            'publication_end_to' => ['nullable', 'date_format:Y-m-d'],
-            'sort' => ['nullable', Rule::in(array_keys($sortOptions))],
-        ])->valid();
-
-        $sort = $filters['sort'] ?? self::DEFAULT_SORT;
-        ['column' => $column, 'direction' => $direction] = $sortOptions[$sort];
-
-        $singlePages = SinglePage::query()
-            ->when(filled($filters['title'] ?? null), fn ($query) => $query->where('title', 'like', '%'.$filters['title'].'%'))
-            ->filterPublicationPeriod($filters)
-            ->orderBy($column, $direction)
-            ->orderBy('id', $direction)
+        $singlePages = $this->applyListFilters(SinglePage::query(), $filters, $sort)
             ->paginate(20)
             ->withQueryString();
 
-        $isSearching = collect($filters)->except('sort')->filter(fn ($value) => filled($value))->isNotEmpty();
         $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
 
         return view('admin.single_pages.index', compact('singlePages', 'filters', 'sort', 'isSearching', 'canReorder'));
@@ -179,21 +156,14 @@ class SinglePageController extends Controller
     }
 
     /**
-     * 一覧で選択可能な並び順(キー → 並び替えるカラム・方向)。一覧の見出しクリックで「項目_asc/desc」のキーが送られる。
+     * 一覧で選択可能な並び順。共通の並び順に、表示順(ドラッグでの並び替え用)を足す。
      *
      * @return array<string, array{column: string, direction: string}>
      */
-    private function sortOptions(): array
+    protected function listSortOptions(): array
     {
         return [
-            'updated_at_desc' => ['column' => 'updated_at', 'direction' => 'desc'],
-            'updated_at_asc' => ['column' => 'updated_at', 'direction' => 'asc'],
-            'title_asc' => ['column' => 'title', 'direction' => 'asc'],
-            'title_desc' => ['column' => 'title', 'direction' => 'desc'],
-            'publication_start_desc' => ['column' => 'publication_start_datetime', 'direction' => 'desc'],
-            'publication_start_asc' => ['column' => 'publication_start_datetime', 'direction' => 'asc'],
-            'publication_end_desc' => ['column' => 'publication_end_datetime', 'direction' => 'desc'],
-            'publication_end_asc' => ['column' => 'publication_end_datetime', 'direction' => 'asc'],
+            ...$this->commonListSortOptions(),
             self::REORDERABLE_SORT => ['column' => 'sort_order', 'direction' => 'asc'],
         ];
     }

@@ -136,6 +136,19 @@ class ArticleControllerTest extends TestCase
         $this->assertSame([$earlier->id, $later->id], $response->viewData('articles')->pluck('id')->all());
     }
 
+    public function test_index_can_sort_by_approval(): void
+    {
+        $this->actingAsAdmin();
+        $published = Article::factory()->create(['approval' => ArticleApprovalStatus::Published]);
+        $draft = Article::factory()->create(['approval' => ArticleApprovalStatus::Draft]);
+        $pending = Article::factory()->create(['approval' => ArticleApprovalStatus::Pending]);
+
+        $response = $this->get(route('admin.articles.index', ['sort' => 'approval_desc']));
+
+        $this->assertSame('approval_desc', $response->viewData('sort'));
+        $this->assertSame([$published->id, $pending->id, $draft->id], $response->viewData('articles')->pluck('id')->all());
+    }
+
     public function test_index_ignores_unknown_sort_and_falls_back_to_default(): void
     {
         $this->actingAsAdmin();
