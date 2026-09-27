@@ -282,7 +282,7 @@ class UserControllerTest extends TestCase
             ->assertSee('data-output-width="250"', false)
             ->assertSee('data-output-height="250"', false)
             ->assertSee('id="image-cropper-modal"', false)
-            ->assertSee('data-role="image-cropper-dropzone"', false)
+            ->assertSee('data-role="image-dropzone"', false)
             ->assertSee('アイコン画像')
             ->assertDontSee('ユーザー画像');
     }

@@ -183,21 +183,13 @@
 
             <div class="mb-3">
                 <label class="form-label">{{ __('ヘッダー画像') }}</label>
-                <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('ヘッダー画像を選択') }}">
-                    <input id="header_image" type="file" name="header_image" accept="image/*" class="d-none" data-role="image-dropzone-input">
-
-                    <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingHeaderImageUrl) style="display: none;" @endif>
-                        <img src="{{ $existingHeaderImageUrl }}" alt="{{ __('ヘッダー画像') }}" data-role="image-dropzone-image">
-                        <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-
-                    <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingHeaderImageUrl) style="display: none;" @endif>
-                        <i class="bi bi-cloud-arrow-up"></i>
-                        <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
-                    </div>
-                </div>
+                <x-admin.image-dropzone
+                    id="header_image"
+                    name="header_image"
+                    :image-url="$existingHeaderImageUrl"
+                    :alt="__('ヘッダー画像')"
+                    :aria-label="__('ヘッダー画像を選択')"
+                />
             </div>
         </div>
     </div>

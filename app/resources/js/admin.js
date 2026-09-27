@@ -1060,99 +1060,113 @@ function initSinglePageReorder() {
 }
 
 /**
- * 画像アップロード用のドロップゾーンUI(サイトアイコン・サイト画像などのフォーム)を初期化する。
- * クリックでのファイル選択、ドラッグ&ドロップ、選択直後のプレビュー表示、選択解除に対応する。
+ * 画像アップロード用のドロップゾーン(data-role="image-dropzone"、Blade の <x-admin.image-dropzone>)を初期化する。
+ * クリック・Enter/Space でファイル選択を開き、ドロップしたファイルはファイル入力へ移して change を発生させる。
+ * 選択した画像は枠内にプレビューし、選択解除ボタン(image-dropzone-remove)で選択を取り消す。
+ * 切り抜きUI(data-role="image-cropper")の中のドロップゾーンは、選択後の表示を initImageCroppers() に任せる。
+ * リピーターで後から追加される行にも対応するため、各イベントは document で受け取る。
  */
 function initImageDropzones() {
-    document.querySelectorAll('[data-role="image-dropzone"]').forEach(bindImageDropzone);
-}
+    const dropzoneOf = (event) => event.target.closest?.('[data-role="image-dropzone"]');
+    const inputOf = (dropzone) => dropzone.querySelector('[data-role="image-dropzone-input"]');
 
-function bindImageDropzone(dropzone) {
-    const input = dropzone.querySelector('[data-role="image-dropzone-input"]');
-    const preview = dropzone.querySelector('[data-role="image-dropzone-preview"]');
-    const previewImage = dropzone.querySelector('[data-role="image-dropzone-image"]');
-    const placeholder = dropzone.querySelector('[data-role="image-dropzone-placeholder"]');
-    const removeButton = dropzone.querySelector('[data-role="image-dropzone-remove"]');
+    document.addEventListener('click', (event) => {
+        const dropzone = dropzoneOf(event);
 
-    function showPreview(src) {
-        previewImage.src = src;
-        preview.style.display = '';
-        placeholder.style.display = 'none';
-    }
+        if (!dropzone) {
+            return;
+        }
 
-    function showPlaceholder() {
-        previewImage.src = '';
-        preview.style.display = 'none';
-        placeholder.style.display = '';
-    }
+        if (event.target.closest('[data-role="image-dropzone-remove"]')) {
+            inputOf(dropzone).value = '';
+            setDropzonePreview(dropzone, null);
 
-    function handleFiles(files) {
-        const file = files?.[0];
+            return;
+        }
 
-        if (!file || !file.type.startsWith('image/')) {
+        // ファイル入力自体のクリック(下の input.click() によるもの)で、ファイル選択を二重に開かないようにする
+        if (!event.target.closest('[data-role="image-dropzone-input"]')) {
+            inputOf(dropzone).click();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const dropzone = dropzoneOf(event);
+
+        if (dropzone && event.target === dropzone && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            inputOf(dropzone).click();
+        }
+    });
+
+    document.addEventListener('dragover', (event) => {
+        const dropzone = dropzoneOf(event);
+
+        if (dropzone) {
+            event.preventDefault();
+            dropzone.classList.add('is-dragover');
+        }
+    });
+
+    document.addEventListener('dragleave', (event) => {
+        const dropzone = dropzoneOf(event);
+
+        if (dropzone && !dropzone.contains(event.relatedTarget)) {
+            dropzone.classList.remove('is-dragover');
+        }
+    });
+
+    document.addEventListener('drop', (event) => {
+        const dropzone = dropzoneOf(event);
+
+        if (!dropzone) {
+            return;
+        }
+
+        event.preventDefault();
+        dropzone.classList.remove('is-dragover');
+
+        if (event.dataTransfer.files.length) {
+            const input = inputOf(dropzone);
+
+            input.files = event.dataTransfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+
+    document.addEventListener('change', (event) => {
+        const input = event.target.closest('[data-role="image-dropzone-input"]');
+        const file = input?.files?.[0];
+
+        if (!input || input.closest('[data-role="image-cropper"]') || !file || !file.type.startsWith('image/')) {
             return;
         }
 
         const reader = new FileReader();
-        reader.onload = () => showPreview(reader.result);
+        reader.onload = () => setDropzonePreview(input.closest('[data-role="image-dropzone"]'), reader.result);
         reader.readAsDataURL(file);
-    }
-
-    dropzone.addEventListener('click', (event) => {
-        if (event.target.closest('[data-role="image-dropzone-remove"]')) {
-            return;
-        }
-
-        input.click();
-    });
-
-    dropzone.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault();
-            input.click();
-        }
-    });
-
-    input.addEventListener('change', () => handleFiles(input.files));
-
-    dropzone.addEventListener('dragover', (event) => {
-        event.preventDefault();
-        dropzone.classList.add('is-dragover');
-    });
-
-    dropzone.addEventListener('dragleave', () => {
-        dropzone.classList.remove('is-dragover');
-    });
-
-    dropzone.addEventListener('drop', (event) => {
-        event.preventDefault();
-        dropzone.classList.remove('is-dragover');
-
-        const files = event.dataTransfer.files;
-
-        if (files.length) {
-            input.files = files;
-            handleFiles(files);
-        }
-    });
-
-    removeButton?.addEventListener('click', (event) => {
-        event.stopPropagation();
-        input.value = '';
-        showPlaceholder();
     });
 }
 
 /**
+ * ドロップゾーンの表示を、画像のプレビュー(src。null なら「クリックまたはドラッグ&ドロップ」の案内)に切り替える。
+ */
+function setDropzonePreview(dropzone, src) {
+    dropzone.querySelector('[data-role="image-dropzone-image"]').src = src || '';
+    dropzone.querySelector('[data-role="image-dropzone-preview"]').style.display = src ? '' : 'none';
+    dropzone.querySelector('[data-role="image-dropzone-placeholder"]').style.display = src ? 'none' : '';
+}
+
+/**
  * 切り抜き範囲を指定して画像をアップロードするUI(トップスライダー画像・ユーザーのアイコン画像のフォーム)を初期化する。
- * data-role="image-cropper" の中のドロップゾーン(image-cropper-dropzone)へのドラッグ&ドロップ、またはクリックして
- * ファイル入力(image-cropper-input)で画像を選ぶと、切り抜き用のモーダル
+ * data-role="image-cropper" の中のドロップゾーン(<x-admin.image-dropzone>。クリック・ドラッグ&ドロップの操作は
+ * initImageDropzones() が受け持つ)で画像を選ぶと、切り抜き用のモーダル
  * (admin.partials._image_cropper_modal)を開いて Cropper.js で範囲と画像の拡大・縮小を調整させる。
  * 「決定」で枠の範囲(元画像のピクセル基準)を隠しinput(image-cropper-x/y/width/height)へ設定し、
- * 切り抜いた結果をプレビュー(image-cropper-image)に表示する。決定後は「切り抜きを編集」(image-cropper-edit)で開き直せる。
+ * 切り抜いた結果をドロップゾーン内にプレビューする。決定後は「切り抜きを編集」(image-cropper-edit)で開き直せる。
  * 最初の選択でモーダルを閉じた場合は、ファイルの選択を取り消す。
  * 枠の比率は保存サイズ(data-output-width / data-output-height)から決める。
- * リピーターで後から追加される行にも対応するため、各イベントは document で受け取る。
+ * リピーターで後から追加される行にも対応するため、change・click イベントは document で受け取る。
  */
 function initImageCroppers() {
     const modalElement = document.getElementById('image-cropper-modal');
@@ -1185,24 +1199,19 @@ function initImageCroppers() {
         return wrapper.querySelector(`[data-role="image-cropper-${key}"]`);
     }
 
+    function dropzone(wrapper) {
+        return wrapper.querySelector('[data-role="image-dropzone"]');
+    }
+
     // ファイルの選択を取り消し、保存済みの画像(あれば)の表示に戻す
     function clearSelection(wrapper) {
-        const image = wrapper.querySelector('[data-role="image-cropper-image"]');
-
         selections.delete(wrapper);
-        wrapper.querySelector('[data-role="image-cropper-input"]').value = '';
+        wrapper.querySelector('[data-role="image-dropzone-input"]').value = '';
         fieldKeys.forEach((key) => {
             field(wrapper, key).value = '';
         });
-        image.src = image.dataset.originalSrc || '';
-        showPreview(wrapper, Boolean(image.dataset.originalSrc));
+        setDropzonePreview(dropzone(wrapper), wrapper.querySelector('[data-role="image-dropzone-image"]').dataset.originalSrc || null);
         wrapper.querySelector('[data-role="image-cropper-edit"]').style.display = 'none';
-    }
-
-    // ドロップゾーン内の表示を、プレビュー画像と「クリックまたはドラッグ&ドロップ」の案内で切り替える
-    function showPreview(wrapper, visible) {
-        wrapper.querySelector('[data-role="image-cropper-frame"]').style.display = visible ? '' : 'none';
-        wrapper.querySelector('[data-role="image-cropper-placeholder"]').style.display = visible ? 'none' : '';
     }
 
     function open(wrapper) {
@@ -1267,15 +1276,13 @@ function initImageCroppers() {
 
         // 整数に丸めると比率が 1px ずれることがあるため、高さを幅と保存サイズの比率から求め直す
         data.height = Math.round(data.width * height / width);
-        const image = wrapper.querySelector('[data-role="image-cropper-image"]');
 
         selections.get(wrapper).data = data;
         fieldKeys.forEach((key) => {
             field(wrapper, key).value = String(data[key]);
         });
 
-        image.src = cropper.getCroppedCanvas({ maxWidth: 960, maxHeight: 960 }).toDataURL();
-        showPreview(wrapper, true);
+        setDropzonePreview(dropzone(wrapper), cropper.getCroppedCanvas({ maxWidth: 960, maxHeight: 960 }).toDataURL());
         wrapper.querySelector('[data-role="image-cropper-edit"]').style.display = '';
 
         applied = true;
@@ -1305,66 +1312,8 @@ function initImageCroppers() {
         }
     });
 
-    // ドロップゾーンのクリック・Enter/Space でファイル選択を開く(ファイル入力自体のクリックは二重に開かないよう除く)
-    function openFileDialog(dropzone) {
-        dropzone.querySelector('[data-role="image-cropper-input"]').click();
-    }
-
-    document.addEventListener('click', (event) => {
-        const dropzone = event.target.closest('[data-role="image-cropper-dropzone"]');
-
-        if (dropzone && !event.target.closest('[data-role="image-cropper-input"]')) {
-            openFileDialog(dropzone);
-        }
-    });
-
-    document.addEventListener('keydown', (event) => {
-        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
-
-        if (dropzone && event.target === dropzone && (event.key === 'Enter' || event.key === ' ')) {
-            event.preventDefault();
-            openFileDialog(dropzone);
-        }
-    });
-
-    // ドロップされたファイルをファイル入力に移し、選択したときと同じく change イベントで切り抜きモーダルを開く
-    document.addEventListener('dragover', (event) => {
-        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
-
-        if (dropzone) {
-            event.preventDefault();
-            dropzone.classList.add('is-dragover');
-        }
-    });
-
-    document.addEventListener('dragleave', (event) => {
-        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
-
-        if (dropzone && !dropzone.contains(event.relatedTarget)) {
-            dropzone.classList.remove('is-dragover');
-        }
-    });
-
-    document.addEventListener('drop', (event) => {
-        const dropzone = event.target.closest?.('[data-role="image-cropper-dropzone"]');
-
-        if (!dropzone) {
-            return;
-        }
-
-        event.preventDefault();
-        dropzone.classList.remove('is-dragover');
-
-        const input = dropzone.querySelector('[data-role="image-cropper-input"]');
-
-        if (event.dataTransfer.files.length) {
-            input.files = event.dataTransfer.files;
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-    });
-
     document.addEventListener('change', (event) => {
-        const input = event.target.closest('[data-role="image-cropper-input"]');
+        const input = event.target.closest('[data-role="image-cropper"] [data-role="image-dropzone-input"]');
 
         if (!input) {
             return;

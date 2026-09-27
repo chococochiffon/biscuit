@@ -62,40 +62,25 @@
 
         <div class="mb-3">
             <label class="form-label">{{ __('サイトアイコン') }}</label>
-            <div class="image-dropzone image-dropzone--icon" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('サイトアイコンを選択') }}">
-                <input id="site_icon" type="file" name="site_icon" accept="image/*" class="d-none" data-role="image-dropzone-input">
-
-                <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingSiteIconUrl) style="display: none;" @endif>
-                    <img src="{{ $existingSiteIconUrl }}" alt="{{ __('サイトアイコン') }}" data-role="image-dropzone-image">
-                    <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingSiteIconUrl) style="display: none;" @endif>
-                    <i class="bi bi-cloud-arrow-up"></i>
-                    <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
-                </div>
-            </div>
+            <x-admin.image-dropzone
+                id="site_icon"
+                name="site_icon"
+                :image-url="$existingSiteIconUrl"
+                :alt="__('サイトアイコン')"
+                :aria-label="__('サイトアイコンを選択')"
+                icon
+            />
         </div>
 
         <div class="mb-3">
             <label class="form-label">{{ __('サイト画像') }}</label>
-            <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('サイト画像を選択') }}">
-                <input id="site_image" type="file" name="site_image" accept="image/*" class="d-none" data-role="image-dropzone-input">
-
-                <div class="image-dropzone-preview" data-role="image-dropzone-preview" @if (! $existingSiteImageUrl) style="display: none;" @endif>
-                    <img src="{{ $existingSiteImageUrl }}" alt="{{ __('サイト画像') }}" data-role="image-dropzone-image">
-                    <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
-                        <i class="bi bi-x-lg"></i>
-                    </button>
-                </div>
-
-                <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" @if ($existingSiteImageUrl) style="display: none;" @endif>
-                    <i class="bi bi-cloud-arrow-up"></i>
-                    <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
-                </div>
-            </div>
+            <x-admin.image-dropzone
+                id="site_image"
+                name="site_image"
+                :image-url="$existingSiteImageUrl"
+                :alt="__('サイト画像')"
+                :aria-label="__('サイト画像を選択')"
+            />
         </div>
     </div>
 

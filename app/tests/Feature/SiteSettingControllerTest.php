@@ -835,7 +835,7 @@ class SiteSettingControllerTest extends TestCase
         $response->assertSee('data-output-width="1920"', false)
             ->assertSee('data-output-height="1080"', false)
             ->assertSee('id="image-cropper-modal"', false)
-            ->assertSee('data-role="image-cropper-dropzone"', false);
+            ->assertSee('data-role="image-dropzone"', false);
     }
 
     public function test_update_syncs_top_slider_images_creating_updating_and_deleting_rows(): void
