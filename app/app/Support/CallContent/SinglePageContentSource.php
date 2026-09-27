@@ -19,7 +19,7 @@ class SinglePageContentSource
     {
         return SinglePage::query()->published()
             ->where('top_page_view', true)
-            ->orderBy('sort_order')
+            ->ordered()
             ->take(5)
             ->get();
     }
@@ -31,7 +31,7 @@ class SinglePageContentSource
     {
         return SinglePage::query()->published()
             ->with('details')
-            ->orderBy('sort_order')
+            ->ordered()
             ->first();
     }
 
@@ -44,7 +44,7 @@ class SinglePageContentSource
     {
         return SinglePage::query()->published()
             ->where('top_page_view', true)
-            ->orderBy('sort_order')
+            ->ordered()
             ->take(10)
             ->get();
     }
@@ -54,6 +54,6 @@ class SinglePageContentSource
      */
     public function getLink(): ?SinglePage
     {
-        return SinglePage::query()->published()->orderBy('sort_order')->first();
+        return SinglePage::query()->published()->ordered()->first();
     }
 }

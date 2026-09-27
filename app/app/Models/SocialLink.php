@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use App\Enums\SocialService;
+use App\Models\Concerns\HasSortOrder;
 use Database\Factories\SocialLinkFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Scope;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -15,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SocialLink extends Model
 {
     /** @use HasFactory<SocialLinkFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasSortOrder, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -27,14 +26,5 @@ class SocialLink extends Model
         return [
             'service' => SocialService::class,
         ];
-    }
-
-    /**
-     * 並び順(sort_order、同順ならid)で取得する。
-     */
-    #[Scope]
-    protected function ordered(Builder $query): void
-    {
-        $query->orderBy('sort_order')->orderBy('id');
     }
 }

@@ -3,10 +3,9 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasPublicImages;
+use App\Models\Concerns\HasSortOrder;
 use Database\Factories\TopSliderImageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Scope;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +17,7 @@ use Illuminate\Support\Str;
 class TopSliderImage extends Model
 {
     /** @use HasFactory<TopSliderImageFactory> */
-    use HasFactory, HasPublicImages, SoftDeletes;
+    use HasFactory, HasPublicImages, HasSortOrder, SoftDeletes;
 
     /**
      * トップスライダー画像の保存先ディレクトリ(公開ディスク基準)。
@@ -51,14 +50,5 @@ class TopSliderImage extends Model
     protected function topImageUrl(): Attribute
     {
         return Attribute::get(fn () => self::publicImageUrl($this->top_image));
-    }
-
-    /**
-     * 並び順(sort_order、同順ならid)で取得する。
-     */
-    #[Scope]
-    protected function ordered(Builder $query): void
-    {
-        $query->orderBy('sort_order')->orderBy('id');
     }
 }

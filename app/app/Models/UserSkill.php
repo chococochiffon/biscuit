@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use Database\Factories\UserSkillFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class UserSkill extends Model
 {
     /** @use HasFactory<UserSkillFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasSortOrder, SoftDeletes;
 
     /**
      * 習熟度(level)の上限。0〜この値の範囲で入力する。
