@@ -12,6 +12,6 @@ class SiteSettingComposer
      */
     public function compose(View $view): void
     {
-        $view->with('currentSiteSetting', SiteSetting::query()->first());
+        $view->with('currentSiteSetting', SiteSetting::current());
     }
 }

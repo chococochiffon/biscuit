@@ -32,7 +32,7 @@ class ContentModelRelationController extends Controller
 
         $contentModelRelations = ContentModelRelation::query()
             ->latest('updated_at')
-            ->paginate(20);
+            ->paginate(config('limits.admin_per_page'));
 
         return view('admin.content_model_relations.index', compact('contentModelRelations'));
     }

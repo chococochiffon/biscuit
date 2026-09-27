@@ -22,7 +22,7 @@ class UserController extends Controller
         $users = User::query()
             ->with('detail')
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(config('limits.admin_per_page'));
 
         return view('admin.users.index', compact('users'));
     }

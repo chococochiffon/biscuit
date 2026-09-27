@@ -23,7 +23,7 @@ class QuestionAnswerController extends Controller
         $questionAnswers = QuestionAnswer::query()
             ->with('question')
             ->latest('updated_at')
-            ->paginate(20);
+            ->paginate(config('limits.admin_per_page'));
 
         return view('admin.question_answers.index', compact('questionAnswers'));
     }

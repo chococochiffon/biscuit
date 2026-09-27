@@ -31,7 +31,7 @@ class ArticleController extends Controller
             ->published()
             ->with(['user', 'tags'])
             ->latest('created_at')
-            ->paginate(20);
+            ->paginate(config('limits.api_per_page'));
 
         return ArticleResource::collection($articles);
     }

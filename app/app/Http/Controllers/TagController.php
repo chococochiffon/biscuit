@@ -25,7 +25,7 @@ class TagController extends Controller
 
         $tags = Tag::query()
             ->orderBy('tag_name')
-            ->paginate(20);
+            ->paginate(config('limits.admin_per_page'));
 
         return view('admin.tags.index', compact('tags'));
     }

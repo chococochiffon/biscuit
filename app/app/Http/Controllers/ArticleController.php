@@ -31,7 +31,7 @@ class ArticleController extends Controller
 
         $articles = $this->applyListFilters(Article::query()->with('user'), $filters, $sort)
             ->when(filled($filters['approval'] ?? null), fn ($query) => $query->where('approval', $filters['approval']))
-            ->paginate(20)
+            ->paginate(config('limits.admin_per_page'))
             ->withQueryString();
 
         return view('admin.articles.index', compact('articles', 'filters', 'sort', 'isSearching'));
