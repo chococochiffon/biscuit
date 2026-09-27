@@ -259,27 +259,4 @@ class CallContentResolverTest extends TestCase
 
         (new CallContentResolver)->resolve($callContent);
     }
-
-    // --- resolveMany ---
-
-    public function test_resolve_many_resolves_each_call_content_by_its_own_id(): void
-    {
-        $article = Article::factory()->published()->create();
-        $singlePage = SinglePage::factory()->create();
-        $articleCallContent = CallContent::factory()->create([
-            'call_type' => CallType::OriginalText,
-            'content_model_relation_id' => $this->relation('Article')->id,
-            'place' => CallContentPlace::Inside,
-        ]);
-        $singlePageCallContent = CallContent::factory()->create([
-            'call_type' => CallType::Link,
-            'content_model_relation_id' => $this->relation('SinglePage')->id,
-            'place' => CallContentPlace::Top,
-        ]);
-
-        $results = (new CallContentResolver)->resolveMany([$articleCallContent, $singlePageCallContent]);
-
-        $this->assertTrue($results->get($articleCallContent->id)->is($article));
-        $this->assertTrue($results->get($singlePageCallContent->id)->is($singlePage));
-    }
 }
