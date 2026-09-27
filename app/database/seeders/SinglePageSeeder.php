@@ -13,17 +13,20 @@ class SinglePageSeeder extends Seeder
      */
     public function run(): void
     {
-        $singlePage = SinglePage::query()->firstOrCreate(
-            ['slug' => 'about'],
-            [
+        $singlePage = SinglePage::query()->firstOrNew(['slug' => 'about']);
+
+        if (! $singlePage->exists) {
+            // DatabaseSeeder はモデルイベントを止めて実行するため、HasPath の代わりに path をここで組み立てる
+            $singlePage->forceFill([
                 'title' => 'biscuitについて',
                 'short_sentences' => 'biscuitは、シンプルで使いやすいコンテンツ管理システムです。',
                 'parent_path' => 'information',
                 'top_page_view' => true,
                 'link_list_view' => true,
                 'sort_order' => 0,
-            ]
-        );
+                'path' => SinglePage::buildPath('information', 'about'),
+            ])->save();
+        }
 
         SinglePageDetail::query()->firstOrCreate(
             ['single_page_id' => $singlePage->id, 'sub_title' => 'シンプルに、コンテンツを届ける。'],
