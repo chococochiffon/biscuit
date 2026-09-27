@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreSinglePageRequest;
 use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
@@ -13,6 +14,8 @@ use Illuminate\View\View;
 
 class SinglePageController extends Controller
 {
+    use SyncsSortableRows;
+
     /**
      * 一覧のデフォルトの並び順(更新日時の新しい順)。
      */
@@ -163,29 +166,16 @@ class SinglePageController extends Controller
 
     /**
      * フォームから送信された詳細(single_page_details)の内容にデータベースを同期する。
-     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
+     * (作成/更新/削除と並び順の扱いは SyncsSortableRows::syncSortableRows() を参照)
      *
      * @param  array<int, array{id?: int|string|null, sub_title: string, contents?: string|null, sort_order?: int|string|null}>  $rows
      */
     private function syncDetails(SinglePage $singlePage, array $rows): void
     {
-        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
-
-        $singlePage->details()->whereNotIn('id', $submittedIds)->delete();
-
-        foreach ($rows as $index => $row) {
-            $attributes = [
-                'sub_title' => $row['sub_title'],
-                'contents' => $row['contents'] ?? '',
-                'sort_order' => $row['sort_order'] ?? $index,
-            ];
-
-            if (! empty($row['id'])) {
-                $singlePage->details()->whereKey($row['id'])->update($attributes);
-            } else {
-                $singlePage->details()->create($attributes);
-            }
-        }
+        $this->syncSortableRows($singlePage->details(), $rows, fn (array $row) => [
+            'sub_title' => $row['sub_title'],
+            'contents' => $row['contents'] ?? '',
+        ]);
     }
 
     /**

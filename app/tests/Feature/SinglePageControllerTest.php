@@ -599,6 +599,34 @@ class SinglePageControllerTest extends TestCase
         $this->assertDatabaseHas('single_page_details', ['single_page_id' => $target->id, 'sub_title' => '新規追加']);
     }
 
+    public function test_update_syncs_details_without_touching_other_pages_and_orders_rows_by_submission(): void
+    {
+        $actor = Administrator::factory()->create();
+        $target = SinglePage::factory()->create();
+        $other = SinglePage::factory()->create();
+        $kept = SinglePageDetail::factory()->create(['single_page_id' => $target->id, 'sort_order' => 5]);
+        $otherDetail = SinglePageDetail::factory()->create(['single_page_id' => $other->id, 'sub_title' => '他のページ']);
+
+        // 並び順を送らない場合は、行のキー(入力名の番号。連番でなくてもよい)の順で並べる
+        $this->actingAs($actor, 'admin')->put(route('admin.single-pages.update', $target), [
+            'slug' => $target->slug,
+            'title' => $target->title,
+            'short_sentences' => $target->short_sentences,
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+            'details' => [
+                3 => ['sub_title' => '1番目(新規)'],
+                7 => ['id' => $kept->id, 'sub_title' => '2番目(既存)'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['1番目(新規)' => 0, '2番目(既存)' => 1],
+            $target->details()->pluck('sort_order', 'sub_title')->all()
+        );
+        $this->assertNotSoftDeleted($otherDetail);
+        $this->assertSame('他のページ', $otherDetail->fresh()->sub_title);
+    }
+
     public function test_destroy_deletes_single_page(): void
     {
         $actor = Administrator::factory()->create();

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreSiteSettingRequest;
 use App\Http\Requests\UpdateSiteSettingRequest;
 use App\Models\CallContent;
@@ -16,6 +17,8 @@ use Illuminate\View\View;
 
 class SiteSettingController extends Controller
 {
+    use SyncsSortableRows;
+
     /**
      * Show the form for creating a new resource.
      */
@@ -114,96 +117,56 @@ class SiteSettingController extends Controller
 
     /**
      * フォームから送信された呼び出しコンテンツ(call_contents)の内容にデータベースを同期する。
-     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
-     * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
+     * (作成/更新/削除と並び順の扱いは SyncsSortableRows::syncSortableRows() を参照)
      *
      * @param  array<int, array{id?: int|string|null, call_type: int|string, call_name: string, title?: string|null, subtitle?: string|null, content_model_relation_id: int|string, view_count: int|string, place: int|string, sort_order?: int|string|null}>  $rows
      */
     private function syncCallContents(array $rows): void
     {
-        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
-
-        CallContent::query()->whereNotIn('id', $submittedIds)->delete();
-
-        foreach (array_values($rows) as $index => $row) {
-            $attributes = [
-                'call_type' => $row['call_type'],
-                'call_name' => $row['call_name'],
-                'title' => $row['title'] ?? null,
-                'subtitle' => $row['subtitle'] ?? null,
-                'content_model_relation_id' => $row['content_model_relation_id'],
-                'view_count' => $row['view_count'],
-                'place' => $row['place'],
-                'sort_order' => $row['sort_order'] ?? $index,
-            ];
-
-            if (! empty($row['id'])) {
-                CallContent::query()->whereKey($row['id'])->update($attributes);
-            } else {
-                CallContent::create($attributes);
-            }
-        }
+        $this->syncSortableRows(CallContent::query(), $rows, fn (array $row) => [
+            'call_type' => $row['call_type'],
+            'call_name' => $row['call_name'],
+            'title' => $row['title'] ?? null,
+            'subtitle' => $row['subtitle'] ?? null,
+            'content_model_relation_id' => $row['content_model_relation_id'],
+            'view_count' => $row['view_count'],
+            'place' => $row['place'],
+        ]);
     }
 
     /**
      * フォームから送信されたSNSリンク(social_links)の内容にデータベースを同期する。
-     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
-     * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
+     * (作成/更新/削除と並び順の扱いは SyncsSortableRows::syncSortableRows() を参照)
      *
      * @param  array<int, array{id?: int|string|null, service: int|string, name: string, url: string, sort_order?: int|string|null}>  $rows
      */
     private function syncSocialLinks(array $rows): void
     {
-        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
-
-        SocialLink::query()->whereNotIn('id', $submittedIds)->delete();
-
-        foreach (array_values($rows) as $index => $row) {
-            $attributes = [
-                'service' => $row['service'],
-                'name' => $row['name'],
-                'url' => $row['url'],
-                'sort_order' => $row['sort_order'] ?? $index,
-            ];
-
-            if (! empty($row['id'])) {
-                SocialLink::query()->whereKey($row['id'])->update($attributes);
-            } else {
-                SocialLink::create($attributes);
-            }
-        }
+        $this->syncSortableRows(SocialLink::query(), $rows, fn (array $row) => [
+            'service' => $row['service'],
+            'name' => $row['name'],
+            'url' => $row['url'],
+        ]);
     }
 
     /**
      * フォームから送信されたトップスライダー画像(top_slider_images)の内容にデータベースを同期する。
-     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
+     * (作成/更新/削除と並び順の扱いは SyncsSortableRows::syncSortableRows() を参照)
      * 画像が選択された行だけ、指定された切り抜き範囲(未指定なら中央)で16:9に加工して保存し直す。
-     * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
      *
      * @param  array<int, array{id?: int|string|null, image?: UploadedFile|null, url?: string|null, crop_x?: int|float|string|null, crop_y?: int|float|string|null, crop_width?: int|float|string|null, crop_height?: int|float|string|null, sort_order?: int|string|null}>  $rows
      */
     private function syncTopSliderImages(array $rows): void
     {
-        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
-
-        TopSliderImage::query()->whereNotIn('id', $submittedIds)->delete();
-
-        foreach (array_values($rows) as $index => $row) {
-            $attributes = [
-                'url' => $row['url'] ?? null,
-                'sort_order' => $row['sort_order'] ?? $index,
-            ];
+        $this->syncSortableRows(TopSliderImage::query(), $rows, function (array $row): array {
+            $attributes = ['url' => $row['url'] ?? null];
 
             if (($row['image'] ?? null) instanceof UploadedFile) {
                 $attributes['top_image'] = TopSliderImage::storeImage($row['image'], $this->cropFromRow($row));
             }
 
-            if (! empty($row['id'])) {
-                TopSliderImage::query()->whereKey($row['id'])->update($attributes);
-            } else {
-                TopSliderImage::create($attributes);
-            }
-        }
+            return $attributes;
+        });
     }
 
     /**
