@@ -7,12 +7,9 @@ use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Models\Article;
 use App\Models\Tag;
-use App\Support\ImageResizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
@@ -91,7 +88,7 @@ class ArticleController extends Controller
         ]);
 
         if ($request->hasFile('thumbnail')) {
-            $article->update(['thumbnail' => $this->storeThumbnail($request->file('thumbnail'), $article)]);
+            $article->update(['thumbnail' => $article->storeThumbnail($request->file('thumbnail'))]);
         }
 
         $this->syncTags($article, $request->validated('tags', []));
@@ -125,7 +122,7 @@ class ArticleController extends Controller
         ]);
 
         if ($request->hasFile('thumbnail')) {
-            $article->thumbnail = $this->storeThumbnail($request->file('thumbnail'), $article);
+            $article->thumbnail = $article->storeThumbnail($request->file('thumbnail'));
         }
 
         $article->save();
@@ -186,27 +183,7 @@ class ArticleController extends Controller
 
         $path = $request->file('image')->store('image/content', 'public');
 
-        return response()->json(['url' => Storage::disk('public')->url($path)]);
-    }
-
-    /**
-     * サムネイル画像を Article::THUMBNAIL_SIZES のうち比率が近いサイズへ切り抜き・縮小して保存し、公開ディスク基準の保存パスを返す。
-     */
-    private function storeThumbnail(UploadedFile $file, Article $article): string
-    {
-        $extension = ImageResizer::extensionFor($file);
-        $path = 'image/thumbnail/'.now()->format('YmdHis').'_'.$article->getTable().'_'.$article->id.'.'.$extension;
-
-        [$sourceWidth, $sourceHeight] = getimagesize($file->getRealPath());
-
-        // 元画像の比率に最も近い目標サイズを選ぶ(比の対数の差で比較し、横長・縦長の差を対称に扱う)
-        [$width, $height] = collect(Article::THUMBNAIL_SIZES)
-            ->sortBy(fn (array $size) => abs(log(($sourceWidth / $sourceHeight) / ($size[0] / $size[1]))))
-            ->first();
-
-        Storage::disk('public')->put($path, ImageResizer::cropAndResize($file->getRealPath(), $extension, $width, $height));
-
-        return $path;
+        return response()->json(['url' => Article::publicImageUrl($path)]);
     }
 
     /**

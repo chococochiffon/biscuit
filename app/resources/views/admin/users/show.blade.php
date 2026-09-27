@@ -30,7 +30,7 @@
                 <dd class="col-8">
                     @if ($user->detail->user_image)
                         <img
-                            src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($user->detail->user_image) }}"
+                            src="{{ $user->detail->user_image_url }}"
                             alt="{{ __('アイコン画像') }}"
                             class="img-thumbnail"
                             style="width: 120px; height: 120px; object-fit: cover;"

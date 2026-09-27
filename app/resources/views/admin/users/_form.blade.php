@@ -120,9 +120,7 @@
         </div>
 
         @php
-            $existingUserImageUrl = ($user->detail->user_image ?? null)
-                ? Illuminate\Support\Facades\Storage::disk('public')->url($user->detail->user_image)
-                : null;
+            $existingUserImageUrl = ($user ?? null)?->detail?->user_image_url;
         @endphp
 
         <div

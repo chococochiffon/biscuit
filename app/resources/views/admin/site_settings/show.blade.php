@@ -39,7 +39,7 @@
                         <dt class="col-4 text-muted fw-normal">{{ __('サイトアイコン') }}</dt>
                         <dd class="col-8">
                             <img
-                                src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_icon ?: \App\Models\SiteSetting::DEFAULT_SITE_ICON_PATH) }}"
+                                src="{{ $siteSetting->site_icon_url }}"
                                 alt="{{ __('サイトアイコン') }}"
                                 class="img-thumbnail"
                                 style="width: 96px; height: 96px; object-fit: cover;"
@@ -49,7 +49,7 @@
                         <dt class="col-4 text-muted fw-normal">{{ __('サイト画像') }}</dt>
                         <dd class="col-8 mb-0">
                             <img
-                                src="{{ Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_image ?: \App\Models\SiteSetting::DEFAULT_SITE_IMAGE_PATH) }}"
+                                src="{{ $siteSetting->site_image_url }}"
                                 alt="{{ __('サイト画像') }}"
                                 class="img-thumbnail"
                                 style="width: 240px; height: 160px; object-fit: cover;"

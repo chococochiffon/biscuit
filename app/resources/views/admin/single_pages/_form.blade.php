@@ -178,9 +178,7 @@
             </div>
 
             @php
-                $existingHeaderImageUrl = isset($singlePage) && $singlePage->header_image
-                    ? Illuminate\Support\Facades\Storage::disk('public')->url($singlePage->header_image)
-                    : null;
+                $existingHeaderImageUrl = ($singlePage ?? null)?->header_image_url;
             @endphp
 
             <div class="mb-3">
