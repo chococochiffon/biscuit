@@ -9,18 +9,14 @@
     </div>
 
     <div class="card mx-auto" style="max-width: 28rem;">
-        <dl class="row mb-0 p-3">
-            <dt class="col-4 text-muted fw-normal">{{ __('名前') }}</dt>
-            <dd class="col-8">{{ $administrator->name }}</dd>
+        <dl class="row mb-0 p-3 detail-list">
+            <x-admin.detail-row :label="__('名前')">{{ $administrator->name }}</x-admin.detail-row>
 
-            <dt class="col-4 text-muted fw-normal">{{ __('メールアドレス') }}</dt>
-            <dd class="col-8">{{ $administrator->email }}</dd>
+            <x-admin.detail-row :label="__('メールアドレス')">{{ $administrator->email }}</x-admin.detail-row>
 
-            <dt class="col-4 text-muted fw-normal">{{ __('権限') }}</dt>
-            <dd class="col-8">{{ $administrator->role->label() }}</dd>
+            <x-admin.detail-row :label="__('権限')">{{ $administrator->role->label() }}</x-admin.detail-row>
 
-            <dt class="col-4 text-muted fw-normal">{{ __('最終ログイン') }}</dt>
-            <dd class="col-8 mb-0">{{ $administrator->last_login_at?->format('Y/m/d H:i') ?? __('未ログイン') }}</dd>
+            <x-admin.detail-row :label="__('最終ログイン')">{{ $administrator->last_login_at?->format('Y/m/d H:i') ?? __('未ログイン') }}</x-admin.detail-row>
         </dl>
     </div>
 

@@ -9,15 +9,12 @@
     </div>
 
     <div class="card mx-auto" style="max-width: 32rem;">
-        <dl class="row mb-0 p-3">
-            <dt class="col-4 text-muted fw-normal">{{ __('コンテンツ種別') }}</dt>
-            <dd class="col-8">{{ $contentModelRelation->content_type->label() }}</dd>
+        <dl class="row mb-0 p-3 detail-list">
+            <x-admin.detail-row :label="__('コンテンツ種別')">{{ $contentModelRelation->content_type->label() }}</x-admin.detail-row>
 
-            <dt class="col-4 text-muted fw-normal">{{ __('モデル名') }}</dt>
-            <dd class="col-8">{{ $contentModelRelation->model_name }}</dd>
+            <x-admin.detail-row :label="__('モデル名')">{{ $contentModelRelation->model_name }}</x-admin.detail-row>
 
-            <dt class="col-4 text-muted fw-normal">{{ __('テーブル名') }}</dt>
-            <dd class="col-8 mb-0">{{ $contentModelRelation->table_name }}</dd>
+            <x-admin.detail-row :label="__('テーブル名')">{{ $contentModelRelation->table_name }}</x-admin.detail-row>
         </dl>
     </div>
 

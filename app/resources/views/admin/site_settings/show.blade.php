@@ -15,46 +15,40 @@
         <div class="row g-4">
             <div class="col-lg-6">
                 <div class="card">
-                    <dl class="row mb-0 p-3">
-                        <dt class="col-4 text-muted fw-normal">{{ __('サイトタイトル') }}</dt>
-                        <dd class="col-8">{{ $siteSetting->site_title }}</dd>
+                    <dl class="row mb-0 p-3 detail-list">
+                        <x-admin.detail-row :label="__('サイトタイトル')">{{ $siteSetting->site_title }}</x-admin.detail-row>
 
-                        <dt class="col-4 text-muted fw-normal">{{ __('説明') }}</dt>
-                        <dd class="col-8">{{ $siteSetting->description }}</dd>
+                        <x-admin.detail-row :label="__('説明')">{{ $siteSetting->description }}</x-admin.detail-row>
 
-                        <dt class="col-4 text-muted fw-normal">{{ __('フロントのURL') }}</dt>
-                        <dd class="col-8 text-break">
+                        <x-admin.detail-row :label="__('フロントのURL')" class="text-break">
                             @if ($siteSetting->front_url)
                                 <a href="{{ $siteSetting->front_url }}" target="_blank" rel="noopener">{{ $siteSetting->front_url }}</a>
                             @endif
-                        </dd>
+                        </x-admin.detail-row>
 
-                        <dt class="col-4 text-muted fw-normal">{{ __('APIのURL') }}</dt>
-                        <dd class="col-8 text-break">
+                        <x-admin.detail-row :label="__('APIのURL')" class="text-break">
                             @if ($siteSetting->api_url)
                                 <a href="{{ $siteSetting->api_url }}" target="_blank" rel="noopener">{{ $siteSetting->api_url }}</a>
                             @endif
-                        </dd>
+                        </x-admin.detail-row>
 
-                        <dt class="col-4 text-muted fw-normal">{{ __('サイトアイコン') }}</dt>
-                        <dd class="col-8">
+                        <x-admin.detail-row :label="__('サイトアイコン')">
                             <img
                                 src="{{ $siteSetting->site_icon_url }}"
                                 alt="{{ __('サイトアイコン') }}"
                                 class="img-thumbnail"
                                 style="width: 96px; height: 96px; object-fit: cover;"
                             >
-                        </dd>
+                        </x-admin.detail-row>
 
-                        <dt class="col-4 text-muted fw-normal">{{ __('サイト画像') }}</dt>
-                        <dd class="col-8 mb-0">
+                        <x-admin.detail-row :label="__('サイト画像')">
                             <img
                                 src="{{ $siteSetting->site_image_url }}"
                                 alt="{{ __('サイト画像') }}"
                                 class="img-thumbnail"
                                 style="width: 240px; height: 160px; object-fit: cover;"
                             >
-                        </dd>
+                        </x-admin.detail-row>
                     </dl>
                 </div>
             </div>
