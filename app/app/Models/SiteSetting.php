@@ -38,6 +38,14 @@ class SiteSetting extends Model
     public const DEFAULT_SITE_IMAGE_PATH = 'image/biscuit-og-image-1200x630.png';
 
     /**
+     * 現在のサイト設定を取得する(サイト設定は 1 件だけ登録する前提。未登録なら null)。
+     */
+    public static function current(): ?self
+    {
+        return self::query()->first();
+    }
+
+    /**
      * サイトアイコンを保存し、公開ディスク基準の保存パスを返す。
      */
     public function storeSiteIcon(UploadedFile $file): string

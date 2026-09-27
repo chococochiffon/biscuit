@@ -17,7 +17,7 @@ class AdministratorController extends Controller
     {
         $administrators = Administrator::query()
             ->orderBy('name')
-            ->paginate(20);
+            ->paginate(config('limits.admin_per_page'));
 
         return view('admin.administrators.index', compact('administrators'));
     }

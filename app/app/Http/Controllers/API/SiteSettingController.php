@@ -24,7 +24,7 @@ class SiteSettingController extends Controller
     )]
     public function show(): SiteSettingResource|JsonResponse
     {
-        $siteSetting = SiteSetting::query()->first();
+        $siteSetting = SiteSetting::current();
 
         if (! $siteSetting) {
             return response()->json(['message' => 'Site setting not found.'], 404);

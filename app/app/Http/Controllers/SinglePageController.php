@@ -31,7 +31,7 @@ class SinglePageController extends Controller
         [$filters, $sort, $isSearching] = $this->listFilters($request);
 
         $singlePages = $this->applyListFilters(SinglePage::query(), $filters, $sort)
-            ->paginate(20)
+            ->paginate(config('limits.admin_per_page'))
             ->withQueryString();
 
         $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
