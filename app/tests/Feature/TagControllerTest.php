@@ -159,6 +159,16 @@ class TagControllerTest extends TestCase
         $this->assertSame('Updated Tag', $target->fresh()->tag_name);
     }
 
+    public function test_update_allows_keeping_its_own_tag_name(): void
+    {
+        $this->actingAsAdmin();
+        $target = Tag::factory()->create(['tag_name' => 'そのまま']);
+
+        $this->put(route('admin.tags.update', $target), ['tag_name' => 'そのまま'])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect(route('admin.tags.index'));
+    }
+
     public function test_update_fails_when_tag_name_belongs_to_another_tag(): void
     {
         $this->actingAsAdmin();

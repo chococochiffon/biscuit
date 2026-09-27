@@ -28,6 +28,7 @@ class StoreArticleRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
+     * 更新(UpdateArticleRequest)と共通のルール。一意性などのチェックでは、更新対象(ルートのモデル。新規登録時は null)を除く。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -37,7 +38,7 @@ class StoreArticleRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
             'thumbnail' => ['nullable', 'image', 'max:10240'],
-            ...$this->pathRules(slugRequired: false),
+            ...$this->pathRules(slugRequired: false, ignore: $this->route('article')),
             'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],
             'tags' => ['nullable', 'array'],
