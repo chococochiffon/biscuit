@@ -171,6 +171,25 @@ class UserControllerTest extends TestCase
         $this->assertSame('他人のスキル', $othersSkill->fresh()->name);
     }
 
+    public function test_store_rejects_existing_skill_id(): void
+    {
+        $this->actingAsAdmin();
+        $existingSkill = UserSkill::factory()->create(['name' => '既存のスキル']);
+
+        $response = $this->post(route('admin.users.store'), [
+            'name' => '検証太郎',
+            'email' => 'new-user@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'user_detail' => $this->validUserDetailPayload([
+                'skills' => [['id' => $existingSkill->id, 'name' => '書き換え', 'level' => 1]],
+            ]),
+        ]);
+
+        $response->assertSessionHasErrors('user_detail.skills.0.id');
+        $this->assertSame('既存のスキル', $existingSkill->fresh()->name);
+    }
+
     public function test_show_displays_skills(): void
     {
         $this->actingAsAdmin();

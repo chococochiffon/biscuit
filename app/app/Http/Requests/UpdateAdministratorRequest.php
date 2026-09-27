@@ -2,38 +2,23 @@
 
 namespace App\Http\Requests;
 
-use App\Enums\AdministratorRole;
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Enum;
 use Illuminate\Validation\Rules\Password;
 
-class UpdateAdministratorRequest extends FormRequest
+/**
+ * 更新時のバリデーション。ルールは StoreAdministratorRequest と共通(差分だけをここで上書きする)。
+ */
+class UpdateAdministratorRequest extends StoreAdministratorRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Get the validation rules that apply to the request.
+     * 更新時のパスワードは、変更する場合だけ入力する。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => [
-                'required', 'string', 'email', 'max:255',
-                Rule::unique('administrators', 'email')->ignore($this->route('administrator'))->withoutTrashed(),
-            ],
+        return array_merge(parent::rules(), [
             'password' => ['nullable', 'string', Password::default(), 'confirmed'],
-            'role' => ['required', new Enum(AdministratorRole::class)],
-        ];
+        ]);
     }
 }

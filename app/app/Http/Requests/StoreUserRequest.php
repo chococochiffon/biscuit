@@ -22,6 +22,7 @@ class StoreUserRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
+     * 更新(UpdateUserRequest)と共通のルール。一意性などのチェックでは、更新対象(ルートのモデル。新規登録時は null)を除く。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -29,7 +30,10 @@ class StoreUserRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users', 'email')->withoutTrashed()],
+            'email' => [
+                'required', 'string', 'email', 'max:255',
+                Rule::unique('users', 'email')->ignore($this->route('user'))->withoutTrashed(),
+            ],
             'password' => ['required', 'string', Password::default(), 'confirmed'],
 
             'user_detail' => ['required', 'array'],
@@ -48,6 +52,11 @@ class StoreUserRequest extends FormRequest
             'user_detail.view_flag' => ['nullable', 'boolean'],
             'user_detail.name_settings' => ['required', new Enum(UserDetailNameSetting::class)],
             'user_detail.skills' => ['nullable', 'array'],
+            // 既存のスキルは、このユーザーの詳細に紐づくものだけ更新できる(新規登録時は既存のスキルを指定できない)
+            'user_detail.skills.*.id' => [
+                'nullable', 'integer',
+                Rule::exists('user_skills', 'id')->where('user_detail_id', $this->route('user')?->detail?->id),
+            ],
             'user_detail.skills.*.name' => ['required', 'string', 'max:255'],
             'user_detail.skills.*.level' => ['required', 'integer', 'min:0', 'max:'.UserSkill::MAX_LEVEL],
             'user_detail.skills.*.sort_order' => ['nullable', 'integer', 'min:0'],

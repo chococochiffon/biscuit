@@ -202,6 +202,22 @@ class ContentModelRelationControllerTest extends TestCase
         $this->assertSame('single_pages', $fresh->table_name);
     }
 
+    public function test_update_allows_keeping_its_own_model_name(): void
+    {
+        $this->actingAsAdmin();
+        $target = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Article,
+            'model_name' => 'article',
+            'table_name' => 'articles',
+        ]);
+
+        $this->put(route('admin.content-model-relations.update', $target), [
+            'content_type' => CallContentType::Article->value,
+            'model_name' => 'article',
+            'table_name' => 'articles',
+        ])->assertSessionHasNoErrors();
+    }
+
     public function test_update_fails_with_disallowed_table_name(): void
     {
         $this->actingAsAdmin();

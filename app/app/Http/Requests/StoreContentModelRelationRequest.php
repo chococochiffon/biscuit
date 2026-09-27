@@ -21,6 +21,7 @@ class StoreContentModelRelationRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
+     * 更新(UpdateContentModelRelationRequest)と共通のルール。一意性などのチェックでは、更新対象(ルートのモデル。新規登録時は null)を除く。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -32,6 +33,7 @@ class StoreContentModelRelationRequest extends FormRequest
                 'required', 'string', 'max:255',
                 Rule::unique('content_model_relations', 'model_name')
                     ->where(fn ($query) => $query->where('content_type', $this->input('content_type')))
+                    ->ignore($this->route('contentModelRelation'))
                     ->withoutTrashed(),
             ],
             'table_name' => ['required', 'string', 'max:255', new AllowedTableName],
