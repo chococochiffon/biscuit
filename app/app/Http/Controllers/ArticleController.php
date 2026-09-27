@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Http\Controllers\Concerns\FiltersPublishableList;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Models\Article;
@@ -10,17 +11,13 @@ use App\Models\Tag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class ArticleController extends Controller
 {
-    /**
-     * 一覧のデフォルトの並び順(更新日時の新しい順)。
-     */
-    private const DEFAULT_SORT = 'updated_at_desc';
+    use FiltersPublishableList;
 
     /**
      * Display a listing of the resource.
@@ -28,33 +25,14 @@ class ArticleController extends Controller
      */
     public function index(Request $request): View
     {
-        $sortOptions = $this->sortOptions();
-
-        // 不正な検索条件でリダイレクトを繰り返さないよう、妥当な値だけを採用して残りは無視する
-        $filters = Validator::make($request->query(), [
-            'title' => ['nullable', 'string', 'max:255'],
-            'publication_start_from' => ['nullable', 'date_format:Y-m-d'],
-            'publication_start_to' => ['nullable', 'date_format:Y-m-d'],
-            'publication_end_from' => ['nullable', 'date_format:Y-m-d'],
-            'publication_end_to' => ['nullable', 'date_format:Y-m-d'],
+        [$filters, $sort, $isSearching] = $this->listFilters($request, [
             'approval' => ['nullable', new Enum(ArticleApprovalStatus::class)],
-            'sort' => ['nullable', Rule::in(array_keys($sortOptions))],
-        ])->valid();
+        ]);
 
-        $sort = $filters['sort'] ?? self::DEFAULT_SORT;
-        ['column' => $column, 'direction' => $direction] = $sortOptions[$sort];
-
-        $articles = Article::query()
-            ->with('user')
-            ->when(filled($filters['title'] ?? null), fn ($query) => $query->where('title', 'like', '%'.$filters['title'].'%'))
+        $articles = $this->applyListFilters(Article::query()->with('user'), $filters, $sort)
             ->when(filled($filters['approval'] ?? null), fn ($query) => $query->where('approval', $filters['approval']))
-            ->filterPublicationPeriod($filters)
-            ->orderBy($column, $direction)
-            ->orderBy('id', $direction)
             ->paginate(20)
             ->withQueryString();
-
-        $isSearching = collect($filters)->except('sort')->filter(fn ($value) => filled($value))->isNotEmpty();
 
         return view('admin.articles.index', compact('articles', 'filters', 'sort', 'isSearching'));
     }
@@ -204,21 +182,14 @@ class ArticleController extends Controller
     }
 
     /**
-     * 一覧で選択可能な並び順(キー → 並び替えるカラム・方向)。一覧の見出しクリックで「項目_asc/desc」のキーが送られる。
+     * 一覧で選択可能な並び順。共通の並び順に、ステータス順を足す。
      *
      * @return array<string, array{column: string, direction: string}>
      */
-    private function sortOptions(): array
+    protected function listSortOptions(): array
     {
         return [
-            'updated_at_desc' => ['column' => 'updated_at', 'direction' => 'desc'],
-            'updated_at_asc' => ['column' => 'updated_at', 'direction' => 'asc'],
-            'title_asc' => ['column' => 'title', 'direction' => 'asc'],
-            'title_desc' => ['column' => 'title', 'direction' => 'desc'],
-            'publication_start_desc' => ['column' => 'publication_start_datetime', 'direction' => 'desc'],
-            'publication_start_asc' => ['column' => 'publication_start_datetime', 'direction' => 'asc'],
-            'publication_end_desc' => ['column' => 'publication_end_datetime', 'direction' => 'desc'],
-            'publication_end_asc' => ['column' => 'publication_end_datetime', 'direction' => 'asc'],
+            ...$this->commonListSortOptions(),
             'approval_asc' => ['column' => 'approval', 'direction' => 'asc'],
             'approval_desc' => ['column' => 'approval', 'direction' => 'desc'],
         ];
