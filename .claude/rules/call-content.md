@@ -18,7 +18,7 @@ paths:
 
 # 呼び出しコンテンツ機能(CallContent)
 
-`CallContent`（`call_type`: ShortSentence/OriginalText/LinkList/Link/Archive/SkillList=表示方法・`call_name`=管理用ラベル・`title`/`subtitle`=公開側で表示する見出し・小見出し（任意。空なら見出しなしで表示）・`content_model_relation_id`（`ContentModelRelation` への FK）・`view_count`・`place`: Top/Inside/Others=設置場所）は「どの設置場所にどのデータ種別の呼び出し枠を置くか」を表す設定レコードで、専用の管理コントローラーは持たず `SiteSettingController` の作成/編集フォームに埋め込まれ、`syncCallContents()`（送信された行を id の有無で作成/更新し、送信されなかった既存行は削除）で同期される。同じ「埋め込みリピーター行を private な `syncXxx()` で同期する」パターンは `SinglePageController`（`SinglePageDetail` を `syncDetails()` で同期）にも使われている。
+`CallContent`（`call_type`: ShortSentence/OriginalText/LinkList/Link/Archive/SkillList=表示方法・`call_name`=管理用ラベル・`title`/`subtitle`=公開側で表示する見出し・小見出し（任意。空なら見出しなしで表示）・`content_model_relation_id`（`ContentModelRelation` への FK）・`view_count`・`place`: Top/Inside/Others=設置場所）は「どの設置場所にどのデータ種別の呼び出し枠を置くか」を表す設定レコードで、専用の管理コントローラーは持たず `SiteSettingController` の作成/編集フォームに埋め込まれ、`syncCallContents()`（送信された行を id の有無で作成/更新し、送信されなかった既存行は削除）で同期される。埋め込みリピーター行の同期は共通トレイト `Http\Controllers\Concerns\SyncsSortableRows` の `syncSortableRows()` にまとめてあり、`syncCallContents()`・`syncSocialLinks()`・`syncTopSliderImages()`（`SiteSettingController`）、`syncDetails()`（`SinglePageController`）、`syncSkills()`（`UserController`）は行から保存する属性を組み立てて渡すだけになっている（親に属する行は親のリレーションを渡して絞り込む）。
 
 `content_model_relation_id` が指す `ContentModelRelation`（`content_type`: Article/SinglePage/Custom・`model_name`・`table_name` の対応表、管理画面 CRUD あり）が実際の呼び出し先モデルを決め、`table_name` 自体は `Rules\AllowedTableName`（固定許可値 `articles`/`single_pages`/`user_details`、または `user_make_` 接頭辞の動的テーブルのみ許可）でバリデーションされる。
 
@@ -28,6 +28,6 @@ paths:
 
 `GET /api/call-contents`（`place` クエリで絞り込み、未指定時は Top）は `CallContent::forPlace()` スコープで並び順（`sort_order`、同順は id）に取得し、`CallContentResource` がこのリゾルバーを呼び出す。各要素は `call_type`（`CallType::apiName()` による snake_case 文字列。例: `link_list`）・`call_name`・`title`・`subtitle`（未設定は null）と、`table_name`（例: `articles`/`single_pages`/`user_details`）をキーにしたオブジェクト（値は解決済み実データ。`ArticleResource`/`SinglePageResource`/`UserDetailResource` で整形し、単一表示はオブジェクト・一覧表示は配列）として返す（`view_count`/`model_name`/`content_type` 等は含めない）。実データ解決に失敗するケース（マトリクス上許可されない組み合わせ、`model_name` 不明など）は例外を伝播させ 500 エラーとする。
 
-並び順（`sort_order`）はサイト設定画面の行をドラッグで並び替えて設定し（`admin.js` の `initSortableRows()` が隠し input `sort_order` に画面上の順番を入れる）、`syncCallContents()` で保存する（未送信時は送信順）。同じ設置場所の中でこの順に返す。
+並び順（`sort_order`）はサイト設定画面の行をドラッグで並び替えて設定し（`admin.js` の `initSortableRows()` が隠し input `sort_order` に画面上の順番を入れる）、`syncCallContents()` で保存する（未送信時は行のキーの順）。同じ設置場所の中でこの順に返す。
 
 フロントエンドのページ表示はパス解決 API（`GET /api/resolve?path=...`、`API\ResolveController`）が担い、呼び出しコンテンツと組み合わせる: `/` は `type=top` と Top の呼び出しコンテンツ、それ以外は本文（`data`）と Inside の呼び出しコンテンツを返す。ページの文脈では `CallContentResource::withPageContent()` で本文を渡し、`CallContentResolver::resolve($callContent, $pageContent)` が本文内（Inside）の原文（OriginalText）枠に固定の取得条件（最新記事・先頭の固定ページ）ではなくその本文を入れる。データ種別が本文と異なる原文枠は `CallContentResolver::appliesToPage()` で除外する。その他（Others）はヘッダー・フッターなど共通部品として `GET /api/call-contents?place=3` で取得する想定。

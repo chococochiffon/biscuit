@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\UserDetail;
-use App\Models\UserSkill;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    use SyncsSortableRows;
+
     /**
      * Display a listing of the resource.
      */
@@ -148,29 +150,15 @@ class UserController extends Controller
 
     /**
      * フォームから送信されたスキル(user_detail.skills)の内容に、ユーザー詳細のスキルを同期する。
-     * 送信された行はid有無で作成/更新し、送信されなかった既存行は削除する。
-     * 並び順(sort_order)は画面上の行の順(未送信の場合は送信順)で保存する。
+     * (作成/更新/削除と並び順の扱いは SyncsSortableRows::syncSortableRows() を参照)
      *
      * @param  array<int, array{id?: int|string|null, name: string, level: int|string, sort_order?: int|string|null}>  $rows
      */
     private function syncSkills(UserDetail $detail, array $rows): void
     {
-        $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
-
-        UserSkill::query()->where('user_detail_id', $detail->id)->whereNotIn('id', $submittedIds)->delete();
-
-        foreach (array_values($rows) as $index => $row) {
-            $attributes = [
-                'name' => $row['name'],
-                'level' => $row['level'],
-                'sort_order' => $row['sort_order'] ?? $index,
-            ];
-
-            if (! empty($row['id'])) {
-                UserSkill::query()->where('user_detail_id', $detail->id)->whereKey($row['id'])->update($attributes);
-            } else {
-                $detail->skills()->create($attributes);
-            }
-        }
+        $this->syncSortableRows($detail->skills(), $rows, fn (array $row) => [
+            'name' => $row['name'],
+            'level' => $row['level'],
+        ]);
     }
 }
