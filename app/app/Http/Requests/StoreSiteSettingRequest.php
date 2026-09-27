@@ -54,7 +54,7 @@ class StoreSiteSettingRequest extends FormRequest
             'social_links.*.url' => ['required', 'url:http,https', 'max:2048'],
             'social_links.*.sort_order' => ['nullable', 'integer', 'min:0'],
 
-            'top_slider_images' => ['nullable', 'array'],
+            'top_slider_images' => ['nullable', 'array', 'max:'.config('limits.top_slider_images')],
             'top_slider_images.*.id' => ['nullable', 'integer', Rule::exists('top_slider_images', 'id')],
             'top_slider_images.*.image' => ['required_without:top_slider_images.*.id', 'nullable', 'image', 'max:10240'],
             'top_slider_images.*.url' => ['nullable', 'url:http,https', 'max:255'],
@@ -63,6 +63,18 @@ class StoreSiteSettingRequest extends FormRequest
             'top_slider_images.*.crop_width' => ['nullable', 'numeric', 'min:1'],
             'top_slider_images.*.crop_height' => ['nullable', 'numeric', 'min:1'],
             'top_slider_images.*.sort_order' => ['nullable', 'integer', 'min:0'],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'top_slider_images.max' => __('トップスライダー画像は:max枚まで登録できます。'),
         ];
     }
 }

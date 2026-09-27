@@ -131,5 +131,9 @@
     "画像": "Image",
     "リンク先URL": "Link URL",
     "画像を選ぶと16:9の枠が表示されます。枠の移動・拡大縮小で表示する範囲を調整してください(1920×1080で保存します)。": "After choosing an image, a 16:9 frame appears. Move or resize the frame to adjust the visible area (saved at 1920×1080).",
-    "トップスライダー画像が登録されていません。": "No top slider images have been registered."
+    "トップスライダー画像が登録されていません。": "No top slider images have been registered.",
+    "トップスライダー画像は:max枚まで登録できます。": "You can register up to :max top slider images.",
+    "詳細は:max件まで登録できます。": "You can register up to :max details.",
+    "1つの質問に登録できる回答は:max件までです。": "You can register up to :max answers per question.",
+    "最大:max件まで登録できます。": "You can register up to :max items."
 }

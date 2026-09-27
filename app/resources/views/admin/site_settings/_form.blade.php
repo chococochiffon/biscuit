@@ -126,9 +126,12 @@
                 ]);
         @endphp
 
-        <div class="mb-3" data-role="repeater">
+        <div class="mb-3" data-role="repeater" data-max-rows="{{ config('limits.top_slider_images') }}">
             <label class="form-label mb-0">{{ __('トップスライダー画像') }}</label>
-            <div class="form-text mb-2">{{ __('公開側トップのスライダーに、この順で表示します。') }}</div>
+            <div class="form-text mb-2">
+                {{ __('公開側トップのスライダーに、この順で表示します。') }}
+                {{ __('最大:max件まで登録できます。', ['max' => config('limits.top_slider_images')]) }}
+            </div>
 
             <div data-role="repeater-rows" data-next-index="{{ $topSliderImageRows->count() }}">
                 @foreach ($topSliderImageRows as $row)

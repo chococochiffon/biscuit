@@ -498,6 +498,7 @@ function initCallContentRows() {
  * data-role="repeater" の中に、行のコンテナ(repeater-rows、data-next-index に次の行番号)・
  * 追加ボタン(repeater-add)・行のテンプレート(repeater-template、行番号は __INDEX__)を置く。
  * 各行(repeater-row)にはドラッグハンドル(drag-handle)・並び順の隠しinput(sort-order)・削除ボタン(remove-row)を置く。
+ * repeater に data-max-rows があれば、行数がその件数に達したときに追加ボタンを無効にする。
  */
 function initRepeaterRows() {
     document.querySelectorAll('[data-role="repeater"]').forEach((repeater) => {
@@ -506,7 +507,14 @@ function initRepeaterRows() {
         const template = repeater.querySelector('[data-role="repeater-template"]');
 
         let nextIndex = Number(container.dataset.nextIndex || '0');
+        const maxRows = Number(repeater.dataset.maxRows || '0');
         const { bindRow: bindSortableRow, updateSortOrders } = initSortableRows(container, '[data-role="repeater-row"]');
+
+        function updateAddButton() {
+            if (maxRows > 0) {
+                addButton.disabled = container.querySelectorAll('[data-role="repeater-row"]').length >= maxRows;
+            }
+        }
 
         function bindRow(row) {
             bindSortableRow(row);
@@ -514,6 +522,7 @@ function initRepeaterRows() {
             row.querySelector('[data-role="remove-row"]').addEventListener('click', () => {
                 row.remove();
                 updateSortOrders();
+                updateAddButton();
             });
         }
 
@@ -529,9 +538,11 @@ function initRepeaterRows() {
             bindRow(row);
             nextIndex += 1;
             updateSortOrders();
+            updateAddButton();
         });
 
         updateSortOrders();
+        updateAddButton();
     });
 }
 
@@ -973,6 +984,7 @@ function initContentModelRelationManagerModal() {
  * 固定ページの詳細(single_page_details)の行入力UI(固定ページの登録・編集フォーム)を初期化する。
  * 「+」で行を追加、「×」で行を削除し、左側のハンドルをドラッグして並び替えできる。
  * 各行の本文はリッチテキストエディタ(Quill)で編集し、フォーム送信時に隠しtextareaへ反映する。
+ * コンテナに data-max-rows があれば、行数がその件数に達したときに追加ボタンを無効にする。
  */
 function initSinglePageDetailRows() {
     const container = document.getElementById('single-page-detail-rows');
@@ -986,6 +998,7 @@ function initSinglePageDetailRows() {
     const form = container.closest('form');
 
     let nextIndex = Number(container.dataset.nextIndex || '0');
+    const maxRows = Number(container.dataset.maxRows || '0');
     const editors = new Map();
     let draggingRow = null;
 
@@ -1017,6 +1030,12 @@ function initSinglePageDetailRows() {
         container.querySelectorAll('[data-role="detail-row"]').forEach((row, index) => {
             row.querySelector('[data-role="sort-order"]').value = String(index);
         });
+    }
+
+    function updateAddButton() {
+        if (maxRows > 0) {
+            addButton.disabled = container.querySelectorAll('[data-role="detail-row"]').length >= maxRows;
+        }
     }
 
     function getRowAfterElement(y) {
@@ -1081,6 +1100,7 @@ function initSinglePageDetailRows() {
             editors.delete(row);
             row.remove();
             updateSortOrders();
+            updateAddButton();
         });
     }
 
@@ -1096,6 +1116,7 @@ function initSinglePageDetailRows() {
         bindRow(row);
         nextIndex += 1;
         updateSortOrders();
+        updateAddButton();
     });
 
     form.addEventListener('submit', () => {
@@ -1106,6 +1127,7 @@ function initSinglePageDetailRows() {
     });
 
     updateSortOrders();
+    updateAddButton();
 }
 
 /**
@@ -1473,6 +1495,7 @@ function initArticleApprovalControls() {
  * 選んでいない側は disabled にして送信しない。分岐ありはフローチャート(上→下のツリー)で、
  * 質問ノード(question-block)の下に回答ノード(answer-row)を追加・削除し、回答ノードの下に分岐先の質問ノードを追加・削除する。
  * 入力名は各ノードの data-name を接頭辞にして組み立てる。
+ * 分岐ありの欄に data-max-answers があれば、回答がその件数に達した質問ノードの「回答を追加」を無効にする。
  */
 function initQuestionAnswerForm() {
     const form = document.querySelector('[data-role="question-answer-form"]');
@@ -1496,6 +1519,21 @@ function initQuestionAnswerForm() {
 
     typeInputs.forEach((input) => input.addEventListener('change', applyType));
     applyType();
+
+    const maxAnswers = Number(form.querySelector('[data-max-answers]')?.dataset.maxAnswers || '0');
+
+    function updateAddAnswerButtons() {
+        if (maxAnswers <= 0) {
+            return;
+        }
+
+        form.querySelectorAll('[data-role="question-block"]').forEach((questionBlock) => {
+            const rows = questionBlock.querySelector(':scope > [data-role="answer-rows"]');
+            const button = rows.querySelector(':scope > [data-role="answer-add-slot"] [data-role="add-answer"]');
+
+            button.disabled = rows.querySelectorAll(':scope > [data-role="answer-row"]').length >= maxAnswers;
+        });
+    }
 
     const answerTemplate = form.querySelector('[data-role="answer-template"]');
     const questionTemplate = form.querySelector('[data-role="question-template"]');
@@ -1549,7 +1587,11 @@ function initQuestionAnswerForm() {
                 break;
             }
         }
+
+        updateAddAnswerButtons();
     });
+
+    updateAddAnswerButtons();
 }
 
 /**

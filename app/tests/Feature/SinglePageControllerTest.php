@@ -297,6 +297,37 @@ class SinglePageControllerTest extends TestCase
         $this->assertSame(0, $singlePage->details->first()->sort_order);
     }
 
+    public function test_store_rejects_details_over_the_limit(): void
+    {
+        config(['limits.single_page_details' => 2]);
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->post(route('admin.single-pages.store'), [
+            'title' => '会社概要',
+            'slug' => 'about',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+            'details' => [
+                ['sub_title' => '沿革', 'sort_order' => 0],
+                ['sub_title' => '事業内容', 'sort_order' => 1],
+                ['sub_title' => '所在地', 'sort_order' => 2],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors(['details' => '詳細は2件まで登録できます。']);
+        $this->assertDatabaseCount('single_pages', 0);
+    }
+
+    public function test_create_screen_passes_detail_limit_to_the_rows(): void
+    {
+        config(['limits.single_page_details' => 3]);
+        $actor = Administrator::factory()->create();
+
+        $response = $this->actingAs($actor, 'admin')->get(route('admin.single-pages.create'));
+
+        $response->assertSee('data-max-rows="3"', false);
+        $response->assertSee('最大3件まで登録できます。');
+    }
+
     public function test_store_places_page_at_site_root_and_normalizes_parent_path(): void
     {
         $actor = Administrator::factory()->create();

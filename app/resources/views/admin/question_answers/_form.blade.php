@@ -65,10 +65,11 @@
     </fieldset>
 </div>
 
-<fieldset class="mb-3" data-type-section="branch">
+<fieldset class="mb-3" data-type-section="branch" data-max-answers="{{ config('limits.question_answers') }}">
     <div class="form-text">
         {{ __('回答ごとに「分岐する質問」を追加すると、その回答を選んだときに次の質問へ進みます。') }}
         {{ __('分岐する質問がない回答は、その回答文を表示して終わります。') }}
+        {{ __('1つの質問に登録できる回答は:max件までです。', ['max' => config('limits.question_answers')]) }}
     </div>
 
     <div class="qa-flow">

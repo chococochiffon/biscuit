@@ -44,7 +44,7 @@ class StoreSinglePageRequest extends FormRequest
             'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],
 
-            'details' => ['nullable', 'array'],
+            'details' => ['nullable', 'array', 'max:'.config('limits.single_page_details')],
             'details.*.id' => ['nullable', 'integer', Rule::exists('single_page_details', 'id')],
             'details.*.sub_title' => ['required', 'string', 'max:255'],
             'details.*.contents' => ['nullable', 'string'],
@@ -59,6 +59,8 @@ class StoreSinglePageRequest extends FormRequest
      */
     public function messages(): array
     {
-        return $this->pathMessages();
+        return $this->pathMessages() + [
+            'details.max' => __('詳細は:max件まで登録できます。'),
+        ];
     }
 }
