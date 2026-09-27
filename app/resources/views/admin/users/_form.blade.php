@@ -130,25 +130,15 @@
             data-output-height="{{ \App\Models\UserDetail::USER_IMAGE_SIZE }}"
         >
             <label class="form-label">{{ __('アイコン画像') }}</label>
-            <div class="image-dropzone image-dropzone--icon" data-role="image-cropper-dropzone" tabindex="0" role="button" aria-label="{{ __('アイコン画像を選択') }}">
-                <input
-                    id="user_detail_user_image"
-                    type="file"
-                    name="user_detail[user_image]"
-                    accept="image/*"
-                    class="d-none"
-                    data-role="image-cropper-input"
-                >
-
-                <div class="image-dropzone-preview" data-role="image-cropper-frame" @if (! $existingUserImageUrl) style="display: none;" @endif>
-                    <img src="{{ $existingUserImageUrl }}" data-original-src="{{ $existingUserImageUrl }}" alt="{{ __('アイコン画像') }}" data-role="image-cropper-image">
-                </div>
-
-                <div class="image-dropzone-placeholder" data-role="image-cropper-placeholder" @if ($existingUserImageUrl) style="display: none;" @endif>
-                    <i class="bi bi-cloud-arrow-up"></i>
-                    <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
-                </div>
-            </div>
+            <x-admin.image-dropzone
+                id="user_detail_user_image"
+                name="user_detail[user_image]"
+                :image-url="$existingUserImageUrl"
+                :alt="__('アイコン画像')"
+                :aria-label="__('アイコン画像を選択')"
+                icon
+                :removable="false"
+            />
             <input type="hidden" name="user_detail[user_image_crop][x]" data-role="image-cropper-x">
             <input type="hidden" name="user_detail[user_image_crop][y]" data-role="image-cropper-y">
             <input type="hidden" name="user_detail[user_image_crop][width]" data-role="image-cropper-width">

@@ -64,21 +64,13 @@
 
             <div class="mb-3">
                 <label class="form-label">{{ __('サムネイル画像') }}</label>
-                <div class="image-dropzone" data-role="image-dropzone" tabindex="0" role="button" aria-label="{{ __('サムネイル画像を選択') }}">
-                    <input id="thumbnail" type="file" name="thumbnail" accept="image/*" class="d-none" data-role="image-dropzone-input">
-
-                    <div class="image-dropzone-preview" data-role="image-dropzone-preview">
-                        <img src="{{ $thumbnailUrl }}" alt="{{ __('サムネイル') }}" data-role="image-dropzone-image">
-                        <button type="button" class="btn btn-sm btn-outline-secondary image-dropzone-remove" data-role="image-dropzone-remove" aria-label="{{ __('選択を解除') }}">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-
-                    <div class="image-dropzone-placeholder" data-role="image-dropzone-placeholder" style="display: none;">
-                        <i class="bi bi-cloud-arrow-up"></i>
-                        <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
-                    </div>
-                </div>
+                <x-admin.image-dropzone
+                    id="thumbnail"
+                    name="thumbnail"
+                    :image-url="$thumbnailUrl"
+                    :alt="__('サムネイル')"
+                    :aria-label="__('サムネイル画像を選択')"
+                />
                 <div class="form-text">
                     {{ __('1200×630px(約1.91:1)または1280×720px(16:9)のうち、比率が近い方へ中央を切り抜いて縮小します。') }}<br>
                     {{ __('未指定の場合はデフォルト画像が使用されます。') }}

@@ -27,24 +27,13 @@
         data-output-height="{{ \App\Models\TopSliderImage::IMAGE_HEIGHT }}"
     >
         <label class="form-label small">{{ __('画像') }}</label>
-        <div class="image-dropzone" data-role="image-cropper-dropzone" tabindex="0" role="button" aria-label="{{ __('トップスライダー画像を選択') }}">
-            <input
-                type="file"
-                name="top_slider_images[{{ $index }}][image]"
-                accept="image/*"
-                class="d-none"
-                data-role="image-cropper-input"
-            >
-
-            <div class="image-dropzone-preview" data-role="image-cropper-frame" @if (! $imageUrl) style="display: none;" @endif>
-                <img src="{{ $imageUrl }}" data-original-src="{{ $imageUrl }}" alt="{{ __('トップスライダー画像') }}" data-role="image-cropper-image">
-            </div>
-
-            <div class="image-dropzone-placeholder" data-role="image-cropper-placeholder" @if ($imageUrl) style="display: none;" @endif>
-                <i class="bi bi-cloud-arrow-up"></i>
-                <span class="small">{{ __('クリックまたはドラッグ&ドロップ') }}</span>
-            </div>
-        </div>
+        <x-admin.image-dropzone
+            name="top_slider_images[{{ $index }}][image]"
+            :image-url="$imageUrl"
+            :alt="__('トップスライダー画像')"
+            :aria-label="__('トップスライダー画像を選択')"
+            :removable="false"
+        />
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_x]" data-role="image-cropper-x">
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_y]" data-role="image-cropper-y">
         <input type="hidden" name="top_slider_images[{{ $index }}][crop_width]" data-role="image-cropper-width">
