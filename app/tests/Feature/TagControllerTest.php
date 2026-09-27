@@ -95,6 +95,20 @@ class TagControllerTest extends TestCase
         $response->assertSessionHasErrors('tag_name');
     }
 
+    public function test_create_screen_shows_validation_errors_after_failed_store(): void
+    {
+        $actor = Administrator::factory()->create();
+
+        $this->actingAs($actor, 'admin')
+            ->from(route('admin.tags.create'))
+            ->post(route('admin.tags.store'), [])
+            ->assertRedirect(route('admin.tags.create'));
+
+        $this->get(route('admin.tags.create'))
+            ->assertOk()
+            ->assertSeeInOrder(['<div class="alert alert-danger">', '<li>'], false);
+    }
+
     public function test_store_succeeds_with_tag_name_of_soft_deleted_tag(): void
     {
         $actor = Administrator::factory()->create();

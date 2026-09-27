@@ -1,12 +1,4 @@
-@if ($errors->any())
-    <div class="alert alert-danger">
-        <ul class="mb-0 ps-3">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    </div>
-@endif
+@include('admin.partials._form_errors')
 
 {{-- 左: 基本設定・画像 / 右: トップスライダー画像・SNSリンク（API設定は下に全幅で表示） --}}
 <div class="row g-4 mb-3">

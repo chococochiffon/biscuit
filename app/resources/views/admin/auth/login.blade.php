@@ -24,15 +24,7 @@
 
                 <h1 class="h4 text-center mb-4">{{ __('管理者ログイン') }}</h1>
 
-                @if ($errors->any())
-                    <div class="alert alert-danger">
-                        <ul class="mb-0 ps-3">
-                            @foreach ($errors->all() as $error)
-                                <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+                @include('admin.partials._form_errors')
 
                 <form method="POST" action="{{ route('admin.login.store') }}">
                     @csrf

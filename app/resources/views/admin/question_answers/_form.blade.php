@@ -13,15 +13,7 @@
 @endphp
 
 <div style="max-width: 48rem;">
-    @if ($errors->any())
-        <div class="alert alert-danger">
-            <ul class="mb-0 ps-3">
-                @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    @include('admin.partials._form_errors')
 
     <div class="mb-3">
         <label class="form-label d-block">{{ __('形式') }}</label>
