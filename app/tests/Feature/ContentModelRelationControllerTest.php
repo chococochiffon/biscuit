@@ -257,4 +257,20 @@ class ContentModelRelationControllerTest extends TestCase
         $response->assertRedirect(route('admin.content-model-relations.index'));
         $this->assertDatabaseHas('content_model_relations', ['id' => $target->id, 'deleted_at' => null]);
     }
+
+    public function test_blocked_destroy_message_is_shown_in_the_selected_language(): void
+    {
+        $this->actingAsAdmin();
+        $target = ContentModelRelation::factory()->create();
+        CallContent::factory()->create(['content_model_relation_id' => $target->id]);
+
+        $this->withSession(['locale' => 'en'])
+            ->delete(route('admin.content-model-relations.destroy', $target))
+            ->assertSessionHas('error', 'This data type mapping cannot be deleted because it is used by call contents.');
+
+        $this->withSession(['locale' => 'en'])
+            ->deleteJson(route('admin.content-model-relations.destroy', $target))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'This data type mapping cannot be deleted because it is used by call contents.');
+    }
 }

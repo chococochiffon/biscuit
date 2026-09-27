@@ -52,7 +52,7 @@ class UserController extends Controller
 
         $this->syncSkills($detail, $request->validated('user_detail.skills', []));
 
-        return redirect()->route('admin.users.index')->with('status', 'ユーザーを登録しました。');
+        return redirect()->route('admin.users.index')->with('status', __('ユーザーを登録しました。'));
     }
 
     /**
@@ -97,7 +97,7 @@ class UserController extends Controller
 
         $this->syncSkills($detail, $request->validated('user_detail.skills', []));
 
-        return redirect()->route('admin.users.index')->with('status', 'ユーザーを更新しました。');
+        return redirect()->route('admin.users.index')->with('status', __('ユーザーを更新しました。'));
     }
 
     /**
@@ -107,7 +107,7 @@ class UserController extends Controller
     {
         $user->delete();
 
-        return redirect()->route('admin.users.index')->with('status', 'ユーザーを削除しました。');
+        return redirect()->route('admin.users.index')->with('status', __('ユーザーを削除しました。'));
     }
 
     /**

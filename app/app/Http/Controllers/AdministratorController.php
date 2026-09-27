@@ -40,7 +40,7 @@ class AdministratorController extends Controller
 
         Administrator::create($data);
 
-        return redirect()->route('admin.index')->with('status', '管理者を登録しました。');
+        return redirect()->route('admin.index')->with('status', __('管理者を登録しました。'));
     }
 
     /**
@@ -72,7 +72,7 @@ class AdministratorController extends Controller
 
         $administrator->update($data);
 
-        return redirect()->route('admin.index')->with('status', '管理者を更新しました。');
+        return redirect()->route('admin.index')->with('status', __('管理者を更新しました。'));
     }
 
     /**
@@ -82,6 +82,6 @@ class AdministratorController extends Controller
     {
         $administrator->delete();
 
-        return redirect()->route('admin.index')->with('status', '管理者を削除しました。');
+        return redirect()->route('admin.index')->with('status', __('管理者を削除しました。'));
     }
 }

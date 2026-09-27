@@ -57,7 +57,7 @@ class SiteSettingController extends Controller
         $this->syncSocialLinks($request->validated('social_links', []));
         $this->syncTopSliderImages($request->validated('top_slider_images', []));
 
-        return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を登録しました。');
+        return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', __('サイト設定を登録しました。'));
     }
 
     /**
@@ -112,7 +112,7 @@ class SiteSettingController extends Controller
         $this->syncSocialLinks($request->validated('social_links', []));
         $this->syncTopSliderImages($request->validated('top_slider_images', []));
 
-        return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', 'サイト設定を更新しました。');
+        return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', __('サイト設定を更新しました。'));
     }
 
     /**

@@ -65,7 +65,7 @@ class TagController extends Controller
             return response()->json($tag, 201);
         }
 
-        return redirect()->route('admin.tags.index')->with('status', 'タグを登録しました。');
+        return redirect()->route('admin.tags.index')->with('status', __('タグを登録しました。'));
     }
 
     /**
@@ -95,7 +95,7 @@ class TagController extends Controller
             return response()->json($tag);
         }
 
-        return redirect()->route('admin.tags.index')->with('status', 'タグを更新しました。');
+        return redirect()->route('admin.tags.index')->with('status', __('タグを更新しました。'));
     }
 
     /**
@@ -109,6 +109,6 @@ class TagController extends Controller
             return response()->json(status: 204);
         }
 
-        return redirect()->route('admin.tags.index')->with('status', 'タグを削除しました。');
+        return redirect()->route('admin.tags.index')->with('status', __('タグを削除しました。'));
     }
 }

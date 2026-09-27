@@ -70,7 +70,7 @@ class SinglePageController extends Controller
 
         $this->syncDetails($singlePage, $request->validated('details', []));
 
-        return redirect()->route('admin.single-pages.index')->with('status', '固定ページを登録しました。');
+        return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを登録しました。'));
     }
 
     /**
@@ -107,7 +107,7 @@ class SinglePageController extends Controller
 
         $this->syncDetails($singlePage, $request->validated('details', []));
 
-        return redirect()->route('admin.single-pages.index')->with('status', '固定ページを更新しました。');
+        return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを更新しました。'));
     }
 
     /**
@@ -117,7 +117,7 @@ class SinglePageController extends Controller
     {
         $singlePage->delete();
 
-        return redirect()->route('admin.single-pages.index')->with('status', '固定ページを削除しました。');
+        return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを削除しました。'));
     }
 
     /**
@@ -138,7 +138,7 @@ class SinglePageController extends Controller
             SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
         }
 
-        return redirect()->route('admin.single-pages.index', ['sort' => self::REORDERABLE_SORT])->with('status', '並び替えを保存しました。');
+        return redirect()->route('admin.single-pages.index', ['sort' => self::REORDERABLE_SORT])->with('status', __('並び替えを保存しました。'));
     }
 
     /**
