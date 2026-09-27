@@ -36,6 +36,29 @@ function t(key, replacements = {}) {
 }
 
 /**
+ * レイアウトの meta タグから CSRF トークンを取得する。
+ */
+function csrfToken() {
+    return document.querySelector('meta[name="csrf-token"]')?.content ?? '';
+}
+
+/**
+ * JSON を返す管理画面の API へ、CSRF トークン付きでリクエストする。
+ * body がオブジェクトなら JSON に、FormData ならそのまま送る。
+ */
+function requestJson(url, { method = 'GET', body } = {}) {
+    const headers = { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken() };
+    let payload = body;
+
+    if (body !== undefined && !(body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+        payload = JSON.stringify(body);
+    }
+
+    return fetch(url, { method, headers, body: payload });
+}
+
+/**
  * タグ検索・選択UI(記事の作成・編集フォーム)を初期化する。
  * 選択済みタグはバッジで表示し、×ボタンで選択解除できる。
  */
@@ -132,9 +155,7 @@ function initTagSelector() {
 
         debounceTimer = setTimeout(async () => {
             try {
-                const response = await fetch(`${searchUrl}?q=${encodeURIComponent(keyword)}`, {
-                    headers: { Accept: 'application/json' },
-                });
+                const response = await requestJson(`${searchUrl}?q=${encodeURIComponent(keyword)}`);
 
                 if (!response.ok) {
                     return;
@@ -198,7 +219,7 @@ function initTagSelector() {
 
 /**
  * タグ管理モーダル(記事の作成・編集フォーム)を初期化する。
- * タグの新規登録・編集・削除をモーダル内で完結させる。
+ * タグの新規登録・編集・削除をモーダル内で完結させ、記事フォームのタグ入力欄へ名前の変更・削除を通知する。
  */
 function initTagManagerModal() {
     const modal = document.getElementById('tag-manager-modal');
@@ -207,15 +228,93 @@ function initTagManagerModal() {
         return;
     }
 
-    const listContainer = document.getElementById('tag-manager-list');
     const input = document.getElementById('tag-manager-input');
-    const submitButton = document.getElementById('tag-manager-submit');
-    const errorBox = document.getElementById('tag-manager-error');
-    const indexUrl = listContainer.dataset.indexUrl;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-    let editingTagId = null;
-    let editingTagName = null;
+    initManagerModal(modal, {
+        listContainer: document.getElementById('tag-manager-list'),
+        submitButton: document.getElementById('tag-manager-submit'),
+        errorBox: document.getElementById('tag-manager-error'),
+        focusTarget: input,
+        submitOnEnter: [input],
+        messages: {
+            deleteFailed: t('タグの削除に失敗しました。'),
+            saveFailed: t('タグの保存に失敗しました。'),
+        },
+        itemLabel: (tag) => tag.tag_name,
+        readForm() {
+            const name = input.value.trim();
+
+            return name === '' ? null : { tag_name: name };
+        },
+        fillForm(tag) {
+            input.value = tag.tag_name;
+        },
+        clearForm() {
+            input.value = '';
+        },
+        renderItem(tag, { edit, remove }) {
+            const chip = document.createElement('span');
+            chip.className = 'badge text-bg-light border text-dark d-inline-flex align-items-center gap-2 p-2';
+            chip.setAttribute('role', 'button');
+            chip.addEventListener('click', edit);
+
+            const name = document.createElement('span');
+            name.textContent = tag.tag_name;
+            chip.appendChild(name);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn-close';
+            deleteButton.style.fontSize = '0.6rem';
+            deleteButton.setAttribute('aria-label', t('タグを削除'));
+            deleteButton.addEventListener('click', (event) => {
+                event.stopPropagation();
+                remove();
+            });
+            chip.appendChild(deleteButton);
+
+            return chip;
+        },
+        onSaved(saved, previous, payload) {
+            if (previous && previous.tag_name !== payload.tag_name) {
+                document.dispatchEvent(new CustomEvent('tag:renamed', { detail: { previousName: previous.tag_name, name: payload.tag_name } }));
+            }
+        },
+        onDeleted(tag) {
+            document.dispatchEvent(new CustomEvent('tag:deleted', { detail: { name: tag.tag_name } }));
+        },
+    });
+}
+
+/**
+ * 一覧の表示と登録・編集・削除を Ajax で行う管理モーダルの共通処理(タグ管理・データ種別紐付け管理)。
+ * listContainer の data-index-url を一覧取得・登録の URL、`${indexUrl}/${id}` を更新・削除の URL として使う。
+ * モーダルを開くと一覧を読み込み、一覧の項目の「編集」でフォームに値を入れて更新モードにし、閉じると登録モードに戻す。
+ * 画面ごとに違う部分は options で渡す:
+ * - readForm(): フォームから送信する値を返す(未入力などで送信しない場合は null)
+ * - fillForm(item) / clearForm(): 編集時にフォームへ値を入れる / フォームを空にする
+ * - renderItem(item, { edit, remove }): 一覧の 1 件の要素を返す(edit・remove は編集開始・削除の関数)
+ * - itemLabel(item): 削除確認に表示する名前
+ * - messages: 削除・保存に失敗したときのメッセージ(deleteRejected は削除が 422 で拒否され、理由が返らなかったとき)
+ * - onSaved(saved, previous, payload) / onDeleted(item): 保存・削除のあとの処理(previous は更新前の項目。登録時は null)
+ */
+function initManagerModal(modal, {
+    listContainer,
+    submitButton,
+    errorBox,
+    focusTarget,
+    submitOnEnter = [],
+    messages,
+    itemLabel,
+    readForm,
+    fillForm,
+    clearForm,
+    renderItem,
+    onSaved = () => {},
+    onDeleted = () => {},
+}) {
+    const indexUrl = listContainer.dataset.indexUrl;
+    let editing = null;
 
     function showError(message) {
         errorBox.textContent = message;
@@ -228,142 +327,96 @@ function initTagManagerModal() {
     }
 
     function resetForm() {
-        editingTagId = null;
-        editingTagName = null;
-        input.value = '';
+        editing = null;
+        clearForm();
         submitButton.textContent = t('登録');
     }
 
-    function renderTags(tags) {
+    function edit(item) {
+        editing = item;
+        fillForm(item);
+        submitButton.textContent = t('更新');
+        clearError();
+        focusTarget.focus();
+    }
+
+    async function load() {
+        const response = await requestJson(indexUrl);
+
+        if (!response.ok) {
+            return;
+        }
+
         listContainer.innerHTML = '';
-
-        tags.forEach((tag) => {
-            const chip = document.createElement('span');
-            chip.className = 'badge text-bg-light border text-dark d-inline-flex align-items-center gap-2 p-2';
-            chip.setAttribute('role', 'button');
-
-            const name = document.createElement('span');
-            name.textContent = tag.tag_name;
-            chip.appendChild(name);
-
-            const deleteButton = document.createElement('button');
-            deleteButton.type = 'button';
-            deleteButton.className = 'btn-close';
-            deleteButton.style.fontSize = '0.6rem';
-            deleteButton.setAttribute('aria-label', t('タグを削除'));
-            chip.appendChild(deleteButton);
-
-            chip.addEventListener('click', () => {
-                editingTagId = tag.id;
-                editingTagName = tag.tag_name;
-                input.value = tag.tag_name;
-                submitButton.textContent = t('更新');
-                clearError();
-                input.focus();
-            });
-
-            deleteButton.addEventListener('click', async (event) => {
-                event.stopPropagation();
-
-                if (!window.confirm(t('「:name」を削除してよろしいですか?', { name: tag.tag_name }))) {
-                    return;
-                }
-
-                await deleteTag(tag.id, tag.tag_name);
-            });
-
-            listContainer.appendChild(chip);
+        (await response.json()).forEach((item) => {
+            listContainer.appendChild(renderItem(item, { edit: () => edit(item), remove: () => remove(item) }));
         });
     }
 
-    async function fetchTags() {
-        const response = await fetch(indexUrl, {
-            headers: { Accept: 'application/json' },
-        });
-
-        if (!response.ok) {
+    async function remove(item) {
+        if (!window.confirm(t('「:name」を削除してよろしいですか?', { name: itemLabel(item) }))) {
             return;
         }
 
-        renderTags(await response.json());
-    }
-
-    async function deleteTag(id, name) {
-        const response = await fetch(`${indexUrl}/${id}`, {
-            method: 'DELETE',
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken },
-        });
+        const response = await requestJson(`${indexUrl}/${item.id}`, { method: 'DELETE' });
 
         if (!response.ok) {
-            showError(t('タグの削除に失敗しました。'));
+            const rejected = response.status === 422 ? (await response.json()).message ?? messages.deleteRejected : null;
+            showError(rejected ?? messages.deleteFailed);
 
             return;
         }
 
-        if (editingTagId === id) {
+        if (editing?.id === item.id) {
             resetForm();
         }
 
-        document.dispatchEvent(new CustomEvent('tag:deleted', { detail: { name } }));
-
-        await fetchTags();
+        onDeleted(item);
+        await load();
     }
 
-    async function submitTag() {
-        const name = input.value.trim();
+    async function submit() {
+        const payload = readForm();
 
-        if (name === '') {
+        if (payload === null) {
             return;
         }
 
         clearError();
 
-        const isEditing = editingTagId !== null;
-        const previousName = editingTagName;
-        const url = isEditing ? `${indexUrl}/${editingTagId}` : indexUrl;
-        const method = isEditing ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            body: JSON.stringify({ tag_name: name }),
+        const previous = editing;
+        const response = await requestJson(previous ? `${indexUrl}/${previous.id}` : indexUrl, {
+            method: previous ? 'PUT' : 'POST',
+            body: payload,
         });
 
         if (!response.ok) {
-            if (response.status === 422) {
-                const data = await response.json();
-                showError(Object.values(data.errors ?? {}).flat().join(' '));
-            } else {
-                showError(t('タグの保存に失敗しました。'));
-            }
+            showError(response.status === 422
+                ? Object.values((await response.json()).errors ?? {}).flat().join(' ')
+                : messages.saveFailed);
 
             return;
         }
 
-        if (isEditing && previousName !== name) {
-            document.dispatchEvent(new CustomEvent('tag:renamed', { detail: { previousName, name } }));
-        }
-
+        onSaved(await response.json(), previous, payload);
         resetForm();
-        await fetchTags();
+        await load();
     }
 
-    submitButton.addEventListener('click', submitTag);
+    submitButton.addEventListener('click', submit);
 
-    input.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            submitTag();
-        }
+    submitOnEnter.forEach((input) => {
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                submit();
+            }
+        });
     });
 
     modal.addEventListener('show.bs.modal', () => {
         clearError();
-        fetchTags();
+        load();
     });
 
     modal.addEventListener('hidden.bs.modal', resetForm);
@@ -383,7 +436,6 @@ function initContentEditor() {
     const hiddenInput = document.getElementById('content-input');
     const form = hiddenInput.closest('form');
     const uploadUrl = editorElement.dataset.uploadUrl;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     const quill = new Quill(editorElement, {
         theme: 'snow',
@@ -423,11 +475,7 @@ function initContentEditor() {
             const formData = new FormData();
             formData.append('image', file);
 
-            const response = await fetch(uploadUrl, {
-                method: 'POST',
-                headers: { 'X-CSRF-TOKEN': csrfToken },
-                body: formData,
-            });
+            const response = await requestJson(uploadUrl, { method: 'POST', body: formData });
 
             if (!response.ok) {
                 window.alert(t('画像のアップロードに失敗しました。'));
@@ -811,35 +859,11 @@ function initContentModelRelationManagerModal() {
         return;
     }
 
-    const listContainer = document.getElementById('content-model-relation-manager-list');
     const contentTypeSelect = document.getElementById('content-model-relation-manager-content-type');
     const modelNameInput = document.getElementById('content-model-relation-manager-model-name');
     const tableNameSelect = document.getElementById('content-model-relation-manager-table-name');
-    const submitButton = document.getElementById('content-model-relation-manager-submit');
-    const errorBox = document.getElementById('content-model-relation-manager-error');
-    const indexUrl = listContainer.dataset.indexUrl;
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
-    let editingId = null;
-
-    function showError(message) {
-        errorBox.textContent = message;
-        errorBox.classList.remove('d-none');
-    }
-
-    function clearError() {
-        errorBox.classList.add('d-none');
-        errorBox.textContent = '';
-    }
-
-    function resetForm() {
-        editingId = null;
-        contentTypeSelect.selectedIndex = 0;
-        modelNameInput.value = '';
-        tableNameSelect.value = '';
-        submitButton.textContent = t('登録');
-    }
-
+    // 許可リスト外の動的テーブル(user_make_*)を編集する場合は、選択肢に足してから選ぶ
     function ensureTableNameOption(tableName) {
         if (!tableName || tableNameSelect.querySelector(`option[value="${tableName}"]`)) {
             return;
@@ -851,10 +875,39 @@ function initContentModelRelationManagerModal() {
         tableNameSelect.appendChild(option);
     }
 
-    function renderList(relations) {
-        listContainer.innerHTML = '';
+    initManagerModal(modal, {
+        listContainer: document.getElementById('content-model-relation-manager-list'),
+        submitButton: document.getElementById('content-model-relation-manager-submit'),
+        errorBox: document.getElementById('content-model-relation-manager-error'),
+        focusTarget: modelNameInput,
+        messages: {
+            deleteFailed: t('データ種別の紐付けの削除に失敗しました。'),
+            deleteRejected: t('このデータ種別の紐付けは使用されているため削除できません。'),
+            saveFailed: t('データ種別の紐付けの保存に失敗しました。'),
+        },
+        itemLabel: (relation) => `${relation.content_type_label} / ${relation.model_name}`,
+        readForm() {
+            const modelName = modelNameInput.value.trim();
+            const tableName = tableNameSelect.value;
 
-        relations.forEach((relation) => {
+            if (modelName === '' || tableName === '') {
+                return null;
+            }
+
+            return { content_type: contentTypeSelect.value, model_name: modelName, table_name: tableName };
+        },
+        fillForm(relation) {
+            contentTypeSelect.value = String(relation.content_type);
+            modelNameInput.value = relation.model_name;
+            ensureTableNameOption(relation.table_name);
+            tableNameSelect.value = relation.table_name;
+        },
+        clearForm() {
+            contentTypeSelect.selectedIndex = 0;
+            modelNameInput.value = '';
+            tableNameSelect.value = '';
+        },
+        renderItem(relation, { edit, remove }) {
             const item = document.createElement('div');
             item.className = 'list-group-item d-flex justify-content-between align-items-center';
 
@@ -875,16 +928,7 @@ function initContentModelRelationManagerModal() {
             editButton.className = 'btn btn-sm btn-outline-secondary';
             editButton.innerHTML = '<i class="bi bi-pencil"></i>';
             editButton.setAttribute('aria-label', t('編集'));
-            editButton.addEventListener('click', () => {
-                editingId = relation.id;
-                contentTypeSelect.value = String(relation.content_type);
-                modelNameInput.value = relation.model_name;
-                ensureTableNameOption(relation.table_name);
-                tableNameSelect.value = relation.table_name;
-                submitButton.textContent = t('更新');
-                clearError();
-                modelNameInput.focus();
-            });
+            editButton.addEventListener('click', edit);
             actions.appendChild(editButton);
 
             const deleteButton = document.createElement('button');
@@ -892,107 +936,16 @@ function initContentModelRelationManagerModal() {
             deleteButton.className = 'btn btn-sm btn-outline-danger';
             deleteButton.innerHTML = '<i class="bi bi-trash"></i>';
             deleteButton.setAttribute('aria-label', t('削除'));
-            deleteButton.addEventListener('click', async () => {
-                if (!window.confirm(t('「:name」を削除してよろしいですか?', { name: `${relation.content_type_label} / ${relation.model_name}` }))) {
-                    return;
-                }
-
-                await deleteRelation(relation);
-            });
+            deleteButton.addEventListener('click', remove);
             actions.appendChild(deleteButton);
 
             item.appendChild(actions);
-            listContainer.appendChild(item);
-        });
-    }
 
-    async function fetchList() {
-        const response = await fetch(indexUrl, {
-            headers: { Accept: 'application/json' },
-        });
-
-        if (!response.ok) {
-            return;
-        }
-
-        renderList(await response.json());
-    }
-
-    async function deleteRelation(relation) {
-        const response = await fetch(`${indexUrl}/${relation.id}`, {
-            method: 'DELETE',
-            headers: { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken },
-        });
-
-        if (!response.ok) {
-            if (response.status === 422) {
-                const data = await response.json();
-                showError(data.message ?? t('このデータ種別の紐付けは使用されているため削除できません。'));
-            } else {
-                showError(t('データ種別の紐付けの削除に失敗しました。'));
-            }
-
-            return;
-        }
-
-        if (editingId === relation.id) {
-            resetForm();
-        }
-
-        removeContentModelRelationOption(relation.id);
-        await fetchList();
-    }
-
-    async function submitRelation() {
-        const contentType = contentTypeSelect.value;
-        const modelName = modelNameInput.value.trim();
-        const tableName = tableNameSelect.value;
-
-        if (modelName === '' || tableName === '') {
-            return;
-        }
-
-        clearError();
-
-        const isEditing = editingId !== null;
-        const url = isEditing ? `${indexUrl}/${editingId}` : indexUrl;
-        const method = isEditing ? 'PUT' : 'POST';
-
-        const response = await fetch(url, {
-            method,
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            body: JSON.stringify({ content_type: contentType, model_name: modelName, table_name: tableName }),
-        });
-
-        if (!response.ok) {
-            if (response.status === 422) {
-                const data = await response.json();
-                showError(Object.values(data.errors ?? {}).flat().join(' '));
-            } else {
-                showError(t('データ種別の紐付けの保存に失敗しました。'));
-            }
-
-            return;
-        }
-
-        const saved = await response.json();
-        upsertContentModelRelationOption(saved);
-        resetForm();
-        await fetchList();
-    }
-
-    submitButton.addEventListener('click', submitRelation);
-
-    modal.addEventListener('show.bs.modal', () => {
-        clearError();
-        fetchList();
+            return item;
+        },
+        onSaved: (saved) => upsertContentModelRelationOption(saved),
+        onDeleted: (relation) => removeContentModelRelationOption(relation.id),
     });
-
-    modal.addEventListener('hidden.bs.modal', resetForm);
 }
 
 /**
@@ -1425,7 +1378,6 @@ function initPathPreview() {
  * @param {Record<string, string|string[]>} fields 送信するフィールド(name → 値、配列の場合は同名で複数付与)
  */
 function submitHiddenForm(action, method, fields) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
     const form = document.createElement('form');
     form.method = 'POST';
@@ -1440,7 +1392,7 @@ function submitHiddenForm(action, method, fields) {
         form.appendChild(input);
     };
 
-    appendHidden('_token', csrfToken ?? '');
+    appendHidden('_token', csrfToken());
 
     if (method.toUpperCase() !== 'POST') {
         appendHidden('_method', method);
