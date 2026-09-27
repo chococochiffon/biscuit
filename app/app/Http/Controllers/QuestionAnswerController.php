@@ -47,7 +47,7 @@ class QuestionAnswerController extends Controller
             $this->syncQuestionTree($questionAnswer, $request->validated('question'));
         });
 
-        return redirect()->route('admin.question-answers.index')->with('status', 'Q&Aを登録しました。');
+        return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを登録しました。'));
     }
 
     /**
@@ -81,7 +81,7 @@ class QuestionAnswerController extends Controller
             $this->syncQuestionTree($questionAnswer, $request->validated('question'));
         });
 
-        return redirect()->route('admin.question-answers.index')->with('status', 'Q&Aを更新しました。');
+        return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを更新しました。'));
     }
 
     /**
@@ -91,7 +91,7 @@ class QuestionAnswerController extends Controller
     {
         DB::transaction(fn () => $questionAnswer->delete());
 
-        return redirect()->route('admin.question-answers.index')->with('status', 'Q&Aを削除しました。');
+        return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを削除しました。'));
     }
 
     /**

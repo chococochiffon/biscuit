@@ -58,7 +58,7 @@ class ContentModelRelationController extends Controller
             return response()->json($this->toJsonPayload($contentModelRelation), 201);
         }
 
-        return redirect()->route('admin.content-model-relations.index')->with('status', 'データ種別の紐付けを登録しました。');
+        return redirect()->route('admin.content-model-relations.index')->with('status', __('データ種別の紐付けを登録しました。'));
     }
 
     /**
@@ -96,7 +96,7 @@ class ContentModelRelationController extends Controller
             return response()->json($this->toJsonPayload($contentModelRelation));
         }
 
-        return redirect()->route('admin.content-model-relations.index')->with('status', 'データ種別の紐付けを更新しました。');
+        return redirect()->route('admin.content-model-relations.index')->with('status', __('データ種別の紐付けを更新しました。'));
     }
 
     /**
@@ -110,11 +110,11 @@ class ContentModelRelationController extends Controller
 
         if ($isInUseByCallContent) {
             if ($request->wantsJson()) {
-                return response()->json(['message' => 'このデータ種別の紐付けはcall_contentsで使用されているため削除できません。'], 422);
+                return response()->json(['message' => __('このデータ種別の紐付けはcall_contentsで使用されているため削除できません。')], 422);
             }
 
             return redirect()->route('admin.content-model-relations.index')
-                ->with('error', 'このデータ種別の紐付けはcall_contentsで使用されているため削除できません。');
+                ->with('error', __('このデータ種別の紐付けはcall_contentsで使用されているため削除できません。'));
         }
 
         $contentModelRelation->delete();
@@ -123,7 +123,7 @@ class ContentModelRelationController extends Controller
             return response()->json(status: 204);
         }
 
-        return redirect()->route('admin.content-model-relations.index')->with('status', 'データ種別の紐付けを削除しました。');
+        return redirect()->route('admin.content-model-relations.index')->with('status', __('データ種別の紐付けを削除しました。'));
     }
 
     /**

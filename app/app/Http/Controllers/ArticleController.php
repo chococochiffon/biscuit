@@ -71,7 +71,7 @@ class ArticleController extends Controller
 
         $this->syncTags($article, $request->validated('tags', []));
 
-        return redirect()->route('admin.articles.index')->with('status', '記事を登録しました。');
+        return redirect()->route('admin.articles.index')->with('status', __('記事を登録しました。'));
     }
 
     /**
@@ -107,7 +107,7 @@ class ArticleController extends Controller
 
         $this->syncTags($article, $request->validated('tags', []));
 
-        return redirect()->route('admin.articles.index')->with('status', '記事を更新しました。');
+        return redirect()->route('admin.articles.index')->with('status', __('記事を更新しました。'));
     }
 
     /**
@@ -117,7 +117,7 @@ class ArticleController extends Controller
     {
         $article->delete();
 
-        return redirect()->route('admin.articles.index')->with('status', '記事を削除しました。');
+        return redirect()->route('admin.articles.index')->with('status', __('記事を削除しました。'));
     }
 
     /**
@@ -131,7 +131,7 @@ class ArticleController extends Controller
 
         $article->update(['approval' => $validated['approval']]);
 
-        return back()->with('status', '公開設定を更新しました。');
+        return back()->with('status', __('公開設定を更新しました。'));
     }
 
     /**
@@ -147,7 +147,7 @@ class ArticleController extends Controller
 
         Article::query()->whereIn('id', $validated['article_ids'])->update(['approval' => $validated['approval']]);
 
-        return back()->with('status', '選択した記事の公開設定を一括更新しました。');
+        return back()->with('status', __('選択した記事の公開設定を一括更新しました。'));
     }
 
     /**

@@ -169,6 +169,18 @@ class TagControllerTest extends TestCase
             ->assertRedirect(route('admin.tags.index'));
     }
 
+    public function test_completion_message_is_shown_in_the_selected_language(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->post(route('admin.tags.store'), ['tag_name' => '日本語'])
+            ->assertSessionHas('status', 'タグを登録しました。');
+
+        $this->withSession(['locale' => 'en'])
+            ->post(route('admin.tags.store'), ['tag_name' => 'English'])
+            ->assertSessionHas('status', 'The tag has been created.');
+    }
+
     public function test_update_fails_when_tag_name_belongs_to_another_tag(): void
     {
         $this->actingAsAdmin();
