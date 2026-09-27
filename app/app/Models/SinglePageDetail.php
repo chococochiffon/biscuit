@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasSortOrder;
 use Database\Factories\SinglePageDetailFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class SinglePageDetail extends Model
 {
     /** @use HasFactory<SinglePageDetailFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasSortOrder, SoftDeletes;
 
     /**
      * 詳細が紐づく固定ページを取得する。

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
 use App\Models\Concerns\HasPublicImages;
+use App\Models\Concerns\HasSortOrder;
 use Database\Factories\SinglePageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -22,7 +23,7 @@ use Illuminate\Http\UploadedFile;
 class SinglePage extends Model
 {
     /** @use HasFactory<SinglePageFactory> */
-    use HasFactory, HasPath, HasPublicationPeriod, HasPublicImages, SoftDeletes;
+    use HasFactory, HasPath, HasPublicationPeriod, HasPublicImages, HasSortOrder, SoftDeletes;
 
     /**
      * ヘッダー画像の保存先ディレクトリ(公開ディスク基準)。
@@ -76,6 +77,6 @@ class SinglePage extends Model
      */
     public function details(): HasMany
     {
-        return $this->hasMany(SinglePageDetail::class)->orderBy('sort_order');
+        return $this->hasMany(SinglePageDetail::class)->ordered();
     }
 }

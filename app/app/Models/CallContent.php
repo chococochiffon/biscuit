@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\CallContentPlace;
 use App\Enums\CallType;
+use App\Models\Concerns\HasSortOrder;
 use Database\Factories\CallContentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -17,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class CallContent extends Model
 {
     /** @use HasFactory<CallContentFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasSortOrder, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -38,7 +39,7 @@ class CallContent extends Model
     #[Scope]
     protected function forPlace(Builder $query, CallContentPlace $place): void
     {
-        $query->where('place', $place)->orderBy('sort_order')->orderBy('id');
+        $query->where('place', $place)->ordered();
     }
 
     /**

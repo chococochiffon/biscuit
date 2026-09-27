@@ -67,7 +67,7 @@ class UserDetail extends Model
      */
     public function skills(): HasMany
     {
-        return $this->hasMany(UserSkill::class)->orderBy('sort_order')->orderBy('id');
+        return $this->hasMany(UserSkill::class)->ordered();
     }
 
     /**

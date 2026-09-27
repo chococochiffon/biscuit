@@ -65,7 +65,7 @@ class SiteSettingController extends Controller
      */
     public function show(SiteSetting $siteSetting): View
     {
-        $callContents = CallContent::query()->with('contentModelRelation')->orderBy('place')->orderBy('sort_order')->orderBy('id')->get();
+        $callContents = CallContent::query()->with('contentModelRelation')->orderBy('place')->ordered()->get();
         $socialLinks = SocialLink::query()->ordered()->get();
         $topSliderImages = TopSliderImage::query()->ordered()->get();
 
@@ -77,7 +77,7 @@ class SiteSettingController extends Controller
      */
     public function edit(SiteSetting $siteSetting): View
     {
-        $callContents = CallContent::query()->orderBy('sort_order')->orderBy('id')->get();
+        $callContents = CallContent::query()->ordered()->get();
         $socialLinks = SocialLink::query()->ordered()->get();
         $topSliderImages = TopSliderImage::query()->ordered()->get();
         $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
