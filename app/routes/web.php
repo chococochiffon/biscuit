@@ -12,9 +12,9 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// biscuit は管理画面と API だけを提供する(公開側サイトは chococo)ため、トップは管理画面へ転送する
+// (未ログインなら管理画面の入口からログイン画面へ送られる)
+Route::redirect('/', '/admin');
 
 Route::get('locale/{locale}', LocaleController::class)->name('locale.update');
 
