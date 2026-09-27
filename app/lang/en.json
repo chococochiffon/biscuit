@@ -174,5 +174,18 @@
     "記事を更新しました。": "The article has been updated.",
     "記事を登録しました。": "The article has been created.",
     "選択した記事の公開設定を一括更新しました。": "The publication settings of the selected articles have been updated.",
-    "このデータ種別の紐付けはcall_contentsで使用されているため削除できません。": "This data type mapping cannot be deleted because it is used by call contents."
+    "このデータ種別の紐付けはcall_contentsで使用されているため削除できません。": "This data type mapping cannot be deleted because it is used by call contents.",
+    "タグを削除": "Delete tag",
+    "登録": "Register",
+    "更新": "Update",
+    "「:name」を削除してよろしいですか?": "Are you sure you want to delete \":name\"?",
+    "タグの削除に失敗しました。": "Failed to delete the tag.",
+    "タグの保存に失敗しました。": "Failed to save the tag.",
+    "画像のアップロードに失敗しました。": "Failed to upload the image.",
+    "選択した表示箇所ではこの呼び出し方は選択できなくなりました。呼び出し方を選び直してください。": "This call type is no longer available for the selected placement. Please choose the call type again.",
+    "選択した表示箇所・呼び出し方ではこのデータ種別は選択できなくなりました。データ種別を選び直してください。": "This data type is no longer available for the selected placement and call type. Please choose the data type again.",
+    "このデータ種別の紐付けは使用されているため削除できません。": "This data type mapping cannot be deleted because it is in use.",
+    "データ種別の紐付けの削除に失敗しました。": "Failed to delete the data type mapping.",
+    "データ種別の紐付けの保存に失敗しました。": "Failed to save the data type mapping.",
+    "記事を選択してください。": "Please select articles."
 }
