@@ -187,5 +187,6 @@
     "このデータ種別の紐付けは使用されているため削除できません。": "This data type mapping cannot be deleted because it is in use.",
     "データ種別の紐付けの削除に失敗しました。": "Failed to delete the data type mapping.",
     "データ種別の紐付けの保存に失敗しました。": "Failed to save the data type mapping.",
-    "記事を選択してください。": "Please select articles."
+    "記事を選択してください。": "Please select articles.",
+    ":total 件中 :first〜:last 件を表示": "Showing :first to :last of :total results"
 }
