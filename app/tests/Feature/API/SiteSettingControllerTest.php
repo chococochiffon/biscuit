@@ -41,6 +41,17 @@ class SiteSettingControllerTest extends TestCase
         $response->assertJsonPath('data.social_links.1.service', 'github');
     }
 
+    public function test_show_returns_image_urls_and_null_for_unset_images_instead_of_defaults(): void
+    {
+        SiteSetting::factory()->create(['site_icon' => null, 'site_image' => 'image/site_image/og.png']);
+
+        $response = $this->getJson(route('api.site-setting.show'));
+
+        $response->assertOk()
+            ->assertJsonPath('data.site_icon_url', null)
+            ->assertJsonPath('data.site_image_url', Storage::disk('public')->url('image/site_image/og.png'));
+    }
+
     public function test_show_includes_front_url_and_api_url(): void
     {
         SiteSetting::factory()->create(['front_url' => 'https://www.example.com', 'api_url' => 'https://api.example.com/api']);

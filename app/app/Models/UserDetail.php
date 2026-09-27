@@ -3,16 +3,16 @@
 namespace App\Models;
 
 use App\Enums\UserDetailNameSetting;
-use App\Support\ImageResizer;
+use App\Models\Concerns\HasPublicImages;
 use Database\Factories\UserDetailFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 #[Fillable([
     'user_id',
@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\Storage;
 class UserDetail extends Model
 {
     /** @use HasFactory<UserDetailFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicImages, SoftDeletes;
 
     /**
      * アイコン画像(user_image)の保存先ディレクトリ(公開ディスク基準)。
@@ -77,14 +77,16 @@ class UserDetail extends Model
      */
     public function storeUserImage(UploadedFile $file, ?array $crop = null): string
     {
-        $extension = ImageResizer::extensionFor($file);
-        $path = self::USER_IMAGE_DIRECTORY.'/'.now()->format('YmdHis').'_'.$this->getTable().'_'.$this->id.'.'.$extension;
+        return $this->storeNamedImage($file, self::USER_IMAGE_DIRECTORY, [self::USER_IMAGE_SIZE, self::USER_IMAGE_SIZE], $crop);
+    }
 
-        Storage::disk('public')->put(
-            $path,
-            ImageResizer::cropAndResize($file->getRealPath(), $extension, self::USER_IMAGE_SIZE, self::USER_IMAGE_SIZE, $crop)
-        );
-
-        return $path;
+    /**
+     * アイコン画像の公開URL(未設定なら null)。
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function userImageUrl(): Attribute
+    {
+        return Attribute::get(fn () => self::publicImageUrl($this->user_image));
     }
 }

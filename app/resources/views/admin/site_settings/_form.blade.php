@@ -55,13 +55,9 @@
         </div>
 
         @php
-            $existingSiteIconUrl = isset($siteSetting) && $siteSetting->site_icon
-                ? Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_icon)
-                : null;
+            $existingSiteIconUrl = ($siteSetting ?? null)?->site_icon ? $siteSetting->site_icon_url : null;
 
-            $existingSiteImageUrl = isset($siteSetting) && $siteSetting->site_image
-                ? Illuminate\Support\Facades\Storage::disk('public')->url($siteSetting->site_image)
-                : null;
+            $existingSiteImageUrl = ($siteSetting ?? null)?->site_image ? $siteSetting->site_image_url : null;
         @endphp
 
         <div class="mb-3">

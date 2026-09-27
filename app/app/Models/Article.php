@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ArticleApprovalStatus;
 use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
+use App\Models\Concerns\HasPublicImages;
 use Database\Factories\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -14,14 +15,19 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 
 #[Fillable(['title', 'content', 'thumbnail', 'parent_path', 'slug', 'user_id', 'approval', 'publication_start_datetime', 'publication_end_datetime'])]
 #[Hidden(['unique_path'])]
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
-    use HasFactory, HasPath, HasPublicationPeriod, SoftDeletes;
+    use HasFactory, HasPath, HasPublicationPeriod, HasPublicImages, SoftDeletes;
+
+    /**
+     * サムネイル画像の保存先ディレクトリ(公開ディスク基準)。
+     */
+    public const THUMBNAIL_DIRECTORY = 'image/thumbnail';
 
     /**
      * サムネイル未指定の場合に使用するデフォルト画像の(publicディスク基準の)パス。
@@ -55,9 +61,22 @@ class Article extends Model
      */
     protected function thumbnailUrl(): Attribute
     {
-        return Attribute::get(
-            fn () => Storage::disk('public')->url($this->thumbnail ?: self::DEFAULT_THUMBNAIL_PATH)
-        );
+        return Attribute::get(fn () => self::publicImageUrl($this->thumbnail ?: self::DEFAULT_THUMBNAIL_PATH));
+    }
+
+    /**
+     * サムネイル画像を THUMBNAIL_SIZES のうち比率が近いサイズへ中央で切り抜き・縮小して保存し、公開ディスク基準の保存パスを返す。
+     */
+    public function storeThumbnail(UploadedFile $file): string
+    {
+        [$sourceWidth, $sourceHeight] = getimagesize($file->getRealPath());
+
+        // 元画像の比率に最も近い目標サイズを選ぶ(比の対数の差で比較し、横長・縦長の差を対称に扱う)
+        $size = collect(self::THUMBNAIL_SIZES)
+            ->sortBy(fn (array $size) => abs(log(($sourceWidth / $sourceHeight) / ($size[0] / $size[1]))))
+            ->first();
+
+        return $this->storeNamedImage($file, self::THUMBNAIL_DIRECTORY, $size);
     }
 
     /**

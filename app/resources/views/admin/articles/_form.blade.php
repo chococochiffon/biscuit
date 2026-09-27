@@ -59,7 +59,7 @@
             ])
 
             @php
-                $thumbnailUrl = $article->thumbnail_url ?? Illuminate\Support\Facades\Storage::disk('public')->url(\App\Models\Article::DEFAULT_THUMBNAIL_PATH);
+                $thumbnailUrl = $article->thumbnail_url ?? \App\Models\Article::publicImageUrl(\App\Models\Article::DEFAULT_THUMBNAIL_PATH);
             @endphp
 
             <div class="mb-3">

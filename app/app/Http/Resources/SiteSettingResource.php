@@ -6,7 +6,6 @@ use App\Models\SocialLink;
 use App\Models\TopSliderImage;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class SiteSettingResource extends JsonResource
 {
@@ -23,8 +22,9 @@ class SiteSettingResource extends JsonResource
             'description' => $this->description,
             'front_url' => $this->front_url,
             'api_url' => $this->api_url,
-            'site_icon_url' => $this->site_icon ? Storage::disk('public')->url($this->site_icon) : null,
-            'site_image_url' => $this->site_image ? Storage::disk('public')->url($this->site_image) : null,
+            // 未設定の場合は(デフォルト画像ではなく) null を返す
+            'site_icon_url' => $this->site_icon ? $this->site_icon_url : null,
+            'site_image_url' => $this->site_image ? $this->site_image_url : null,
             'social_links' => SocialLinkResource::collection(SocialLink::query()->ordered()->get()),
             'top_slider_images' => TopSliderImageResource::collection(TopSliderImage::query()->ordered()->get()),
         ];

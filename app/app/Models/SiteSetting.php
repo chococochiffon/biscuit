@@ -2,19 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasPublicImages;
 use Database\Factories\SiteSettingFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['site_title', 'description', 'front_url', 'api_url', 'site_icon', 'site_image'])]
 class SiteSetting extends Model
 {
     /** @use HasFactory<SiteSettingFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicImages, SoftDeletes;
 
     /**
      * サイトアイコンの保存先ディレクトリ(公開ディスク基準)。
@@ -53,14 +54,22 @@ class SiteSetting extends Model
     }
 
     /**
-     * 指定ディレクトリへ、命名規則(yyyymmddhhmmss_テーブル名_id)に従って画像を保存する。
+     * サイトアイコンの公開URL(未設定の場合はデフォルト画像)。
+     *
+     * @return Attribute<string, never>
      */
-    private function storeNamedImage(UploadedFile $file, string $directory): string
+    protected function siteIconUrl(): Attribute
     {
-        Storage::disk('public')->makeDirectory($directory);
+        return Attribute::get(fn () => self::publicImageUrl($this->site_icon ?: self::DEFAULT_SITE_ICON_PATH));
+    }
 
-        $filename = now()->format('YmdHis').'_'.$this->getTable().'_'.$this->id.'.'.$file->extension();
-
-        return $file->storeAs($directory, $filename, 'public');
+    /**
+     * サイト画像の公開URL(未設定の場合はデフォルト画像)。
+     *
+     * @return Attribute<string, never>
+     */
+    protected function siteImageUrl(): Attribute
+    {
+        return Attribute::get(fn () => self::publicImageUrl($this->site_image ?: self::DEFAULT_SITE_IMAGE_PATH));
     }
 }

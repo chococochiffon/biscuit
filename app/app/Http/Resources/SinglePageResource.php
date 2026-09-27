@@ -4,7 +4,6 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 class SinglePageResource extends JsonResource
 {
@@ -19,7 +18,7 @@ class SinglePageResource extends JsonResource
             'id' => $this->id,
             'title' => $this->title,
             'short_sentences' => $this->short_sentences,
-            'header_image_url' => $this->header_image ? Storage::disk('public')->url($this->header_image) : null,
+            'header_image_url' => $this->header_image_url,
             'parent_path' => $this->parent_path,
             'slug' => $this->slug,
             'path' => $this->path,

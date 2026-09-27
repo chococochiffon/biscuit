@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Support\ImageResizer;
+use App\Models\Concerns\HasPublicImages;
 use Database\Factories\TopSliderImageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -12,14 +12,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 #[Fillable(['top_image', 'url', 'sort_order'])]
 class TopSliderImage extends Model
 {
     /** @use HasFactory<TopSliderImageFactory> */
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasPublicImages, SoftDeletes;
 
     /**
      * トップスライダー画像の保存先ディレクトリ(公開ディスク基準)。
@@ -41,15 +40,7 @@ class TopSliderImage extends Model
      */
     public static function storeImage(UploadedFile $file, ?array $crop = null): string
     {
-        $extension = ImageResizer::extensionFor($file);
-        $path = self::IMAGE_DIRECTORY.'/'.Str::random(40).'.'.$extension;
-
-        Storage::disk('public')->put(
-            $path,
-            ImageResizer::cropAndResize($file->getRealPath(), $extension, self::IMAGE_WIDTH, self::IMAGE_HEIGHT, $crop)
-        );
-
-        return $path;
+        return self::storeResizedImage($file, self::IMAGE_DIRECTORY.'/'.Str::random(40), self::IMAGE_WIDTH, self::IMAGE_HEIGHT, $crop);
     }
 
     /**
@@ -59,7 +50,7 @@ class TopSliderImage extends Model
      */
     protected function topImageUrl(): Attribute
     {
-        return Attribute::get(fn () => Storage::disk('public')->url($this->top_image));
+        return Attribute::get(fn () => self::publicImageUrl($this->top_image));
     }
 
     /**
