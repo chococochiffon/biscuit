@@ -9,22 +9,40 @@ use App\Models\GalleryImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class GalleryImageController extends Controller
 {
     /**
-     * ギャラリー画像の一覧を並び順(公開側の表示順)で表示する。行をドラッグして並び替えられる。
+     * 分類の絞り込みで「未分類」を表す値。
      */
-    public function index(): View
+    public const UNCATEGORIZED = 'none';
+
+    /**
+     * ギャラリー画像の一覧を並び順(公開側の表示順)で表示する。
+     * GET パラメータ category(分類の id、未分類は UNCATEGORIZED)で絞り込める。不正な値はリダイレクトせずに無視する。
+     * 行をドラッグして並び替えられるのは、絞り込んでいないときだけ(絞り込んだ一部だけでは並び順を振り直せないため)。
+     */
+    public function index(Request $request): View
     {
+        $category = Validator::make($request->query(), [
+            'category' => ['nullable', 'regex:/^('.self::UNCATEGORIZED.'|[1-9][0-9]*)$/'],
+        ])->valid()['category'] ?? null;
+
         $galleryImages = GalleryImage::query()
             ->with('category')
+            ->when($category === self::UNCATEGORIZED, fn ($query) => $query->whereNull('gallery_category_id'))
+            ->when($category !== null && $category !== self::UNCATEGORIZED, fn ($query) => $query->where('gallery_category_id', $category))
             ->ordered()
-            ->paginate(config('limits.admin_per_page'));
+            ->paginate(config('limits.admin_per_page'))
+            ->withQueryString();
 
-        return view('admin.gallery_images.index', compact('galleryImages'));
+        $categories = GalleryCategory::query()->ordered()->get();
+        $canReorder = $category === null;
+
+        return view('admin.gallery_images.index', compact('galleryImages', 'categories', 'category', 'canReorder'));
     }
 
     /**

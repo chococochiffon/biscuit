@@ -200,7 +200,6 @@
     "分類": "Category",
     "コメント": "Comment",
     "未分類": "Uncategorized",
-    "ギャラリー画像が登録されていません。": "No gallery images have been registered.",
     "ギャラリー画像の新規登録": "New gallery image",
     "ギャラリー画像の編集": "Edit gallery image",
     "ギャラリー画像": "Gallery image",
@@ -220,5 +219,8 @@
     "並び替えを保存": "Save order",
     "保存する": "Save",
     "ドラッグして並び替え": "Drag to reorder",
-    "+ 行を追加": "+ Add row"
+    "+ 行を追加": "+ Add row",
+    "絞り込む": "Filter",
+    "絞り込み中は並び替えできません。並び替えるときはクリアしてください。": "Reordering is disabled while filtering. Clear the filter to reorder.",
+    "該当するギャラリー画像がありません。": "No matching gallery images."
 }
