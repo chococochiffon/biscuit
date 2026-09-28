@@ -270,5 +270,6 @@
     "詳細": "Details",
     "選択肢(1行に1つ)": "Options (one per line)",
     "項目名": "Field name",
-    "選択肢": "Options"
+    "選択肢": "Options",
+    "テーブル名は articles・single_pages・user_details・gallery_images・question_answers のいずれか、またはカスタムページの本体のテーブル(user_make_○○)を指定してください。": "The table name must be one of articles, single_pages, user_details, gallery_images, or question_answers, or the main table of a custom page type (user_make_...)."
 }
