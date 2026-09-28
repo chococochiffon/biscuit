@@ -4,6 +4,8 @@ use App\Http\Controllers\AdministratorController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
+use App\Http\Controllers\CustomPageEntryController;
+use App\Http\Controllers\CustomPageTypeController;
 use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LocaleController;
@@ -90,6 +92,17 @@ Route::middleware('auth:admin')->group(function () {
         ->parameters(['gallery-images' => 'galleryImage'])
         ->except(['show'])
         ->names('admin.gallery-images');
+
+    Route::resource('admin/custom-page-types', CustomPageTypeController::class)
+        ->parameters(['custom-page-types' => 'customPageType'])
+        ->except(['show'])
+        ->names('admin.custom-page-types');
+
+    Route::resource('admin/custom-pages/{customPageType}/entries', CustomPageEntryController::class)
+        ->parameters(['entries' => 'entry'])
+        ->except(['show'])
+        ->whereNumber('entry')
+        ->names('admin.custom-pages.entries');
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)
         ->parameters(['question-answers' => 'questionAnswer'])

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\View\Composers\CustomPageTypeComposer;
 use App\View\Composers\SiteSettingComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -35,5 +36,6 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
 
         View::composer('layouts.admin', SiteSettingComposer::class);
+        View::composer('layouts.admin', CustomPageTypeComposer::class);
     }
 }

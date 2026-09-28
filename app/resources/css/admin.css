@@ -54,6 +54,15 @@
     padding: 0 0.75rem;
 }
 
+/* サイドメニューの見出し(カスタムページ管理など) */
+.admin-sidebar-heading {
+    padding: 0 1.5rem 0.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.05rem;
+}
+
 .admin-sidebar-nav .nav-link {
     display: flex;
     align-items: center;

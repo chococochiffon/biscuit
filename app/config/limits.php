@@ -21,6 +21,9 @@ return [
     // Q&A の質問 1 件あたりの回答(分岐)の最大件数
     'question_answers' => (int) env('LIMIT_QUESTION_ANSWERS', 10),
 
+    // カスタムページの種類の最大件数
+    'custom_page_types' => (int) env('LIMIT_CUSTOM_PAGE_TYPES', 5),
+
     /*
     |--------------------------------------------------------------------------
     | 一覧の 1 ページの件数
