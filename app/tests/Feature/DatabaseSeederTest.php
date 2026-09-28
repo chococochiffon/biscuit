@@ -72,6 +72,10 @@ class DatabaseSeederTest extends TestCase
             ['SinglePage', 'UserSkill', 'ArticleArchive', 'GalleryTileList', 'QuestionAnswerAccordion'],
             $callContents->where('place', CallContentPlace::Top)->pluck('call_name')->values()->all()
         );
+        $this->assertSame(
+            ['SinglePageLinkList'],
+            $callContents->where('place', CallContentPlace::Others)->pluck('call_name')->values()->all()
+        );
     }
 
     public function test_top_slider_images_are_not_duplicated_when_seeding_again(): void

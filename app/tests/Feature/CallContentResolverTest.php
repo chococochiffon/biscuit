@@ -139,10 +139,11 @@ class CallContentResolverTest extends TestCase
         $this->assertTrue($result->details->contains($detail));
     }
 
-    public function test_single_page_link_list_resolves_up_to_ten_top_page_view_pages_in_sort_order(): void
+    public function test_single_page_link_list_resolves_up_to_ten_link_list_view_pages_in_sort_order(): void
     {
-        SinglePage::factory()->count(11)->create(['top_page_view' => true]);
-        SinglePage::factory()->create(['top_page_view' => false]);
+        // リンクリストに出すかは「リンクリストへ表示する」で決まり、「Topページへ表示する」には左右されない
+        SinglePage::factory()->count(11)->create(['link_list_view' => true, 'top_page_view' => false]);
+        SinglePage::factory()->create(['link_list_view' => false, 'top_page_view' => true]);
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::LinkList,
             'content_model_relation_id' => $this->relation('SinglePage')->id,
@@ -153,7 +154,7 @@ class CallContentResolverTest extends TestCase
 
         $this->assertInstanceOf(EloquentCollection::class, $result);
         $this->assertCount(10, $result);
-        $this->assertTrue($result->every(fn (SinglePage $page) => $page->top_page_view));
+        $this->assertTrue($result->every(fn (SinglePage $page) => $page->link_list_view));
     }
 
     public function test_single_page_link_resolves_the_first_page_in_sort_order(): void
