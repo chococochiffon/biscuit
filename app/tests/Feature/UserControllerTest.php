@@ -40,15 +40,32 @@ class UserControllerTest extends TestCase
         $response->assertRedirect(route('admin.login'));
     }
 
-    public function test_index_displays_users(): void
+    public function test_index_displays_users_with_details(): void
     {
         $this->actingAsAdmin();
-        $user = User::factory()->has(UserDetail::factory(), 'detail')->create(['name' => 'Jane Doe']);
+        User::factory()->has(UserDetail::factory()->state([
+            'first_name' => '花子',
+            'family_name' => '山田',
+            'user_image' => 'image/user/hanako.png',
+            'view_flag' => true,
+            'name_settings' => UserDetailNameSetting::NickName,
+        ]), 'detail')->create(['email' => 'hanako@example.com']);
 
         $response = $this->get(route('admin.users.index'));
 
         $response->assertOk();
-        $response->assertSee($user->name);
+        $response->assertSeeInOrder(['/storage/image/user/hanako.png', '花子', '山田', 'hanako@example.com', '表示する', 'ニックネーム']);
+    }
+
+    public function test_index_displays_users_without_details(): void
+    {
+        $this->actingAsAdmin();
+        User::factory()->create(['name' => 'Jane Doe']);
+
+        $response = $this->get(route('admin.users.index'));
+
+        $response->assertOk();
+        $response->assertSee('Jane Doe');
     }
 
     public function test_create_screen_can_be_rendered(): void

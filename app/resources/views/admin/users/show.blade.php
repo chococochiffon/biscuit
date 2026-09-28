@@ -36,7 +36,7 @@
 
                 <x-admin.detail-row :label="__('コメント')" style="white-space: pre-wrap;">{{ $user->detail->comment }}</x-admin.detail-row>
 
-                <x-admin.detail-row :label="__('表示設定')">{{ $user->detail->view_flag ? __('表示') : __('非表示') }}</x-admin.detail-row>
+                <x-admin.detail-row :label="__('トップへ表示する')">{{ $user->detail->view_flag ? __('表示する') : __('表示しない') }}</x-admin.detail-row>
 
                 <x-admin.detail-row :label="__('名前の表示設定')">{{ $user->detail->name_settings->label() }}</x-admin.detail-row>
 
