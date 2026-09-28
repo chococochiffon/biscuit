@@ -93,16 +93,19 @@ Route::middleware('auth:admin')->group(function () {
         ->except(['show'])
         ->names('admin.gallery-images');
 
-    Route::resource('admin/custom-page-types', CustomPageTypeController::class)
-        ->parameters(['custom-page-types' => 'customPageType'])
-        ->except(['show'])
-        ->names('admin.custom-page-types');
+    // カスタムページ管理はスーパー管理者だけが使える(AppServiceProvider の manage-custom-pages)
+    Route::middleware('can:manage-custom-pages')->group(function () {
+        Route::resource('admin/custom-page-types', CustomPageTypeController::class)
+            ->parameters(['custom-page-types' => 'customPageType'])
+            ->except(['show'])
+            ->names('admin.custom-page-types');
 
-    Route::resource('admin/custom-pages/{customPageType}/entries', CustomPageEntryController::class)
-        ->parameters(['entries' => 'entry'])
-        ->except(['show'])
-        ->whereNumber('entry')
-        ->names('admin.custom-pages.entries');
+        Route::resource('admin/custom-pages/{customPageType}/entries', CustomPageEntryController::class)
+            ->parameters(['entries' => 'entry'])
+            ->except(['show'])
+            ->whereNumber('entry')
+            ->names('admin.custom-pages.entries');
+    });
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)
         ->parameters(['question-answers' => 'questionAnswer'])

@@ -22,6 +22,8 @@ paths:
 
 管理画面で種類を登録すると、種類ごとのテーブルを実行時に作る機能。サイドメニューの「カスタムページ管理」の下に「種類の管理」(`admin.custom-page-types`)と、登録した種類ごとのページ一覧(`admin.custom-pages.entries`、URL は `/admin/custom-pages/{customPageType}/entries`)を並べる(`View\Composers\CustomPageTypeComposer`)。公開側は下の「公開側」を参照。
 
+カスタムページ管理(種類の管理と種類ごとのページ)は **スーパー管理者(`AdministratorRole::SuperAdmin`)だけ** が使える。`AppServiceProvider` のゲート `manage-custom-pages`(`Administrator::isSuperAdmin()`)を、ルートは `can:manage-custom-pages` ミドルウェアのグループで、サイドメニューは `@can` で適用している(通常の管理者は 403・メニュー非表示)。カスタムページ管理のルートを足すときはこのグループの中に置く。
+
 ## 種類とテーブル
 
 - `CustomPageType`(`custom_page_types`)がカスタム名(`name`)・表示名(`label`)・ベースの型(`base_type`: `CustomPageBaseType` の記事/固定ページ)・並び順を持つ。登録は `config('limits.custom_page_types')`(既定 5)件まで。

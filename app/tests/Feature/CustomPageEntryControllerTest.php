@@ -41,7 +41,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_store_saves_article_type_entry_with_custom_field_values(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $text = $this->createForm($type, '材料', CustomFormType::Text);
         $date = $this->createForm($type, '作った日', CustomFormType::Date);
@@ -77,7 +77,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_store_validates_custom_field_values_by_type(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $email = $this->createForm($type, '連絡先', CustomFormType::Email);
         $date = $this->createForm($type, '作った日', CustomFormType::Date);
@@ -108,7 +108,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_store_saves_single_page_type_entry_with_details(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('shop', CustomPageBaseType::SinglePage);
         CustomPageEntry::queryFor($type)->create(['title' => '既存', 'short_sentences' => '概要', 'sort_order' => 4]);
 
@@ -131,7 +131,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_update_changes_entry_values_and_syncs_details(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('shop', CustomPageBaseType::SinglePage);
         $form = $this->createForm($type, '定休日', CustomFormType::Text);
         $entry = CustomPageEntry::queryFor($type)->create(['title' => '本店', 'short_sentences' => '概要']);
@@ -159,7 +159,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_update_rejects_details_of_another_entry(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('shop', CustomPageBaseType::SinglePage);
         $entry = CustomPageEntry::queryFor($type)->create(['title' => '本店', 'short_sentences' => '概要']);
         $other = CustomPageEntry::queryFor($type)->create(['title' => '支店', 'short_sentences' => '概要']);
@@ -179,7 +179,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_edit_screen_shows_saved_values(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $form = $this->createForm($type, '材料', CustomFormType::Text);
         $checkbox = $this->createForm($type, 'タグ', CustomFormType::Checkbox, ['和食', '洋食'], 1);
@@ -197,7 +197,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_index_lists_entries_and_destroy_soft_deletes_related_rows(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $form = $this->createForm($type, '材料', CustomFormType::Text);
         $entry = CustomPageEntry::queryFor($type)->create(['title' => '肉じゃが', 'content' => '<p>本文</p>', 'approval' => ArticleApprovalStatus::Published]);
@@ -214,7 +214,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_deleted_type_pages_are_not_found(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $type->delete();
 
@@ -223,7 +223,7 @@ class CustomPageEntryControllerTest extends TestCase
 
     public function test_create_screen_uses_date_picker_and_shows_one_empty_detail_row(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('shop', CustomPageBaseType::SinglePage);
         $date = $this->createForm($type, '開店日', CustomFormType::Date);
 

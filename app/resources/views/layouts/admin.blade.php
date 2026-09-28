@@ -62,9 +62,10 @@
                     </li>
                 </ul>
 
+                {{-- カスタムページ管理: 種類の管理と、登録した種類ごとのページ一覧(スーパー管理者のみ) --}}
+                @can('manage-custom-pages')
                 <hr class="admin-sidebar-divider">
 
-                {{-- カスタムページ管理: 種類の管理と、登録した種類ごとのページ一覧 --}}
                 <div class="admin-sidebar-heading">{{ __('カスタムページ管理') }}</div>
                 <ul class="nav flex-column admin-sidebar-nav">
                     <li class="nav-item">
@@ -80,6 +81,7 @@
                         </li>
                     @endforeach
                 </ul>
+                @endcan
             </aside>
 
             <div class="d-flex flex-column flex-grow-1 min-vh-100">
