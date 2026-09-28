@@ -171,6 +171,23 @@ class CustomPageTypeControllerTest extends TestCase
         $response->assertSee(route('admin.custom-pages.entries.index', $type), false);
     }
 
+    public function test_rolling_back_the_migration_drops_tables_of_all_types(): void
+    {
+        $active = $this->createTypeWithTables('recipe');
+        $deleted = $this->createTypeWithTables('shop', CustomPageBaseType::SinglePage);
+        $deleted->delete();
+        $migration = require database_path('migrations/2026_09_28_000004_create_custom_page_types_table.php');
+
+        $migration->down();
+
+        // 論理削除済みの種類のテーブルも含めて削除し、どの種類にも紐づかないテーブルを残さない
+        foreach ([...$active->tableNames(), ...$deleted->tableNames(), 'custom_page_types'] as $table) {
+            $this->assertFalse(Schema::hasTable($table), "{$table} が残っています。");
+        }
+
+        $migration->up();
+    }
+
     private function createTypeWithTables(string $name, CustomPageBaseType $baseType = CustomPageBaseType::Article): CustomPageType
     {
         $type = CustomPageType::factory()->create(['name' => $name, 'base_type' => $baseType]);

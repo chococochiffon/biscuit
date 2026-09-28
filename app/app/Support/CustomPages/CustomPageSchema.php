@@ -45,7 +45,8 @@ class CustomPageSchema
     }
 
     /**
-     * 種類ごとのテーブルを削除する(種類の登録に失敗したときの後始末用。種類の削除では使わない)。
+     * 種類ごとのテーブルを削除する(種類の登録に失敗したときの後始末と、custom_page_types のマイグレーションの取り消し用。
+     * 種類の削除(論理削除)では使わない)。
      */
     public function drop(CustomPageType $type): void
     {
