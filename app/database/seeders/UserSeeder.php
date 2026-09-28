@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\UserDetail;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UserSeeder extends Seeder
@@ -24,7 +25,8 @@ class UserSeeder extends Seeder
     /**
      * 初期ユーザーと、そのユーザー詳細・スキルを登録する。
      * アイコン画像は database/seeders/images/user_icon.png を、管理画面からのアップロードと同じく中央を正方形に切り抜いて保存する。
-     * 同じメールアドレスのユーザーが登録済みの場合はそのユーザーを登録しない(再実行で重複させない)。
+     * 同じメールアドレスのユーザーが登録済みの場合はユーザーを登録せず、ユーザー詳細がなければ詳細・スキルだけを追加する
+     * (再実行で重複させない。ユーザー詳細の導入前に登録したユーザーにも詳細を付ける)。
      * 登録の前に、どのユーザー詳細からも参照されていないアイコン画像を削除する(migrate:refresh --seed のたびに古い画像がたまらないようにする)。
      */
     public function run(): void
@@ -64,7 +66,8 @@ class UserSeeder extends Seeder
     }
 
     /**
-     * ユーザーとユーザー詳細(アイコン画像を含む)・スキルを登録する。
+     * ユーザーとユーザー詳細(アイコン画像を含む)・スキルをまとめて登録する(途中で失敗したら全体を取り消す)。
+     * ユーザーが登録済みなら詳細・スキルだけを追加し、詳細も登録済みなら何もしない。
      *
      * @param  array{name: string, email: string}  $user
      * @param  array<string, mixed>  $detail
@@ -72,18 +75,22 @@ class UserSeeder extends Seeder
      */
     private function createUser(array $user, array $detail, array $skills = []): void
     {
-        if (User::query()->where('email', $user['email'])->exists()) {
-            return;
-        }
+        DB::transaction(function () use ($user, $detail, $skills) {
+            $model = User::query()->where('email', $user['email'])->first() ?? User::factory()->create($user);
 
-        $userDetail = User::factory()->create($user)->detail()->create($detail + ['comment' => self::COMMENT]);
+            if ($model->detail()->exists()) {
+                return;
+            }
 
-        $filename = 'user_icon.png';
-        $userDetail->update([
-            'user_image' => $userDetail->storeUserImage(new UploadedFile(DefaultImageSeeder::sourcePath($filename), $filename, null, null, true)),
-        ]);
+            $userDetail = $model->detail()->create($detail + ['comment' => self::COMMENT]);
 
-        $userDetail->skills()->createMany($skills);
+            $filename = 'user_icon.png';
+            $userDetail->update([
+                'user_image' => $userDetail->storeUserImage(new UploadedFile(DefaultImageSeeder::sourcePath($filename), $filename, null, null, true)),
+            ]);
+
+            $userDetail->skills()->createMany($skills);
+        });
     }
 
     /**

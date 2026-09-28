@@ -65,6 +65,33 @@ class UserSeederTest extends TestCase
         $this->assertCount(2, Storage::disk('public')->files(UserDetail::USER_IMAGE_DIRECTORY));
     }
 
+    public function test_adds_details_to_existing_user_without_details(): void
+    {
+        Storage::fake('public');
+        // ユーザー詳細の導入前のシーダーで登録された Test User
+        $existing = User::factory()->create(['name' => 'Test User', 'email' => 'test@example.com']);
+
+        $this->seed(UserSeeder::class);
+
+        $this->assertSame(1, User::where('email', 'test@example.com')->count());
+        $this->assertSame('Test', $existing->fresh()->detail->first_name);
+        $this->assertNotNull($existing->fresh()->detail->user_image);
+    }
+
+    public function test_keeps_existing_user_details_and_skills(): void
+    {
+        Storage::fake('public');
+        $detail = UserDetail::factory()
+            ->for(User::factory()->state(['email' => 'chococo.chiffon@gmail.com']))
+            ->create(['nick_name' => '変更済み']);
+
+        $this->seed(UserSeeder::class);
+
+        $this->assertSame(1, $detail->user->detail()->count());
+        $this->assertSame('変更済み', $detail->fresh()->nick_name);
+        $this->assertCount(0, $detail->fresh()->skills);
+    }
+
     public function test_deletes_icon_files_left_after_database_refresh(): void
     {
         Storage::fake('public');
