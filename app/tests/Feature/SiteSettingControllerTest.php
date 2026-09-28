@@ -421,6 +421,70 @@ class SiteSettingControllerTest extends TestCase
         ]);
     }
 
+    public function test_store_creates_tile_list_and_accordion_call_contents_at_top(): void
+    {
+        $this->actingAsAdmin();
+        $galleryRelation = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Custom,
+            'model_name' => 'GalleryImage',
+            'table_name' => 'gallery_images',
+        ]);
+        $questionAnswerRelation = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Custom,
+            'model_name' => 'QuestionAnswer',
+            'table_name' => 'question_answers',
+        ]);
+
+        $response = $this->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::TileList->value,
+                    'call_name' => 'ギャラリー',
+                    'content_model_relation_id' => $galleryRelation->id,
+                    'view_count' => 12,
+                    'place' => CallContentPlace::Top->value,
+                ],
+                [
+                    'call_type' => CallType::Accordion->value,
+                    'call_name' => 'よくある質問',
+                    'content_model_relation_id' => $questionAnswerRelation->id,
+                    'view_count' => 5,
+                    'place' => CallContentPlace::Top->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('call_contents', ['call_type' => CallType::TileList->value, 'content_model_relation_id' => $galleryRelation->id, 'view_count' => 12]);
+        $this->assertDatabaseHas('call_contents', ['call_type' => CallType::Accordion->value, 'content_model_relation_id' => $questionAnswerRelation->id, 'view_count' => 5]);
+    }
+
+    public function test_store_rejects_tile_list_call_content_outside_top(): void
+    {
+        $this->actingAsAdmin();
+        $relation = ContentModelRelation::factory()->create([
+            'content_type' => CallContentType::Custom,
+            'model_name' => 'GalleryImage',
+            'table_name' => 'gallery_images',
+        ]);
+
+        $response = $this->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::TileList->value,
+                    'call_name' => 'ギャラリー',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 12,
+                    'place' => CallContentPlace::Others->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('call_contents.0.call_type');
+    }
+
     public function test_store_fails_when_archive_call_type_uses_a_relation_other_than_article(): void
     {
         $this->actingAsAdmin();

@@ -60,6 +60,28 @@ class CallContentSeeder extends Seeder
                 'place' => CallContentPlace::Top,
                 'sort_order' => 4,
             ],
+            // トップで、ギャラリー画像をタイル状に並べる枠
+            [
+                'call_name' => 'GalleryTileList',
+                'title' => 'Gallery',
+                'subtitle' => 'ギャラリー',
+                'call_type' => CallType::TileList,
+                'content_model_relation_id' => 4,
+                'view_count' => 12,
+                'place' => CallContentPlace::Top,
+                'sort_order' => 6,
+            ],
+            // トップで、簡易版の Q&A を開閉パネルで並べる枠
+            [
+                'call_name' => 'QuestionAnswerAccordion',
+                'title' => 'Q&A',
+                'subtitle' => 'よくある質問',
+                'call_type' => CallType::Accordion,
+                'content_model_relation_id' => 5,
+                'view_count' => 5,
+                'place' => CallContentPlace::Top,
+                'sort_order' => 7,
+            ],
         ];
 
         foreach ($callContents as $callContent) {

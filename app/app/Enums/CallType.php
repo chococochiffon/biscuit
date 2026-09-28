@@ -12,6 +12,8 @@ enum CallType: int
     case Link = 4;
     case Archive = 5;
     case SkillList = 6;
+    case TileList = 7;
+    case Accordion = 8;
 
     /**
      * 表示用のラベルを取得する(現在の言語設定に応じて翻訳される)。
@@ -25,6 +27,8 @@ enum CallType: int
             self::Link => __('リンク'),
             self::Archive => __('アーカイブ'),
             self::SkillList => __('スキルリスト'),
+            self::TileList => __('タイルリスト'),
+            self::Accordion => __('開閉パネル'),
         };
     }
 
@@ -49,6 +53,8 @@ enum CallType: int
                 'Article' => [self::Link, self::Archive],
                 'SinglePage' => [self::ShortSentence, self::LinkList, self::Link],
                 'UserDetail' => [self::LinkList, self::SkillList],
+                'GalleryImage' => [self::TileList],
+                'QuestionAnswer' => [self::Accordion],
             ],
             CallContentPlace::Inside->value => [
                 'Article' => [self::OriginalText],
@@ -111,7 +117,7 @@ enum CallType: int
     {
         return match ($this) {
             self::ShortSentence, self::OriginalText, self::Link => true,
-            self::LinkList, self::Archive, self::SkillList => false,
+            self::LinkList, self::Archive, self::SkillList, self::TileList, self::Accordion => false,
         };
     }
 

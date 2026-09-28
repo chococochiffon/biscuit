@@ -4,6 +4,8 @@ use App\Http\Controllers\AdministratorController;
 use App\Http\Controllers\ArticleController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
+use App\Http\Controllers\GalleryCategoryController;
+use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
@@ -31,7 +33,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('logout');
 });
 
-// 管理画面(ログインが必要なルート)。独自ルート(tags/search・articles/bulk-approval・single-pages/reorder など)は
+// 管理画面(ログインが必要なルート)。独自ルート(tags/search・articles/bulk-approval・single-pages/reorder・gallery-images/reorder など)は
 // 対応する Route::resource より前に置き、/admin/{administrator} が他の /admin/* を飲み込む管理者の resource は最後に置く
 Route::middleware('auth:admin')->group(function () {
     Route::get('admin/tags/search', [TagController::class, 'search'])
@@ -72,6 +74,20 @@ Route::middleware('auth:admin')->group(function () {
         ->parameters(['single-pages' => 'singlePage'])
         ->except(['show'])
         ->names('admin.single-pages');
+
+    Route::get('admin/gallery-categories', [GalleryCategoryController::class, 'edit'])
+        ->name('admin.gallery-categories.edit');
+
+    Route::put('admin/gallery-categories', [GalleryCategoryController::class, 'update'])
+        ->name('admin.gallery-categories.update');
+
+    Route::patch('admin/gallery-images/reorder', [GalleryImageController::class, 'reorder'])
+        ->name('admin.gallery-images.reorder');
+
+    Route::resource('admin/gallery-images', GalleryImageController::class)
+        ->parameters(['gallery-images' => 'galleryImage'])
+        ->except(['show'])
+        ->names('admin.gallery-images');
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)
         ->parameters(['question-answers' => 'questionAnswer'])

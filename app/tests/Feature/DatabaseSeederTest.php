@@ -5,9 +5,11 @@ namespace Tests\Feature;
 use App\Enums\CallContentPlace;
 use App\Models\Article;
 use App\Models\CallContent;
+use App\Models\GalleryImage;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Models\TopSliderImage;
+use Database\Seeders\GallerySeeder;
 use Database\Seeders\TopSliderImageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -37,6 +39,11 @@ class DatabaseSeederTest extends TestCase
             $this->assertSame([1920, 1080], array_slice(getimagesizefromstring(Storage::disk('public')->get($sliderImage->top_image)), 0, 2));
         }
 
+        $galleryImages = GalleryImage::query()->with('category')->ordered()->get();
+        $this->assertCount(4, $galleryImages);
+        $this->assertSame(['イラスト', 'イラスト', 'イラスト', 'バナー'], $galleryImages->pluck('category.name')->all());
+        Storage::disk('public')->assertExists($galleryImages->pluck('image')->all());
+
         $this->assertSame(['/information/about'], SinglePage::query()->pluck('path')->all());
         $this->assertSame(3, Article::query()->whereNotNull('path')->count());
 
@@ -62,7 +69,7 @@ class DatabaseSeederTest extends TestCase
         }
 
         $this->assertSame(
-            ['SinglePage', 'UserSkill', 'ArticleArchive'],
+            ['SinglePage', 'UserSkill', 'ArticleArchive', 'GalleryTileList', 'QuestionAnswerAccordion'],
             $callContents->where('place', CallContentPlace::Top)->pluck('call_name')->values()->all()
         );
     }
@@ -110,5 +117,20 @@ class DatabaseSeederTest extends TestCase
             TopSliderImage::query()->pluck('top_image')->all(),
             $disk->files('image/top_image')
         );
+    }
+
+    public function test_gallery_seeder_does_not_duplicate_and_deletes_unreferenced_image_files(): void
+    {
+        Storage::fake('public');
+        $disk = Storage::disk('public');
+        // migrate:refresh 後と同じく、レコードはなく前回のファイルだけが残っている状態
+        $disk->put(GalleryImage::IMAGE_DIRECTORY.'/old.png', 'old');
+
+        $this->seed(GallerySeeder::class);
+        $this->seed(GallerySeeder::class);
+
+        $disk->assertMissing(GalleryImage::IMAGE_DIRECTORY.'/old.png');
+        $this->assertSame(4, GalleryImage::count());
+        $this->assertEqualsCanonicalizing(GalleryImage::query()->pluck('image')->all(), $disk->files(GalleryImage::IMAGE_DIRECTORY));
     }
 }

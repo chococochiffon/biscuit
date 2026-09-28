@@ -3,6 +3,8 @@
 namespace App\Http\Resources;
 
 use App\Models\Article;
+use App\Models\GalleryImage;
+use App\Models\QuestionAnswer;
 use App\Models\SinglePage;
 use App\Models\UserDetail;
 use App\Support\CallContentResolver;
@@ -33,7 +35,7 @@ class CallContentResource extends JsonResource
      * Transform the resource into an array.
      * フロントエンドが表示方法を切り替えるための call_type(例: link_list)・call_name(管理用ラベル)、
      * 公開側で表示する見出し title・小見出し subtitle(未設定は null)と、
-     * table_name(例: articles/single_pages/user_details)をキーにした解決済みの実データを返す。
+     * table_name(例: articles/single_pages/user_details/gallery_images/question_answers)をキーにした解決済みの実データを返す。
      *
      * @return array<string, mixed>
      */
@@ -49,7 +51,7 @@ class CallContentResource extends JsonResource
     }
 
     /**
-     * call_type/model_name/place(とページの本文)を元にArticle/SinglePage/UserDetailの実データを解決し、整形する。
+     * call_type/model_name/place(とページの本文)を元にArticle/SinglePage/UserDetail/GalleryImage/QuestionAnswerの実データを解決し、整形する。
      */
     private function resolveData(): mixed
     {
@@ -75,6 +77,8 @@ class CallContentResource extends JsonResource
             $items->first() instanceof Article => ArticleResource::collection($items),
             $items->first() instanceof SinglePage => SinglePageResource::collection($items),
             $items->first() instanceof UserDetail => UserDetailResource::collection($items),
+            $items->first() instanceof GalleryImage => GalleryImageResource::collection($items),
+            $items->first() instanceof QuestionAnswer => QuestionAnswerResource::collection($items),
             default => [],
         };
     }

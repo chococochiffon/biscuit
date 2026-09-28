@@ -265,6 +265,13 @@ return [
         // Q&A(入れ子の質問・回答の項目名は ValidatesQuestionAnswer::attributes() で指定する)
         'short_question_text' => '質問(簡易版)',
         'short_answer_text' => '回答(簡易版)',
+
+        // ギャラリー
+        'gallery_category_id' => '分類',
+        'comment' => 'コメント',
+        'categories' => '分類',
+        'categories.*.id' => '分類',
+        'categories.*.name' => '分類名',
     ],
 
 ];
