@@ -11,11 +11,11 @@ use Illuminate\Database\Eloquent\Collection;
 class ArticleContentSource
 {
     /**
-     * 原文表示用に、最新の公開済み記事を1件取得する。
+     * 原文表示用に、最新(公開開始日時が最も新しい)の公開済み記事を1件取得する。
      */
     public function getOriginalText(): ?Article
     {
-        return Article::query()->published()->latest()->first();
+        return Article::query()->published()->newest()->first();
     }
 
     /**
@@ -25,7 +25,7 @@ class ArticleContentSource
      */
     public function getLinkList(int $count): Collection
     {
-        return Article::query()->published()->latest()->take($count)->get();
+        return Article::query()->published()->newest()->take($count)->get();
     }
 
     /**
@@ -33,7 +33,7 @@ class ArticleContentSource
      */
     public function getLink(): ?Article
     {
-        return Article::query()->published()->latest()->first();
+        return Article::query()->published()->newest()->first();
     }
 
     /**
@@ -43,6 +43,6 @@ class ArticleContentSource
      */
     public function getArchive(int $count): Collection
     {
-        return Article::query()->published()->latest()->take($count)->get();
+        return Article::query()->published()->newest()->take($count)->get();
     }
 }
