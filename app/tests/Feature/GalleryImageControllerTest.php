@@ -32,6 +32,63 @@ class GalleryImageControllerTest extends TestCase
         $response->assertSeeInOrder(['1番目', '風景', '2番目', '未分類']);
     }
 
+    public function test_index_filters_by_category_and_disables_reorder(): void
+    {
+        $this->actingAsAdmin();
+        $landscape = GalleryCategory::factory()->create(['name' => '風景']);
+        GalleryImage::factory()->for($landscape, 'category')->create(['name' => '海辺']);
+        GalleryImage::factory()->for(GalleryCategory::factory(), 'category')->create(['name' => '料理の写真']);
+        GalleryImage::factory()->create(['name' => '分類なしの写真']);
+
+        $response = $this->get(route('admin.gallery-images.index', ['category' => $landscape->id]));
+
+        $response->assertOk();
+        $response->assertSee('海辺');
+        $response->assertDontSee('料理の写真');
+        $response->assertDontSee('分類なしの写真');
+        $response->assertDontSee('gallery-image-reorder-form');
+        $response->assertSee('絞り込み中は並び替えできません。');
+    }
+
+    public function test_index_filters_uncategorized_images(): void
+    {
+        $this->actingAsAdmin();
+        GalleryImage::factory()->for(GalleryCategory::factory(), 'category')->create(['name' => '料理の写真']);
+        GalleryImage::factory()->create(['name' => '分類なしの写真']);
+
+        $response = $this->get(route('admin.gallery-images.index', ['category' => 'none']));
+
+        $response->assertOk();
+        $response->assertSee('分類なしの写真');
+        $response->assertDontSee('料理の写真');
+    }
+
+    public function test_index_ignores_invalid_category_and_keeps_reorder(): void
+    {
+        $this->actingAsAdmin();
+        GalleryImage::factory()->for(GalleryCategory::factory(), 'category')->create(['name' => '料理の写真']);
+        GalleryImage::factory()->create(['name' => '分類なしの写真']);
+
+        $response = $this->get(route('admin.gallery-images.index', ['category' => 'invalid']));
+
+        $response->assertOk();
+        $response->assertSee('料理の写真');
+        $response->assertSee('分類なしの写真');
+        $response->assertSee('gallery-image-reorder-form');
+    }
+
+    public function test_index_pagination_links_keep_category_filter(): void
+    {
+        $this->actingAsAdmin();
+        config(['limits.admin_per_page' => 1]);
+        $category = GalleryCategory::factory()->create();
+        GalleryImage::factory()->for($category, 'category')->count(2)->create();
+
+        $response = $this->get(route('admin.gallery-images.index', ['category' => $category->id]));
+
+        $response->assertSee(e(route('admin.gallery-images.index', ['category' => $category->id, 'page' => 2])), false);
+    }
+
     public function test_create_screen_lists_categories_in_sort_order(): void
     {
         $this->actingAsAdmin();
