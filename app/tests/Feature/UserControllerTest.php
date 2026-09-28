@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class UserControllerTest extends TestCase
@@ -97,19 +98,20 @@ class UserControllerTest extends TestCase
             'password_confirmation' => 'password123',
             'user_detail' => $this->validUserDetailPayload([
                 'skills' => [
-                    ['name' => 'Frontend', 'level' => 74],
-                    ['name' => 'Backend API', 'level' => 98],
+                    ['name' => 'Frontend', 'level' => 3],
+                    ['name' => 'Backend API', 'level' => 5],
                 ],
             ]),
         ])->assertSessionHasNoErrors();
 
         $skills = User::where('email', 'skill-user@example.com')->firstOrFail()->detail->skills;
         $this->assertSame(['Frontend', 'Backend API'], $skills->pluck('name')->all());
-        $this->assertSame([74, 98], $skills->pluck('level')->all());
+        $this->assertSame([3, 5], $skills->pluck('level')->all());
         $this->assertSame([0, 1], $skills->pluck('sort_order')->all());
     }
 
-    public function test_store_rejects_skill_level_out_of_range(): void
+    #[DataProvider('outOfRangeSkillLevels')]
+    public function test_store_rejects_skill_level_out_of_range(int $level): void
     {
         $this->actingAsAdmin();
 
@@ -119,7 +121,7 @@ class UserControllerTest extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'user_detail' => $this->validUserDetailPayload([
-                'skills' => [['name' => '上限超え', 'level' => 101]],
+                'skills' => [['name' => '範囲外', 'level' => $level]],
             ]),
         ]);
 
@@ -127,11 +129,24 @@ class UserControllerTest extends TestCase
         $this->assertDatabaseCount('user_skills', 0);
     }
 
+    /**
+     * 習熟度(1〜5)の範囲外の値。
+     *
+     * @return array<string, array{int}>
+     */
+    public static function outOfRangeSkillLevels(): array
+    {
+        return [
+            '下限未満' => [0],
+            '上限超え' => [6],
+        ];
+    }
+
     public function test_update_syncs_skills_creating_updating_and_deleting_rows(): void
     {
         $this->actingAsAdmin();
         $target = User::factory()->has(UserDetail::factory(), 'detail')->create();
-        $kept = UserSkill::factory()->for($target->detail)->create(['name' => '旧スキル', 'level' => 10, 'sort_order' => 0]);
+        $kept = UserSkill::factory()->for($target->detail)->create(['name' => '旧スキル', 'level' => 1, 'sort_order' => 0]);
         $removed = UserSkill::factory()->for($target->detail)->create(['sort_order' => 1]);
 
         $this->put(route('admin.users.update', $target), [
@@ -139,15 +154,15 @@ class UserControllerTest extends TestCase
             'email' => $target->email,
             'user_detail' => $this->validUserDetailPayload([
                 'skills' => [
-                    ['name' => '新スキル', 'level' => 50, 'sort_order' => 0],
-                    ['id' => $kept->id, 'name' => '更新スキル', 'level' => 80, 'sort_order' => 1],
+                    ['name' => '新スキル', 'level' => 2, 'sort_order' => 0],
+                    ['id' => $kept->id, 'name' => '更新スキル', 'level' => 4, 'sort_order' => 1],
                 ],
             ]),
         ])->assertSessionHasNoErrors();
 
         $kept->refresh();
         $this->assertSame('更新スキル', $kept->name);
-        $this->assertSame(80, $kept->level);
+        $this->assertSame(4, $kept->level);
         $this->assertSame(1, $kept->sort_order);
         $this->assertSoftDeleted($removed);
         $this->assertDatabaseHas('user_skills', ['user_detail_id' => $target->detail->id, 'name' => '新スキル', 'sort_order' => 0]);

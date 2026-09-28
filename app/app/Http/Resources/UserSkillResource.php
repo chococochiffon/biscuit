@@ -9,7 +9,7 @@ class UserSkillResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
-     * level は習熟度(0〜100)。
+     * level は習熟度(1〜5 の 5 段階)。
      *
      * @return array<string, mixed>
      */

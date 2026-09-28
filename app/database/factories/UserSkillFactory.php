@@ -21,7 +21,7 @@ class UserSkillFactory extends Factory
         return [
             'user_detail_id' => UserDetail::factory(),
             'name' => fake()->word(),
-            'level' => fake()->numberBetween(0, UserSkill::MAX_LEVEL),
+            'level' => fake()->numberBetween(UserSkill::MIN_LEVEL, UserSkill::MAX_LEVEL),
             'sort_order' => 0,
         ];
     }

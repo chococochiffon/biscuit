@@ -33,17 +33,13 @@
     </div>
 
     <div class="col-auto">
-        <label class="form-label small">{{ __('習熟度(0〜100)') }}</label>
-        <input
-            type="number"
-            name="user_detail[skills][{{ $index }}][level]"
-            value="{{ $level }}"
-            min="0"
-            max="{{ \App\Models\UserSkill::MAX_LEVEL }}"
-            class="form-control form-control-sm"
-            style="width: 7rem;"
-            required
-        >
+        <label class="form-label small">{{ __('習熟度') }}</label>
+        <select name="user_detail[skills][{{ $index }}][level]" class="form-select form-select-sm form-select-auto" required>
+            <option value="" disabled @selected(blank($level))>{{ __('選択してください') }}</option>
+            @for ($value = \App\Models\UserSkill::MIN_LEVEL; $value <= \App\Models\UserSkill::MAX_LEVEL; $value++)
+                <option value="{{ $value }}" @selected((string) $level === (string) $value)>{{ $value }}</option>
+            @endfor
+        </select>
     </div>
 
     <div class="col-auto">
