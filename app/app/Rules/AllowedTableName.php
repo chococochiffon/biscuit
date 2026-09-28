@@ -13,7 +13,7 @@ class AllowedTableName implements ValidationRule
      *
      * @var array<int, string>
      */
-    public const ALLOWED_TABLE_NAMES = ['articles', 'single_pages', 'user_details'];
+    public const ALLOWED_TABLE_NAMES = ['articles', 'single_pages', 'user_details', 'gallery_images', 'question_answers'];
 
     /**
      * ユーザーが動的作成したテーブルを示す接頭辞。

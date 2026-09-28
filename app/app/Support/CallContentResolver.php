@@ -6,6 +6,8 @@ use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use App\Models\CallContent;
 use App\Support\CallContent\ArticleContentSource;
+use App\Support\CallContent\GalleryImageContentSource;
+use App\Support\CallContent\QuestionAnswerContentSource;
 use App\Support\CallContent\SinglePageContentSource;
 use App\Support\CallContent\UserDetailContentSource;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
@@ -14,7 +16,7 @@ use InvalidArgumentException;
 
 /**
  * 呼び出しコンテンツ(CallContent)のmodel_name/call_type/placeから、
- * 実際に表示するArticle/SinglePage/UserDetailのデータを解決する。
+ * 実際に表示するArticle/SinglePage/UserDetail/GalleryImage/QuestionAnswerのデータを解決する。
  * 設置場所(place)ごとにモデルごとの許可されたcall_typeが異なり(CallType::supports()で判定)、
  * 許可されていない組み合わせが渡された場合は例外を投げる。
  */
@@ -24,6 +26,8 @@ class CallContentResolver
         private readonly ArticleContentSource $articleContentSource = new ArticleContentSource,
         private readonly SinglePageContentSource $singlePageContentSource = new SinglePageContentSource,
         private readonly UserDetailContentSource $userDetailContentSource = new UserDetailContentSource,
+        private readonly GalleryImageContentSource $galleryImageContentSource = new GalleryImageContentSource,
+        private readonly QuestionAnswerContentSource $questionAnswerContentSource = new QuestionAnswerContentSource,
     ) {}
 
     /**
@@ -44,6 +48,8 @@ class CallContentResolver
             'Article' => $this->resolveArticle($callContent),
             'SinglePage' => $this->resolveSinglePage($callContent),
             'UserDetail' => $this->resolveUserDetail($callContent),
+            'GalleryImage' => $this->resolveGalleryImage($callContent),
+            'QuestionAnswer' => $this->resolveQuestionAnswer($callContent),
             default => throw new InvalidArgumentException(
                 "未対応のmodel_nameです: {$callContent->contentModelRelation->model_name}"
             ),
@@ -104,6 +110,26 @@ class CallContentResolver
             CallType::LinkList => $this->userDetailContentSource->getLinkList($callContent->view_count),
             CallType::SkillList => $this->userDetailContentSource->getSkillList($callContent->view_count),
             default => throw $this->unsupportedCallType($callContent, 'UserDetail'),
+        };
+    }
+
+    private function resolveGalleryImage(CallContent $callContent): EloquentCollection
+    {
+        $this->assertSupported($callContent, 'GalleryImage');
+
+        return match ($callContent->call_type) {
+            CallType::TileList => $this->galleryImageContentSource->getTileList($callContent->view_count),
+            default => throw $this->unsupportedCallType($callContent, 'GalleryImage'),
+        };
+    }
+
+    private function resolveQuestionAnswer(CallContent $callContent): EloquentCollection
+    {
+        $this->assertSupported($callContent, 'QuestionAnswer');
+
+        return match ($callContent->call_type) {
+            CallType::Accordion => $this->questionAnswerContentSource->getAccordion($callContent->view_count),
+            default => throw $this->unsupportedCallType($callContent, 'QuestionAnswer'),
         };
     }
 

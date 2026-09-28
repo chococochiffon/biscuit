@@ -8,6 +8,9 @@ use App\Enums\CallType;
 use App\Models\Article;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use App\Models\GalleryCategory;
+use App\Models\GalleryImage;
+use App\Models\QuestionAnswer;
 use App\Models\SinglePage;
 use App\Models\UserDetail;
 use App\Models\UserSkill;
@@ -25,6 +28,8 @@ class CallContentControllerTest extends TestCase
         'Article' => 'articles',
         'SinglePage' => 'single_pages',
         'UserDetail' => 'user_details',
+        'GalleryImage' => 'gallery_images',
+        'QuestionAnswer' => 'question_answers',
     ];
 
     private function relation(string $modelName): ContentModelRelation
@@ -297,5 +302,37 @@ class CallContentControllerTest extends TestCase
         $response = $this->getJson(route('call-contents.index'));
 
         $response->assertStatus(500);
+    }
+
+    public function test_index_returns_gallery_images_and_simple_question_answers_at_top(): void
+    {
+        $galleryImage = GalleryImage::factory()->for(GalleryCategory::factory()->state(['name' => '風景']), 'category')->create(['name' => '海辺']);
+        $questionAnswer = QuestionAnswer::factory()->create(['short_question_text' => '質問', 'short_answer_text' => '回答']);
+        CallContent::factory()->create([
+            'call_type' => CallType::TileList,
+            'place' => CallContentPlace::Top,
+            'view_count' => 12,
+            'sort_order' => 0,
+            'content_model_relation_id' => $this->relation('GalleryImage')->id,
+        ]);
+        CallContent::factory()->create([
+            'call_type' => CallType::Accordion,
+            'place' => CallContentPlace::Top,
+            'view_count' => 5,
+            'sort_order' => 1,
+            'content_model_relation_id' => $this->relation('QuestionAnswer')->id,
+        ]);
+
+        $response = $this->getJson(route('call-contents.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.call_type', 'tile_list');
+        $response->assertJsonPath('data.0.gallery_images.0.id', $galleryImage->id);
+        $response->assertJsonPath('data.0.gallery_images.0.name', '海辺');
+        $response->assertJsonPath('data.0.gallery_images.0.category.name', '風景');
+        $response->assertJsonPath('data.1.call_type', 'accordion');
+        $response->assertJsonPath('data.1.question_answers.0.id', $questionAnswer->id);
+        $response->assertJsonPath('data.1.question_answers.0.short_question_text', '質問');
+        $response->assertJsonPath('data.1.question_answers.0.short_answer_text', '回答');
     }
 }

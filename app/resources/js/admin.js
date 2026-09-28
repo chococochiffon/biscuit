@@ -12,6 +12,7 @@ import { initPathPreview, initDateTimePickers } from './admin/forms.js';
 import { initImageDropzones, initImageCroppers } from './admin/images.js';
 import { initArticleApprovalControls } from './admin/articles.js';
 import { initQuestionAnswerForm, initQuestionAnswerFlows } from './admin/question-answers.js';
+import { initGalleryImageReorder } from './admin/gallery-images.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
@@ -29,4 +30,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initArticleApprovalControls();
     initQuestionAnswerForm();
     initQuestionAnswerFlows();
+    initGalleryImageReorder();
 });

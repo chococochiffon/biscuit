@@ -7,6 +7,8 @@ use App\Enums\CallType;
 use App\Models\Article;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use App\Models\GalleryImage;
+use App\Models\QuestionAnswer;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use App\Models\UserDetail;
@@ -219,6 +221,59 @@ class CallContentResolverTest extends TestCase
 
         $this->assertInstanceOf(EloquentCollection::class, $result);
         $this->assertCount(2, $result);
+    }
+
+    // --- GalleryImage ---
+
+    public function test_gallery_image_tile_list_resolves_images_in_sort_order_up_to_view_count(): void
+    {
+        $third = GalleryImage::factory()->create(['sort_order' => 2]);
+        $first = GalleryImage::factory()->create(['sort_order' => 0]);
+        $second = GalleryImage::factory()->create(['sort_order' => 1]);
+        $callContent = CallContent::factory()->create([
+            'call_type' => CallType::TileList,
+            'content_model_relation_id' => $this->relation('GalleryImage')->id,
+            'place' => CallContentPlace::Top,
+            'view_count' => 2,
+        ]);
+
+        $result = (new CallContentResolver)->resolve($callContent);
+
+        $this->assertSame([$first->id, $second->id], $result->pluck('id')->all());
+        $this->assertFalse($result->contains($third));
+    }
+
+    // --- QuestionAnswer ---
+
+    public function test_question_answer_accordion_resolves_only_simple_question_answers_up_to_view_count(): void
+    {
+        $first = QuestionAnswer::factory()->create(['short_question_text' => '質問1', 'short_answer_text' => '回答1']);
+        QuestionAnswer::factory()->create(['short_question_text' => null, 'short_answer_text' => null]); // 分岐ありは対象外
+        $second = QuestionAnswer::factory()->create(['short_question_text' => '質問2', 'short_answer_text' => '回答2']);
+        QuestionAnswer::factory()->create(['short_question_text' => '質問3', 'short_answer_text' => '回答3']);
+        $callContent = CallContent::factory()->create([
+            'call_type' => CallType::Accordion,
+            'content_model_relation_id' => $this->relation('QuestionAnswer')->id,
+            'place' => CallContentPlace::Top,
+            'view_count' => 2,
+        ]);
+
+        $result = (new CallContentResolver)->resolve($callContent);
+
+        $this->assertSame([$first->id, $second->id], $result->pluck('id')->all());
+    }
+
+    public function test_tile_list_is_not_allowed_outside_top(): void
+    {
+        $callContent = CallContent::factory()->create([
+            'call_type' => CallType::TileList,
+            'content_model_relation_id' => $this->relation('GalleryImage')->id,
+            'place' => CallContentPlace::Others,
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        (new CallContentResolver)->resolve($callContent);
     }
 
     // --- エラーケース ---
