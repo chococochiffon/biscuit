@@ -17,9 +17,14 @@ class UserSkill extends Model
     use HasFactory, HasSortOrder, SoftDeletes;
 
     /**
-     * 習熟度(level)の上限。0〜この値の範囲で入力する。
+     * 習熟度(level)の下限。
      */
-    public const MAX_LEVEL = 100;
+    public const MIN_LEVEL = 1;
+
+    /**
+     * 習熟度(level)の上限。MIN_LEVEL〜この値の 5 段階で入力する。
+     */
+    public const MAX_LEVEL = 5;
 
     /**
      * スキルが紐づくユーザー詳細を取得する。

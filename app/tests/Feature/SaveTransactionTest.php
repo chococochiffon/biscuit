@@ -58,7 +58,7 @@ class SaveTransactionTest extends TestCase
                 'nick_name' => 'たろう',
                 'birthday' => '2000-01-01',
                 'name_settings' => UserDetailNameSetting::FullName->value,
-                'skills' => [['name' => 'PHP', 'level' => 50]],
+                'skills' => [['name' => 'PHP', 'level' => 3]],
             ],
         ])->assertServerError();
 

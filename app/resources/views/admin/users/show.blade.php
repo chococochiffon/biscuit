@@ -44,7 +44,7 @@
                     @forelse ($user->detail->skills as $skill)
                         <div class="small">{{ $skill->name }}</div>
                         <div class="progress mb-2" role="progressbar" aria-label="{{ $skill->name }}" aria-valuenow="{{ $skill->level }}" aria-valuemin="0" aria-valuemax="{{ \App\Models\UserSkill::MAX_LEVEL }}" style="height: 6px;">
-                            <div class="progress-bar" style="width: {{ $skill->level }}%;"></div>
+                            <div class="progress-bar" style="width: {{ $skill->level / \App\Models\UserSkill::MAX_LEVEL * 100 }}%;"></div>
                         </div>
                     @empty
                         <span class="text-muted">{{ __('未登録') }}</span>

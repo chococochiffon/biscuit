@@ -234,8 +234,8 @@ class CallContentControllerTest extends TestCase
     public function test_index_includes_skills_in_sort_order_for_skill_list(): void
     {
         $userDetail = UserDetail::factory()->create(['view_flag' => true]);
-        UserSkill::factory()->for($userDetail)->create(['name' => 'Backend API', 'level' => 98, 'sort_order' => 1]);
-        UserSkill::factory()->for($userDetail)->create(['name' => 'Frontend', 'level' => 74, 'sort_order' => 0]);
+        UserSkill::factory()->for($userDetail)->create(['name' => 'Backend API', 'level' => 5, 'sort_order' => 1]);
+        UserSkill::factory()->for($userDetail)->create(['name' => 'Frontend', 'level' => 3, 'sort_order' => 0]);
         UserSkill::factory()->for($userDetail)->create(['name' => '削除済み', 'sort_order' => 2])->delete();
         CallContent::factory()->create([
             'call_type' => CallType::SkillList,
@@ -248,7 +248,7 @@ class CallContentControllerTest extends TestCase
         $response->assertOk();
         $response->assertJsonCount(2, 'data.0.user_details.0.skills');
         $response->assertJsonPath('data.0.user_details.0.skills.0.name', 'Frontend');
-        $response->assertJsonPath('data.0.user_details.0.skills.0.level', 74);
+        $response->assertJsonPath('data.0.user_details.0.skills.0.level', 3);
         $response->assertJsonPath('data.0.user_details.0.skills.1.name', 'Backend API');
     }
 

@@ -58,7 +58,7 @@ class StoreUserRequest extends FormRequest
                 Rule::exists('user_skills', 'id')->where('user_detail_id', $this->route('user')?->detail?->id),
             ],
             'user_detail.skills.*.name' => ['required', 'string', 'max:255'],
-            'user_detail.skills.*.level' => ['required', 'integer', 'min:0', 'max:'.UserSkill::MAX_LEVEL],
+            'user_detail.skills.*.level' => ['required', 'integer', 'min:'.UserSkill::MIN_LEVEL, 'max:'.UserSkill::MAX_LEVEL],
             'user_detail.skills.*.sort_order' => ['nullable', 'integer', 'min:0'],
         ];
     }
