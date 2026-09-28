@@ -11,61 +11,89 @@ class GalleryCategoryControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_edit_screen_displays_categories_in_sort_order(): void
+    public function test_index_returns_categories_in_sort_order(): void
     {
         $this->actingAsAdmin();
-        GalleryCategory::factory()->create(['name' => '料理', 'sort_order' => 1]);
-        GalleryCategory::factory()->create(['name' => '風景', 'sort_order' => 0]);
+        $second = GalleryCategory::factory()->create(['name' => '料理', 'sort_order' => 1]);
+        $first = GalleryCategory::factory()->create(['name' => '風景', 'sort_order' => 0]);
 
-        $response = $this->get(route('admin.gallery-categories.edit'));
+        $response = $this->getJson(route('admin.gallery-categories.index'));
 
         $response->assertOk();
-        $response->assertSeeInOrder(['風景', '料理']);
+        $this->assertSame([$first->id, $second->id], array_column($response->json(), 'id'));
+        $response->assertJsonPath('0.name', '風景');
     }
 
-    public function test_update_syncs_categories_creating_updating_and_deleting_rows(): void
+    public function test_store_creates_category_at_the_end(): void
     {
         $this->actingAsAdmin();
-        $kept = GalleryCategory::factory()->create(['name' => '風景', 'sort_order' => 0]);
-        $removed = GalleryCategory::factory()->create(['name' => '削除する分類', 'sort_order' => 1]);
-        $imageInKept = GalleryImage::factory()->for($kept, 'category')->create();
-        $imageInRemoved = GalleryImage::factory()->for($removed, 'category')->create();
+        GalleryCategory::factory()->create(['sort_order' => 4]);
 
-        $response = $this->put(route('admin.gallery-categories.update'), [
-            'categories' => [
-                ['name' => '料理', 'sort_order' => 0],
-                ['id' => $kept->id, 'name' => '景色', 'sort_order' => 1],
-            ],
-        ]);
+        $response = $this->postJson(route('admin.gallery-categories.store'), ['name' => '料理']);
 
-        $response->assertRedirect(route('admin.gallery-categories.edit'));
-        $this->assertSame(['料理', '景色'], GalleryCategory::query()->ordered()->pluck('name')->all());
-        $this->assertSoftDeleted($removed);
-        // 削除した分類の画像は未分類になり、残した分類の画像はそのまま
-        $this->assertNull($imageInRemoved->fresh()->gallery_category_id);
-        $this->assertSame($kept->id, $imageInKept->fresh()->gallery_category_id);
+        $response->assertCreated();
+        $response->assertJsonPath('name', '料理');
+        $this->assertSame(5, GalleryCategory::where('name', '料理')->firstOrFail()->sort_order);
     }
 
-    public function test_update_removes_all_categories_when_none_are_submitted(): void
+    public function test_store_rejects_duplicate_or_too_long_name(): void
+    {
+        $this->actingAsAdmin();
+        GalleryCategory::factory()->create(['name' => '風景']);
+        GalleryCategory::factory()->create(['name' => '削除済み'])->delete();
+
+        $this->postJson(route('admin.gallery-categories.store'), ['name' => '風景'])->assertJsonValidationErrors('name');
+        $this->postJson(route('admin.gallery-categories.store'), ['name' => str_repeat('あ', 129)])->assertJsonValidationErrors('name');
+        // 削除済みの分類と同じ名前は登録できる
+        $this->postJson(route('admin.gallery-categories.store'), ['name' => '削除済み'])->assertCreated();
+    }
+
+    public function test_update_renames_category(): void
+    {
+        $this->actingAsAdmin();
+        $category = GalleryCategory::factory()->create(['name' => '風景']);
+
+        $response = $this->putJson(route('admin.gallery-categories.update', $category), ['name' => '景色']);
+
+        $response->assertOk();
+        $this->assertSame('景色', $category->fresh()->name);
+        // 自分自身の名前のままでも更新できる
+        $this->putJson(route('admin.gallery-categories.update', $category), ['name' => '景色'])->assertOk();
+    }
+
+    public function test_destroy_soft_deletes_category_and_uncategorizes_its_images(): void
     {
         $this->actingAsAdmin();
         $category = GalleryCategory::factory()->create();
-        $galleryImage = GalleryImage::factory()->for($category, 'category')->create();
+        $other = GalleryCategory::factory()->create();
+        $image = GalleryImage::factory()->for($category, 'category')->create();
+        $otherImage = GalleryImage::factory()->for($other, 'category')->create();
 
-        $this->put(route('admin.gallery-categories.update'))->assertRedirect(route('admin.gallery-categories.edit'));
+        $this->deleteJson(route('admin.gallery-categories.destroy', $category))->assertNoContent();
 
         $this->assertSoftDeleted($category);
-        $this->assertNull($galleryImage->fresh()->gallery_category_id);
+        $this->assertNull($image->fresh()->gallery_category_id);
+        $this->assertSame($other->id, $otherImage->fresh()->gallery_category_id);
     }
 
-    public function test_update_requires_category_name(): void
+    public function test_reorder_saves_sort_order_in_submitted_order(): void
     {
         $this->actingAsAdmin();
+        $first = GalleryCategory::factory()->create(['sort_order' => 0]);
+        $second = GalleryCategory::factory()->create(['sort_order' => 1]);
 
-        $response = $this->put(route('admin.gallery-categories.update'), [
-            'categories' => [['name' => '']],
-        ]);
+        $this->patchJson(route('admin.gallery-categories.reorder'), ['order' => [$second->id, $first->id]])->assertNoContent();
 
-        $response->assertSessionHasErrors('categories.0.name');
+        $this->assertSame(0, $second->fresh()->sort_order);
+        $this->assertSame(1, $first->fresh()->sort_order);
+    }
+
+    public function test_reorder_rejects_deleted_category(): void
+    {
+        $this->actingAsAdmin();
+        $category = GalleryCategory::factory()->create();
+        $category->delete();
+
+        $this->patchJson(route('admin.gallery-categories.reorder'), ['order' => [$category->id]])->assertJsonValidationErrors('order.0');
     }
 }

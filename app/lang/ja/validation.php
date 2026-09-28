@@ -269,9 +269,6 @@ return [
         // ギャラリー
         'gallery_category_id' => '分類',
         'comment' => 'コメント',
-        'categories' => '分類',
-        'categories.*.id' => '分類',
-        'categories.*.name' => '分類名',
     ],
 
 ];

@@ -14,6 +14,7 @@ import { t, requestJson } from './utils.js';
  * - itemLabel(item): 削除確認に表示する名前
  * - messages: 削除・保存に失敗したときのメッセージ(deleteRejected は削除が 422 で拒否され、理由が返らなかったとき)
  * - onSaved(saved, previous, payload) / onDeleted(item): 保存・削除のあとの処理(previous は更新前の項目。登録時は null)
+ * - onLoaded(items): 一覧を読み込んだあとの処理(読み込んだ項目の配列を受け取る)
  */
 export function initManagerModal(modal, {
     listContainer,
@@ -29,6 +30,7 @@ export function initManagerModal(modal, {
     renderItem,
     onSaved = () => {},
     onDeleted = () => {},
+    onLoaded = () => {},
 }) {
     const indexUrl = listContainer.dataset.indexUrl;
     let editing = null;
@@ -64,10 +66,13 @@ export function initManagerModal(modal, {
             return;
         }
 
+        const items = await response.json();
+
         listContainer.innerHTML = '';
-        (await response.json()).forEach((item) => {
+        items.forEach((item) => {
             listContainer.appendChild(renderItem(item, { edit: () => edit(item), remove: () => remove(item) }));
         });
+        onLoaded(items);
     }
 
     async function remove(item) {
@@ -137,4 +142,6 @@ export function initManagerModal(modal, {
     });
 
     modal.addEventListener('hidden.bs.modal', resetForm);
+
+    return { showError, clearError };
 }

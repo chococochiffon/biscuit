@@ -11,11 +11,24 @@
                 <button type="submit" form="gallery-image-reorder-form" class="btn btn-outline-secondary btn-sm">
                     {{ __('並び替えを保存') }}
                 </button>
+            @elseif (! $canReorder)
+                <a
+                    href="{{ route('admin.gallery-images.index', ['sort' => 'sort_order']) }}"
+                    class="btn btn-outline-secondary btn-sm"
+                    title="{{ __('検索条件をクリアして表示順で並べ、ドラッグで並び替えられるようにします。') }}"
+                >
+                    {{ __('表示順で並び替え') }}
+                </a>
             @endif
 
-            <a href="{{ route('admin.gallery-categories.edit') }}" class="btn btn-outline-secondary btn-sm">
-                {{ __('分類の管理') }}
-            </a>
+            <button
+                type="button"
+                class="btn btn-outline-secondary btn-sm"
+                data-bs-toggle="modal"
+                data-bs-target="#gallery-category-manager-modal"
+            >
+                {{ __('分類管理') }}
+            </button>
 
             <a href="{{ route('admin.gallery-images.create') }}" class="btn btn-primary">
                 {{ __('新規登録') }}
@@ -23,26 +36,36 @@
         </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.gallery-images.index') }}" class="card card-body mb-3 d-flex flex-row flex-wrap align-items-end gap-3">
-        <div>
-            <label for="search-category" class="form-label small">{{ __('分類') }}</label>
-            <select id="search-category" name="category" class="form-select form-select-sm form-select-auto">
-                <option value="">{{ __('すべて') }}</option>
-                @foreach ($categories as $categoryOption)
-                    <option value="{{ $categoryOption->id }}" @selected($category === (string) $categoryOption->id)>{{ $categoryOption->name }}</option>
-                @endforeach
-                <option value="{{ \App\Http\Controllers\GalleryImageController::UNCATEGORIZED }}" @selected($category === \App\Http\Controllers\GalleryImageController::UNCATEGORIZED)>{{ __('未分類') }}</option>
-            </select>
-        </div>
+    <form method="GET" action="{{ route('admin.gallery-images.index') }}" class="card mb-3 admin-search-card">
+        <input type="hidden" name="sort" value="{{ $sort }}">
 
-        <div class="d-flex gap-2 text-nowrap">
-            <button type="submit" class="btn btn-sm btn-primary">{{ __('絞り込む') }}</button>
-            <a href="{{ route('admin.gallery-images.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
-        </div>
+        @include('admin.partials._search_toggle', ['target' => 'gallery-image-search-body', 'isSearching' => $isSearching])
 
-        @unless ($canReorder)
-            <div class="form-text m-0">{{ __('絞り込み中は並び替えできません。並び替えるときはクリアしてください。') }}</div>
-        @endunless
+        <div id="gallery-image-search-body" @class(['collapse', 'show' => $isSearching])>
+            <div class="d-flex flex-wrap flex-xl-nowrap gap-3 align-items-end pt-3">
+                <div>
+                    <label for="search-category" class="form-label small">{{ __('分類') }}</label>
+                    <select
+                        id="search-category"
+                        name="category"
+                        class="form-select form-select-sm form-select-auto"
+                        data-role="gallery-category-select"
+                        data-uncategorized-value="{{ \App\Http\Controllers\GalleryImageController::UNCATEGORIZED }}"
+                    >
+                        <option value="">{{ __('すべて') }}</option>
+                        @foreach ($categories as $categoryOption)
+                            <option value="{{ $categoryOption->id }}" @selected($category === (string) $categoryOption->id)>{{ $categoryOption->name }}</option>
+                        @endforeach
+                        <option value="{{ \App\Http\Controllers\GalleryImageController::UNCATEGORIZED }}" @selected($category === \App\Http\Controllers\GalleryImageController::UNCATEGORIZED)>{{ __('未分類') }}</option>
+                    </select>
+                </div>
+
+                <div class="d-flex gap-2 text-nowrap">
+                    <button type="submit" class="btn btn-sm btn-primary">{{ __('検索') }}</button>
+                    <a href="{{ route('admin.gallery-images.index', ['sort' => $sort]) }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
+                </div>
+            </div>
+        </div>
     </form>
 
     @if ($canReorder && $galleryImages->isNotEmpty())
@@ -62,9 +85,10 @@
                         <th></th>
                     @endif
                     <th>{{ __('画像') }}</th>
-                    <th>{{ __('名前') }}</th>
-                    <th>{{ __('分類') }}</th>
+                    @include('admin.partials._sortable_th', ['label' => __('名前'), 'field' => 'name', 'defaultDirection' => 'asc'])
+                    @include('admin.partials._sortable_th', ['label' => __('分類'), 'field' => 'category', 'defaultDirection' => 'asc'])
                     <th>{{ __('コメント') }}</th>
+                    @include('admin.partials._sortable_th', ['label' => __('更新日時'), 'field' => 'updated_at', 'defaultDirection' => 'desc'])
                     <th></th>
                 </tr>
             </thead>
@@ -90,6 +114,7 @@
                         <td>{{ $galleryImage->name }}</td>
                         <td>{{ $galleryImage->category?->name ?? __('未分類') }}</td>
                         <td>{{ $galleryImage->comment }}</td>
+                        <td class="text-nowrap">{{ $galleryImage->updated_at?->format('Y/m/d H:i') }}</td>
                         <td class="text-end text-nowrap">
                             <a href="{{ route('admin.gallery-images.edit', $galleryImage) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
@@ -97,7 +122,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-admin.empty-row :colspan="$canReorder ? 6 : 5">{{ __('該当するギャラリー画像がありません。') }}</x-admin.empty-row>
+                    <x-admin.empty-row :colspan="$canReorder ? 7 : 6">{{ __('該当するギャラリー画像がありません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>
@@ -106,4 +131,7 @@
     <div class="mt-3">
         {{ $galleryImages->links() }}
     </div>
+
+    {{-- 分類を変更したら、一覧の分類名を最新にするため閉じたときに再読み込みする --}}
+    @include('admin.gallery_categories._manager_modal', ['reloadOnChange' => true])
 @endsection

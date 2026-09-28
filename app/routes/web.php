@@ -33,7 +33,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('logout');
 });
 
-// 管理画面(ログインが必要なルート)。独自ルート(tags/search・articles/bulk-approval・single-pages/reorder・gallery-images/reorder など)は
+// 管理画面(ログインが必要なルート)。独自ルート(tags/search・articles/bulk-approval・single-pages/reorder・gallery-images/reorder・gallery-categories/reorder など)は
 // 対応する Route::resource より前に置き、/admin/{administrator} が他の /admin/* を飲み込む管理者の resource は最後に置く
 Route::middleware('auth:admin')->group(function () {
     Route::get('admin/tags/search', [TagController::class, 'search'])
@@ -75,11 +75,13 @@ Route::middleware('auth:admin')->group(function () {
         ->except(['show'])
         ->names('admin.single-pages');
 
-    Route::get('admin/gallery-categories', [GalleryCategoryController::class, 'edit'])
-        ->name('admin.gallery-categories.edit');
+    Route::patch('admin/gallery-categories/reorder', [GalleryCategoryController::class, 'reorder'])
+        ->name('admin.gallery-categories.reorder');
 
-    Route::put('admin/gallery-categories', [GalleryCategoryController::class, 'update'])
-        ->name('admin.gallery-categories.update');
+    Route::resource('admin/gallery-categories', GalleryCategoryController::class)
+        ->parameters(['gallery-categories' => 'galleryCategory'])
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->names('admin.gallery-categories');
 
     Route::patch('admin/gallery-images/reorder', [GalleryImageController::class, 'reorder'])
         ->name('admin.gallery-images.reorder');
