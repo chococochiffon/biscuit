@@ -36,14 +36,14 @@ class SinglePageContentSource
     }
 
     /**
-     * リンクリスト表示用に、Topページ表示対象(top_page_view=true)の固定ページを表示順で10件取得する。
+     * リンクリスト表示用に、リンクリスト表示対象(link_list_view=true)の固定ページを表示順で10件取得する。
      *
      * @return Collection<int, SinglePage>
      */
     public function getLinkList(): Collection
     {
         return SinglePage::query()->published()
-            ->where('top_page_view', true)
+            ->where('link_list_view', true)
             ->ordered()
             ->take(10)
             ->get();

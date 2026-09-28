@@ -162,10 +162,10 @@ class CallContentControllerTest extends TestCase
         $response->assertJsonCount(2, 'data.0.articles');
     }
 
-    public function test_index_resolves_single_page_link_list_filtered_by_top_page_view(): void
+    public function test_index_resolves_single_page_link_list_filtered_by_link_list_view(): void
     {
-        SinglePage::factory()->create(['top_page_view' => false]);
-        $visible = SinglePage::factory()->create(['top_page_view' => true]);
+        SinglePage::factory()->create(['link_list_view' => false, 'top_page_view' => true]);
+        $visible = SinglePage::factory()->create(['link_list_view' => true, 'top_page_view' => false]);
         CallContent::factory()->create([
             'call_type' => CallType::LinkList,
             'place' => CallContentPlace::Top,
@@ -202,9 +202,9 @@ class CallContentControllerTest extends TestCase
     public function test_index_excludes_single_pages_outside_publication_period(): void
     {
         $this->travelTo('2026-10-01 10:00:00');
-        SinglePage::factory()->create(['top_page_view' => true, 'sort_order' => 0, 'publication_start_datetime' => '2026-10-02 00:00:00']);
-        SinglePage::factory()->create(['top_page_view' => true, 'sort_order' => 1, 'publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => '2026-09-30 00:00:00']);
-        $visible = SinglePage::factory()->create(['top_page_view' => true, 'sort_order' => 2, 'publication_start_datetime' => '2026-09-01 00:00:00']);
+        SinglePage::factory()->create(['link_list_view' => true, 'sort_order' => 0, 'publication_start_datetime' => '2026-10-02 00:00:00']);
+        SinglePage::factory()->create(['link_list_view' => true, 'sort_order' => 1, 'publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => '2026-09-30 00:00:00']);
+        $visible = SinglePage::factory()->create(['link_list_view' => true, 'sort_order' => 2, 'publication_start_datetime' => '2026-09-01 00:00:00']);
         CallContent::factory()->create([
             'call_type' => CallType::LinkList,
             'place' => CallContentPlace::Top,
