@@ -6,7 +6,7 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
-class UpdateGalleryCategoriesRequest extends FormRequest
+class StoreGalleryCategoryRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -18,17 +18,17 @@ class UpdateGalleryCategoriesRequest extends FormRequest
 
     /**
      * Get the validation rules that apply to the request.
-     * 分類の一覧(繰り返し入力の行)をまとめて受け取る。
+     * 更新(UpdateGalleryCategoryRequest)と共通のルール。一意性のチェックでは、更新対象(ルートのモデル。新規登録時は null)を除く。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'categories' => ['nullable', 'array'],
-            'categories.*.id' => ['nullable', 'integer', Rule::exists('gallery_categories', 'id')->withoutTrashed()],
-            'categories.*.name' => ['required', 'string', 'max:128'],
-            'categories.*.sort_order' => ['nullable', 'integer', 'min:0'],
+            'name' => [
+                'required', 'string', 'max:128',
+                Rule::unique('gallery_categories', 'name')->ignore($this->route('galleryCategory'))->withoutTrashed(),
+            ],
         ];
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Requests\StoreGalleryImageRequest;
 use App\Http\Requests\UpdateGalleryImageRequest;
 use App\Models\GalleryCategory;
 use App\Models\GalleryImage;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -21,28 +22,45 @@ class GalleryImageController extends Controller
     public const UNCATEGORIZED = 'none';
 
     /**
-     * ギャラリー画像の一覧を並び順(公開側の表示順)で表示する。
-     * GET パラメータ category(分類の id、未分類は UNCATEGORIZED)で絞り込める。不正な値はリダイレクトせずに無視する。
-     * 行をドラッグして並び替えられるのは、絞り込んでいないときだけ(絞り込んだ一部だけでは並び順を振り直せないため)。
+     * デフォルトの並び順(更新日時の新しい順)。
+     */
+    private const DEFAULT_SORT = 'updated_at_desc';
+
+    /**
+     * ドラッグでの並び替えを有効にする並び順(表示順)。
+     */
+    private const REORDERABLE_SORT = 'sort_order';
+
+    /**
+     * ギャラリー画像の一覧を、分類(GET パラメータ category。分類の id、未分類は UNCATEGORIZED)で絞り込み、
+     * 選択した並び順(デフォルトは更新日時の新しい順)で表示する。不正な値はリダイレクトせずに無視する。
+     * ドラッグでの並び替え(表示順の保存)は、並び順が「表示順」かつ検索条件なしの場合のみ有効にする。
      */
     public function index(Request $request): View
     {
-        $category = Validator::make($request->query(), [
+        $filters = Validator::make($request->query(), [
             'category' => ['nullable', 'regex:/^('.self::UNCATEGORIZED.'|[1-9][0-9]*)$/'],
-        ])->valid()['category'] ?? null;
+            'sort' => ['nullable', Rule::in(array_keys($this->listSortOptions()))],
+        ])->valid();
+
+        $category = $filters['category'] ?? null;
+        $sort = $filters['sort'] ?? self::DEFAULT_SORT;
+        $isSearching = $category !== null;
+        ['column' => $column, 'direction' => $direction] = $this->listSortOptions()[$sort];
 
         $galleryImages = GalleryImage::query()
             ->with('category')
             ->when($category === self::UNCATEGORIZED, fn ($query) => $query->whereNull('gallery_category_id'))
-            ->when($category !== null && $category !== self::UNCATEGORIZED, fn ($query) => $query->where('gallery_category_id', $category))
-            ->ordered()
+            ->when($isSearching && $category !== self::UNCATEGORIZED, fn ($query) => $query->where('gallery_category_id', $category))
+            ->orderBy($column, $direction)
+            ->orderBy('id', $direction)
             ->paginate(config('limits.admin_per_page'))
             ->withQueryString();
 
         $categories = GalleryCategory::query()->ordered()->get();
-        $canReorder = $category === null;
+        $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
 
-        return view('admin.gallery_images.index', compact('galleryImages', 'categories', 'category', 'canReorder'));
+        return view('admin.gallery_images.index', compact('galleryImages', 'categories', 'category', 'sort', 'isSearching', 'canReorder'));
     }
 
     /**
@@ -124,7 +142,29 @@ class GalleryImageController extends Controller
             }
         });
 
-        return redirect()->route('admin.gallery-images.index', array_filter(['page' => $validated['page'] ?? null]))
+        return redirect()->route('admin.gallery-images.index', array_filter(['sort' => self::REORDERABLE_SORT, 'page' => $validated['page'] ?? null]))
             ->with('status', __('並び替えを保存しました。'));
+    }
+
+    /**
+     * 一覧で選択可能な並び順。名前・分類(分類の並び順。未分類は先頭)・更新日時と、表示順(ドラッグで並び替える順)。
+     *
+     * @return array<string, array{column: string|Builder, direction: string}>
+     */
+    private function listSortOptions(): array
+    {
+        $categorySortOrder = GalleryCategory::query()
+            ->select('sort_order')
+            ->whereColumn('gallery_categories.id', 'gallery_images.gallery_category_id');
+
+        return [
+            'updated_at_desc' => ['column' => 'updated_at', 'direction' => 'desc'],
+            'updated_at_asc' => ['column' => 'updated_at', 'direction' => 'asc'],
+            'name_asc' => ['column' => 'name', 'direction' => 'asc'],
+            'name_desc' => ['column' => 'name', 'direction' => 'desc'],
+            'category_asc' => ['column' => $categorySortOrder, 'direction' => 'asc'],
+            'category_desc' => ['column' => $categorySortOrder, 'direction' => 'desc'],
+            self::REORDERABLE_SORT => ['column' => 'sort_order', 'direction' => 'asc'],
+        ];
     }
 }

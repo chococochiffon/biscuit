@@ -16,20 +16,54 @@ class GalleryImageControllerTest extends TestCase
     public function test_guests_are_redirected_from_gallery_pages(): void
     {
         $this->get(route('admin.gallery-images.index'))->assertRedirect(route('admin.login'));
-        $this->get(route('admin.gallery-categories.edit'))->assertRedirect(route('admin.login'));
+        $this->getJson(route('admin.gallery-categories.index'))->assertUnauthorized();
     }
 
-    public function test_index_displays_gallery_images_in_sort_order(): void
+    public function test_index_orders_by_updated_at_desc_by_default_and_disables_reorder(): void
+    {
+        $this->actingAsAdmin();
+        GalleryImage::factory()->create(['name' => '古い画像', 'sort_order' => 0, 'updated_at' => now()->subDay()]);
+        GalleryImage::factory()->create(['name' => '新しい画像', 'sort_order' => 1, 'updated_at' => now()]);
+
+        $response = $this->get(route('admin.gallery-images.index'));
+
+        $response->assertOk();
+        $response->assertSeeInOrder(['新しい画像', '古い画像']);
+        $response->assertDontSee('gallery-image-reorder-form');
+        $response->assertSee('表示順で並び替え');
+    }
+
+    public function test_index_orders_by_sort_order_and_enables_reorder(): void
     {
         $this->actingAsAdmin();
         $category = GalleryCategory::factory()->create(['name' => '風景']);
         GalleryImage::factory()->create(['name' => '2番目', 'sort_order' => 1]);
         GalleryImage::factory()->for($category, 'category')->create(['name' => '1番目', 'sort_order' => 0]);
 
-        $response = $this->get(route('admin.gallery-images.index'));
+        $response = $this->get(route('admin.gallery-images.index', ['sort' => 'sort_order']));
 
         $response->assertOk();
         $response->assertSeeInOrder(['1番目', '風景', '2番目', '未分類']);
+        $response->assertSee('gallery-image-reorder-form');
+    }
+
+    public function test_index_orders_by_name_and_category(): void
+    {
+        $this->actingAsAdmin();
+        $second = GalleryCategory::factory()->create(['name' => '料理', 'sort_order' => 1]);
+        $first = GalleryCategory::factory()->create(['name' => '風景', 'sort_order' => 0]);
+        GalleryImage::factory()->for($second, 'category')->create(['name' => 'A 料理の写真']);
+        GalleryImage::factory()->for($first, 'category')->create(['name' => 'B 風景の写真']);
+        GalleryImage::factory()->create(['name' => 'C 分類なしの写真']);
+
+        $this->get(route('admin.gallery-images.index', ['sort' => 'name_desc']))
+            ->assertSeeInOrder(['C 分類なしの写真', 'B 風景の写真', 'A 料理の写真']);
+
+        // 分類は分類の並び順で並べる(未分類は先頭)
+        $this->get(route('admin.gallery-images.index', ['sort' => 'category_asc']))
+            ->assertSeeInOrder(['C 分類なしの写真', 'B 風景の写真', 'A 料理の写真']);
+        $this->get(route('admin.gallery-images.index', ['sort' => 'category_desc']))
+            ->assertSeeInOrder(['A 料理の写真', 'B 風景の写真', 'C 分類なしの写真']);
     }
 
     public function test_index_filters_by_category_and_disables_reorder(): void
@@ -40,14 +74,14 @@ class GalleryImageControllerTest extends TestCase
         GalleryImage::factory()->for(GalleryCategory::factory(), 'category')->create(['name' => '料理の写真']);
         GalleryImage::factory()->create(['name' => '分類なしの写真']);
 
-        $response = $this->get(route('admin.gallery-images.index', ['category' => $landscape->id]));
+        $response = $this->get(route('admin.gallery-images.index', ['category' => $landscape->id, 'sort' => 'sort_order']));
 
         $response->assertOk();
         $response->assertSee('海辺');
         $response->assertDontSee('料理の写真');
         $response->assertDontSee('分類なしの写真');
+        $response->assertSee('検索中');
         $response->assertDontSee('gallery-image-reorder-form');
-        $response->assertSee('絞り込み中は並び替えできません。');
     }
 
     public function test_index_filters_uncategorized_images(): void
@@ -69,9 +103,10 @@ class GalleryImageControllerTest extends TestCase
         GalleryImage::factory()->for(GalleryCategory::factory(), 'category')->create(['name' => '料理の写真']);
         GalleryImage::factory()->create(['name' => '分類なしの写真']);
 
-        $response = $this->get(route('admin.gallery-images.index', ['category' => 'invalid']));
+        $response = $this->get(route('admin.gallery-images.index', ['category' => 'invalid', 'sort' => 'sort_order']));
 
         $response->assertOk();
+        $response->assertDontSee('検索中');
         $response->assertSee('料理の写真');
         $response->assertSee('分類なしの写真');
         $response->assertSee('gallery-image-reorder-form');
@@ -223,7 +258,7 @@ class GalleryImageControllerTest extends TestCase
             'page' => 2,
         ]);
 
-        $response->assertRedirect(route('admin.gallery-images.index', ['page' => 2]));
+        $response->assertRedirect(route('admin.gallery-images.index', ['sort' => 'sort_order', 'page' => 2]));
         $this->assertSame(20, $second->fresh()->sort_order);
         $this->assertSame(21, $first->fresh()->sort_order);
     }

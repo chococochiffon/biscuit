@@ -17,4 +17,6 @@
             <a href="{{ route('admin.gallery-images.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </form>
+
+    @include('admin.gallery_categories._manager_modal')
 @endsection

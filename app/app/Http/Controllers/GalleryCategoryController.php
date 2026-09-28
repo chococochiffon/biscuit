@@ -2,47 +2,81 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Concerns\SyncsSortableRows;
-use App\Http\Requests\UpdateGalleryCategoriesRequest;
+use App\Http\Requests\StoreGalleryCategoryRequest;
+use App\Http\Requests\UpdateGalleryCategoryRequest;
 use App\Models\GalleryCategory;
 use App\Models\GalleryImage;
-use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
+use Illuminate\Validation\Rule;
 
+/**
+ * ギャラリー画像の分類を、分類管理モーダルから Ajax(JSON)で管理する。
+ */
 class GalleryCategoryController extends Controller
 {
-    use SyncsSortableRows;
-
     /**
-     * ギャラリー画像の分類をまとめて編集する画面(行の追加・削除・ドラッグでの並び替え)を表示する。
+     * 分類の一覧を並び順(sort_order、同順なら id)で返す。
      */
-    public function edit(): View
+    public function index(): JsonResponse
     {
-        $categories = GalleryCategory::query()->ordered()->get();
-
-        return view('admin.gallery_categories.edit', compact('categories'));
+        return response()->json(GalleryCategory::query()->ordered()->get(['id', 'name', 'sort_order']));
     }
 
     /**
-     * 送信された分類の行にデータベースを同期する(作成/更新/削除と並び順の扱いは SyncsSortableRows::syncSortableRows() を参照)。
-     * 削除した分類に属していた画像は未分類にする。
+     * 分類を登録する。並び順は末尾にする。
      */
-    public function update(UpdateGalleryCategoriesRequest $request): RedirectResponse
+    public function store(StoreGalleryCategoryRequest $request): JsonResponse
     {
-        DB::transaction(function () use ($request) {
-            $submittedIds = collect($request->validated('categories', []))->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
+        $galleryCategory = GalleryCategory::create([
+            ...$request->validated(),
+            'sort_order' => (GalleryCategory::max('sort_order') ?? -1) + 1,
+        ]);
 
-            GalleryImage::query()
-                ->whereNotNull('gallery_category_id')
-                ->whereNotIn('gallery_category_id', $submittedIds)
-                ->update(['gallery_category_id' => null]);
+        return response()->json($galleryCategory, 201);
+    }
 
-            $this->syncSortableRows(GalleryCategory::query(), $request->validated('categories', []), fn (array $row) => [
-                'name' => $row['name'],
-            ]);
+    /**
+     * 分類の名前を変更する。
+     */
+    public function update(UpdateGalleryCategoryRequest $request, GalleryCategory $galleryCategory): JsonResponse
+    {
+        $galleryCategory->update($request->validated());
+
+        return response()->json($galleryCategory);
+    }
+
+    /**
+     * 分類を削除(論理削除)し、その分類の画像を未分類にする。
+     */
+    public function destroy(GalleryCategory $galleryCategory): JsonResponse
+    {
+        DB::transaction(function () use ($galleryCategory) {
+            GalleryImage::query()->where('gallery_category_id', $galleryCategory->id)->update(['gallery_category_id' => null]);
+            $galleryCategory->delete();
         });
 
-        return redirect()->route('admin.gallery-categories.edit')->with('status', __('分類を保存しました。'));
+        return response()->json(status: 204);
+    }
+
+    /**
+     * ドラッグ&ドロップで並び替えた分類の並び順(sort_order)を、送信された順の連番で保存する。
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'order' => ['required', 'array'],
+            'order.*' => ['integer', Rule::exists('gallery_categories', 'id')->withoutTrashed()],
+        ]);
+
+        // 途中で失敗しても並び順が中途半端にならないよう、まとめて保存する
+        DB::transaction(function () use ($validated) {
+            foreach (array_values($validated['order']) as $index => $id) {
+                GalleryCategory::query()->whereKey($id)->update(['sort_order' => $index]);
+            }
+        });
+
+        return response()->json(status: 204);
     }
 }

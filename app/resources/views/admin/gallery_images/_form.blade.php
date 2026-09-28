@@ -32,8 +32,13 @@
 </div>
 
 <div class="mb-3">
-    <label for="gallery_category_id" class="form-label">{{ __('分類') }}</label>
-    <select id="gallery_category_id" name="gallery_category_id" class="form-select form-select-auto">
+    <div class="d-flex align-items-center justify-content-between mb-2">
+        <label for="gallery_category_id" class="form-label mb-0">{{ __('分類') }}</label>
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#gallery-category-manager-modal">
+            {{ __('分類管理') }}
+        </button>
+    </div>
+    <select id="gallery_category_id" name="gallery_category_id" class="form-select form-select-auto" data-role="gallery-category-select">
         <option value="">{{ __('未分類') }}</option>
         @foreach ($categories as $category)
             <option value="{{ $category->id }}" @selected((string) old('gallery_category_id', $galleryImage->gallery_category_id ?? '') === (string) $category->id)>
@@ -41,9 +46,6 @@
             </option>
         @endforeach
     </select>
-    <div class="form-text">
-        <a href="{{ route('admin.gallery-categories.edit') }}">{{ __('分類の管理') }}</a>
-    </div>
 </div>
 
 <div class="mb-3">
