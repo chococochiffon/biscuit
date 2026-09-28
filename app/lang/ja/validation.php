@@ -256,7 +256,7 @@ return [
         'user_detail.birthday' => '生年月日',
         'user_detail.user_image' => 'アイコン画像',
         'user_detail.comment' => 'コメント',
-        'user_detail.view_flag' => '表示する',
+        'user_detail.view_flag' => 'トップへ表示する',
         'user_detail.name_settings' => '名前の表示設定',
         'user_detail.skills.*.name' => 'スキル名',
         'user_detail.skills.*.level' => 'スキルの習熟度',

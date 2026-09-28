@@ -160,7 +160,7 @@
                 class="form-check-input"
                 @checked(old('user_detail.view_flag', $user->detail->view_flag ?? true))
             >
-            <label for="user_detail_view_flag" class="form-check-label">{{ __('表示する') }}</label>
+            <label for="user_detail_view_flag" class="form-check-label">{{ __('トップへ表示する') }}</label>
         </div>
 
         <div class="mb-3">

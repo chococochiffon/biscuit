@@ -188,5 +188,11 @@
     "データ種別の紐付けの削除に失敗しました。": "Failed to delete the data type mapping.",
     "データ種別の紐付けの保存に失敗しました。": "Failed to save the data type mapping.",
     "記事を選択してください。": "Please select articles.",
-    ":total 件中 :first〜:last 件を表示": "Showing :first to :last of :total results"
+    ":total 件中 :first〜:last 件を表示": "Showing :first to :last of :total results",
+    "名": "First name",
+    "姓": "Last name",
+    "トップへ表示する": "Show on top page",
+    "表示する": "Show",
+    "表示しない": "Hide",
+    "名前の表示設定": "Name display"
 }
