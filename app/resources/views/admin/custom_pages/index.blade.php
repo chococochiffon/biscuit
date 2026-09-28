@@ -21,6 +21,7 @@
             <thead>
                 <tr>
                     <th>{{ __('タイトル') }}</th>
+                    <th>{{ __('URL') }}</th>
                     @if ($customPageType->hasDetails())
                         <th>{{ __('概要') }}</th>
                     @else
@@ -35,6 +36,7 @@
                 @forelse ($entries as $entry)
                     <tr>
                         <td>{{ $entry->title }}</td>
+                        <td><code>{{ $entry->path() }}</code></td>
                         @if ($customPageType->hasDetails())
                             <td>{{ $entry->short_sentences }}</td>
                         @else
@@ -49,7 +51,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-admin.empty-row colspan="5">{{ __(':labelが登録されていません。', ['label' => $customPageType->label]) }}</x-admin.empty-row>
+                    <x-admin.empty-row colspan="6">{{ __(':labelが登録されていません。', ['label' => $customPageType->label]) }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>

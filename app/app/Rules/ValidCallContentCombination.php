@@ -86,7 +86,7 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
         }
 
         if (! $place) {
-            if (! in_array($relation->model_name, $callType->allowedModelNames(), true)) {
+            if (! in_array($relation->matrixModelName(), $callType->allowedModelNames(), true)) {
                 $fail(__('選択した呼び出し方ではこのデータ種別は選択できません。'));
             }
 
@@ -97,7 +97,7 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
             return;
         }
 
-        if (! $callType->supports($relation->model_name, $place)) {
+        if (! $callType->supports($relation->matrixModelName(), $place)) {
             $fail(__('選択した表示箇所・呼び出し方ではこのデータ種別は選択できません。'));
         }
     }

@@ -30,6 +30,13 @@ class CustomPageType extends Model
     public const TABLE_PREFIX = 'user_make_';
 
     /**
+     * 公開側(chococo)の固定のページが使っている URL の先頭。カスタム名の複数形にこれらは使えない。
+     *
+     * @var list<string>
+     */
+    public const RESERVED_PATHS = ['articles', 'gallery', 'faq'];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -58,11 +65,39 @@ class CustomPageType extends Model
     }
 
     /**
+     * 公開側の URL で使う名前(カスタム名の複数形。例: recipes)。本体のテーブル名にも使う。
+     */
+    public function pluralName(): string
+    {
+        return Str::plural($this->name);
+    }
+
+    /**
+     * 公開側の一覧の URL(例: /recipes)。各ページの URL はこの下に「/スラッグ」を付ける。
+     */
+    public function publicPath(): string
+    {
+        return '/'.$this->pluralName();
+    }
+
+    /**
+     * 本体のテーブル名に一致する種類(論理削除済みは除く)。ContentModelRelation の table_name からの逆引きに使う。
+     */
+    public static function findByTableName(?string $tableName): ?self
+    {
+        if ($tableName === null || ! str_starts_with($tableName, self::TABLE_PREFIX)) {
+            return null;
+        }
+
+        return self::query()->get()->first(fn (self $type) => $type->tableName() === $tableName);
+    }
+
+    /**
      * 本体のテーブル名(例: user_make_recipes)。
      */
     public function tableName(): string
     {
-        return self::TABLE_PREFIX.Str::plural($this->name);
+        return self::TABLE_PREFIX.$this->pluralName();
     }
 
     /**

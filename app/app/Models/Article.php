@@ -71,14 +71,22 @@ class Article extends Model
      */
     public function storeThumbnail(UploadedFile $file): string
     {
+        return $this->storeNamedImage($file, self::THUMBNAIL_DIRECTORY, self::thumbnailSizeFor($file));
+    }
+
+    /**
+     * THUMBNAIL_SIZES のうち、画像の比率に最も近い保存サイズ(記事型のカスタムページのサムネイルでも使う)。
+     *
+     * @return array{int, int}
+     */
+    public static function thumbnailSizeFor(UploadedFile $file): array
+    {
         [$sourceWidth, $sourceHeight] = getimagesize($file->getRealPath());
 
-        // 元画像の比率に最も近い目標サイズを選ぶ(比の対数の差で比較し、横長・縦長の差を対称に扱う)
-        $size = collect(self::THUMBNAIL_SIZES)
+        // 比の対数の差で比較し、横長・縦長の差を対称に扱う
+        return collect(self::THUMBNAIL_SIZES)
             ->sortBy(fn (array $size) => abs(log(($sourceWidth / $sourceHeight) / ($size[0] / $size[1]))))
             ->first();
-
-        return $this->storeNamedImage($file, self::THUMBNAIL_DIRECTORY, $size);
     }
 
     /**

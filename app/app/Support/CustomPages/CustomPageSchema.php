@@ -66,18 +66,22 @@ class CustomPageSchema
     }
 
     /**
-     * 本体のテーブル。記事型は記事、固定ページ型は固定ページの主な項目を持つ(URL・画像は公開側の対応時に追加する)。
+     * 本体のテーブル。記事型は記事、固定ページ型は固定ページの主な項目を持つ。
+     * 公開側の URL は「/カスタム名の複数形/スラッグ」(スラッグ未入力の記事型は id)で、スラッグは種類の中で一意にする(フォームリクエストで検証)。
      */
     private function defineEntryTable(Blueprint $table, CustomPageType $type): void
     {
         $table->id();
         $table->string('title');
+        $table->string('slug')->nullable();
 
         if ($type->base_type === CustomPageBaseType::Article) {
             $table->longText('content')->nullable();
+            $table->string('thumbnail')->nullable();
             $table->string('approval', 16)->default(ArticleApprovalStatus::Draft->value);
         } else {
             $table->string('short_sentences');
+            $table->string('header_image')->nullable();
             $table->unsignedInteger('sort_order')->default(0);
         }
 

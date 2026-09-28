@@ -168,7 +168,8 @@ function upsertContentModelRelationOption(relation) {
         }
 
         option.dataset.contentType = String(relation.content_type);
-        option.dataset.modelName = relation.model_name;
+        // 呼び出し方の組み合わせは、カスタムページなら種類のベースの型(CustomArticle など)で判定する
+        option.dataset.modelName = relation.matrix_model_name ?? relation.model_name;
         option.textContent = `${relation.content_type_label} / ${relation.model_name}`;
     });
 

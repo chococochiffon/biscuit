@@ -134,14 +134,23 @@ class CustomPageEntryController extends Controller
     {
         $columns = $customPageType->hasDetails() ? ['short_sentences'] : ['content', 'approval'];
 
-        return $request->safe()->only(['title', ...$columns, 'publication_start_datetime', 'publication_end_datetime']);
+        return $request->safe()->only(['title', 'slug', ...$columns, 'publication_start_datetime', 'publication_end_datetime']);
     }
 
     /**
-     * 詳細(固定ページ型)を送信された行に同期し、カスタムフォームの入力値を保存する。
+     * 画像を保存し、詳細(固定ページ型)を送信された行に同期して、カスタムフォームの入力値を保存する。
      */
     private function saveRelatedRows(StoreCustomPageEntryRequest $request, CustomPageType $customPageType, CustomPageEntry $entry): void
     {
+        // 画像はファイル名に id を使うため、本体の保存後に保存する(未送信なら登録済みの画像のまま)
+        if (! $customPageType->hasDetails() && $request->hasFile('thumbnail')) {
+            $entry->update(['thumbnail' => $entry->storeThumbnail($request->file('thumbnail'))]);
+        }
+
+        if ($customPageType->hasDetails() && $request->hasFile('header_image')) {
+            $entry->update(['header_image' => $entry->storeHeaderImage($request->file('header_image'))]);
+        }
+
         if ($customPageType->hasDetails()) {
             $foreignKey = $customPageType->entryForeignKey();
 

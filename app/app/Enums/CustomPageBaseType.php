@@ -17,4 +17,15 @@ enum CustomPageBaseType: int
             self::SinglePage => __('固定ページ'),
         };
     }
+
+    /**
+     * API でフロントエンドが表示を切り替えるための識別子(article / single_page)。
+     */
+    public function apiName(): string
+    {
+        return match ($this) {
+            self::Article => 'article',
+            self::SinglePage => 'single_page',
+        };
+    }
 }

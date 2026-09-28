@@ -114,6 +114,7 @@ class CustomPageEntryControllerTest extends TestCase
 
         $this->post(route('admin.custom-pages.entries.store', $type), [
             'title' => '本店',
+            'slug' => 'honten',
             'short_sentences' => '駅前のお店です。',
             'publication_start_datetime' => '2026-10-01 10:00',
             'details' => [
@@ -140,6 +141,7 @@ class CustomPageEntryControllerTest extends TestCase
 
         $response = $this->put(route('admin.custom-pages.entries.update', [$type, $entry->id]), [
             'title' => '本店(改装)',
+            'slug' => 'honten',
             'short_sentences' => '概要',
             'publication_start_datetime' => '2026-10-01 10:00',
             'details' => [['id' => $kept->id, 'sub_title' => '行き方', 'sort_order' => 0]],
@@ -165,6 +167,7 @@ class CustomPageEntryControllerTest extends TestCase
 
         $response = $this->put(route('admin.custom-pages.entries.update', [$type, $entry->id]), [
             'title' => '本店',
+            'slug' => 'honten',
             'short_sentences' => '概要',
             'publication_start_datetime' => '2026-10-01 10:00',
             'details' => [['id' => $othersDetail->id, 'sub_title' => '書き換え']],

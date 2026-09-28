@@ -3,7 +3,9 @@
 namespace App\Http\Requests;
 
 use App\Enums\CustomPageBaseType;
+use App\Models\Article;
 use App\Models\CustomPageType;
+use App\Models\SinglePage;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Schema;
@@ -70,6 +72,18 @@ class StoreCustomPageTypeRequest extends FormRequest
 
                 if ($existing !== []) {
                     $validator->errors()->add('name', __('このカスタム名のテーブル(:tables)は既にあるため使えません。', ['tables' => implode(', ', $existing)]));
+
+                    return;
+                }
+
+                // 公開側の URL(/カスタム名の複数形/…)が、chococo の固定のページや記事・固定ページの URL と重ならないようにする
+                $isTaken = in_array($type->pluralName(), CustomPageType::RESERVED_PATHS, true)
+                    || collect([Article::class, SinglePage::class])->contains(fn (string $modelClass) => $modelClass::query()
+                        ->where(fn ($query) => $query->where('path', $type->publicPath())->orWhere('path', 'like', $type->publicPath().'/%'))
+                        ->exists());
+
+                if ($isTaken) {
+                    $validator->errors()->add('name', __('公開側の URL「:path」は他のページで使われているため使えません。', ['path' => $type->publicPath()]));
                 }
             },
         ];

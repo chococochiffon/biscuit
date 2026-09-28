@@ -28,7 +28,7 @@ class SiteSettingController extends Controller
         $callContents = collect();
         $socialLinks = collect();
         $topSliderImages = collect();
-        $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
+        $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name', 'table_name']);
         $tableNames = AllowedTableName::availableTables();
 
         return view('admin.site_settings.create', compact('callContents', 'socialLinks', 'topSliderImages', 'contentModelRelations', 'tableNames'));
@@ -85,7 +85,7 @@ class SiteSettingController extends Controller
         $callContents = CallContent::query()->ordered()->get();
         $socialLinks = SocialLink::query()->ordered()->get();
         $topSliderImages = TopSliderImage::query()->ordered()->get();
-        $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name']);
+        $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name', 'table_name']);
         $tableNames = AllowedTableName::availableTables();
 
         return view('admin.site_settings.edit', compact('siteSetting', 'callContents', 'socialLinks', 'topSliderImages', 'contentModelRelations', 'tableNames'));

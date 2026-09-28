@@ -16,6 +16,14 @@ enum CallType: int
     case Accordion = 8;
 
     /**
+     * 組み合わせのマトリクスで、記事型・固定ページ型のカスタムページを表すモデル名
+     * (データ種別紐付けの table_name がカスタムページの本体のテーブルのとき。ContentModelRelation::matrixModelName())。
+     */
+    public const CUSTOM_ARTICLE = 'CustomArticle';
+
+    public const CUSTOM_SINGLE_PAGE = 'CustomSinglePage';
+
+    /**
      * 表示用のラベルを取得する(現在の言語設定に応じて翻訳される)。
      */
     public function label(): string
@@ -55,6 +63,8 @@ enum CallType: int
                 'UserDetail' => [self::LinkList, self::SkillList],
                 'GalleryImage' => [self::TileList],
                 'QuestionAnswer' => [self::Accordion],
+                self::CUSTOM_ARTICLE => [self::Link, self::Archive],
+                self::CUSTOM_SINGLE_PAGE => [self::LinkList, self::Link],
             ],
             CallContentPlace::Inside->value => [
                 'Article' => [self::OriginalText],
@@ -65,6 +75,8 @@ enum CallType: int
                 'Article' => [self::LinkList, self::Link, self::Archive],
                 'SinglePage' => [self::LinkList],
                 'UserDetail' => [self::LinkList],
+                self::CUSTOM_ARTICLE => [self::LinkList, self::Link, self::Archive],
+                self::CUSTOM_SINGLE_PAGE => [self::LinkList],
             ],
         ];
     }

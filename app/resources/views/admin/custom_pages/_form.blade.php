@@ -111,6 +111,28 @@
 
     <div class="col-lg-4">
         <div class="card mb-3">
+            <div class="mb-3">
+                <label for="slug" class="form-label">{{ __('スラッグ') }}</label>
+                <div class="input-group">
+                    <span class="input-group-text">{{ $customPageType->publicPath() }}/</span>
+                    <input
+                        id="slug"
+                        type="text"
+                        name="slug"
+                        value="{{ old('slug', $entry?->slug) }}"
+                        maxlength="255"
+                        @if ($customPageType->hasDetails()) required @endif
+                        class="form-control"
+                    >
+                </div>
+                <div class="form-text">
+                    {{ __('公開側の URL の最後の部分です(半角英小文字・数字・ハイフン)。') }}
+                    @unless ($customPageType->hasDetails())
+                        {{ __('未入力の場合は番号(id)を使います。') }}
+                    @endunless
+                </div>
+            </div>
+
             @unless ($customPageType->hasDetails())
                 <div class="mb-3">
                     <label for="approval" class="form-label">{{ __('ステータス') }}</label>
@@ -149,6 +171,35 @@
                 >
                 <div class="form-text">{{ __('未指定の場合は終了日時を設定しません。') }}</div>
             </div>
+
+            {{-- 記事型はサムネイル、固定ページ型はヘッダー画像(記事・固定ページと同じサイズ・保存先) --}}
+            @if ($customPageType->hasDetails())
+                <div class="mt-3">
+                    <label class="form-label">{{ __('ヘッダー画像') }}</label>
+                    <x-admin.image-dropzone
+                        id="header_image"
+                        name="header_image"
+                        :image-url="$entry?->header_image_url"
+                        :alt="__('ヘッダー画像')"
+                        :aria-label="__('ヘッダー画像を選択')"
+                    />
+                </div>
+            @else
+                <div class="mt-3">
+                    <label class="form-label">{{ __('サムネイル画像') }}</label>
+                    <x-admin.image-dropzone
+                        id="thumbnail"
+                        name="thumbnail"
+                        :image-url="$entry?->thumbnail_url ?? \App\Models\Article::publicImageUrl(\App\Models\Article::DEFAULT_THUMBNAIL_PATH)"
+                        :alt="__('サムネイル')"
+                        :aria-label="__('サムネイル画像を選択')"
+                    />
+                    <div class="form-text">
+                        {{ __('1200×630px(約1.91:1)または1280×720px(16:9)のうち、比率が近い方へ中央を切り抜いて縮小します。') }}<br>
+                        {{ __('未指定の場合はデフォルト画像が使用されます。') }}
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>
