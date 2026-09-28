@@ -30,4 +30,12 @@ class Administrator extends Authenticatable
             'last_login_at' => 'datetime',
         ];
     }
+
+    /**
+     * スーパー管理者かどうか(カスタムページ管理など、スーパー管理者だけが使える機能の判定に使う)。
+     */
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === AdministratorRole::SuperAdmin;
+    }
 }

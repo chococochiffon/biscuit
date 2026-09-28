@@ -184,7 +184,7 @@ class CustomPagePublicTest extends TestCase
 
     public function test_type_cannot_use_reserved_or_taken_url_prefix(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         Article::factory()->create(['parent_path' => 'events', 'slug' => 'summer']);
 
         // /articles は chococo の記事一覧が使っている
@@ -197,7 +197,7 @@ class CustomPagePublicTest extends TestCase
 
     public function test_articles_and_single_pages_cannot_use_custom_page_url_prefix(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $type->delete();
 
@@ -213,7 +213,7 @@ class CustomPagePublicTest extends TestCase
 
     public function test_entry_slug_must_be_unique_within_type_and_images_are_saved(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         Storage::fake('public');
         $type = $this->createType('recipe', CustomPageBaseType::Article);
         $this->createArticleEntry($type, ['slug' => 'nikujaga']);
@@ -263,7 +263,7 @@ class CustomPagePublicTest extends TestCase
 
     public function test_site_setting_validates_call_contents_for_custom_pages_by_base_type(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $this->createType('shop', CustomPageBaseType::SinglePage, '店舗');
         $relation = ContentModelRelation::factory()->create([
             'content_type' => CallContentType::Custom,

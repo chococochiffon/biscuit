@@ -20,9 +20,27 @@ class CustomPageTypeControllerTest extends TestCase
         $this->get(route('admin.custom-page-types.index'))->assertRedirect(route('admin.login'));
     }
 
+    public function test_only_super_admins_can_use_custom_page_management(): void
+    {
+        $type = $this->createTypeWithTables('recipe');
+
+        // 通常の管理者は、種類の管理と種類ごとのページのどちらも使えず、サイドメニューにも出ない
+        $this->actingAsAdmin();
+        $this->get(route('admin.custom-page-types.index'))->assertForbidden();
+        $this->post(route('admin.custom-page-types.store'), ['name' => 'shop', 'label' => '店舗', 'base_type' => 1])->assertForbidden();
+        $this->get(route('admin.custom-pages.entries.index', $type))->assertForbidden();
+        $this->post(route('admin.custom-pages.entries.store', $type), ['title' => '肉じゃが'])->assertForbidden();
+        $this->get(route('admin.articles.index'))->assertOk()->assertDontSee('カスタムページ管理');
+        $this->assertFalse(Schema::hasTable('user_make_shops'));
+
+        $this->actingAsSuperAdmin();
+        $this->get(route('admin.custom-page-types.index'))->assertOk();
+        $this->get(route('admin.articles.index'))->assertOk()->assertSee('カスタムページ管理');
+    }
+
     public function test_store_creates_article_type_and_its_tables(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
 
         $response = $this->post(route('admin.custom-page-types.store'), [
             'name' => 'recipe',
@@ -44,7 +62,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_store_creates_single_page_type_with_details_table(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
 
         $this->post(route('admin.custom-page-types.store'), [
             'name' => 'shop',
@@ -59,7 +77,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_store_normalizes_name_to_singular_snake_case(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
 
         $this->post(route('admin.custom-page-types.store'), [
             'name' => 'BlogPosts',
@@ -74,7 +92,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_store_rejects_invalid_or_used_names(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         CustomPageType::factory()->create(['name' => 'recipe'])->delete();
 
         // 削除済みの種類のカスタム名も使えない(テーブルを残すため)
@@ -88,7 +106,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_store_rejects_name_whose_table_already_exists(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         Schema::create('user_make_events', fn ($table) => $table->id());
 
         $this->post(route('admin.custom-page-types.store'), ['name' => 'event', 'label' => 'イベント', 'base_type' => 1])
@@ -99,7 +117,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_store_rejects_more_than_the_limit(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         config(['limits.custom_page_types' => 2]);
         CustomPageType::factory()->count(2)->create();
 
@@ -111,7 +129,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_update_changes_label_and_syncs_custom_forms(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createTypeWithTables('recipe');
         $removed = CustomForm::queryFor($type)->create(['parts_name' => '削除する項目', 'customs_form_type' => CustomFormType::Text, 'sort_order' => 0]);
         $kept = CustomForm::queryFor($type)->create(['parts_name' => '材料', 'customs_form_type' => CustomFormType::Text, 'sort_order' => 1]);
@@ -137,7 +155,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_update_requires_options_for_option_types(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createTypeWithTables('recipe');
 
         $response = $this->put(route('admin.custom-page-types.update', $type), [
@@ -150,7 +168,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_destroy_soft_deletes_type_and_keeps_tables(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = $this->createTypeWithTables('recipe');
 
         $this->delete(route('admin.custom-page-types.destroy', $type))->assertRedirect(route('admin.custom-page-types.index'));
@@ -161,7 +179,7 @@ class CustomPageTypeControllerTest extends TestCase
 
     public function test_sidebar_lists_custom_page_types(): void
     {
-        $this->actingAsAdmin();
+        $this->actingAsSuperAdmin();
         $type = CustomPageType::factory()->create(['label' => 'レシピ']);
 
         $response = $this->get(route('admin.custom-page-types.index'));
