@@ -59,6 +59,8 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // DB 側で入る現在時刻(useCurrent の既定値など)をアプリのタイムゾーン(Asia/Tokyo)とそろえる
+            'timezone' => env('DB_TIMEZONE', '+09:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
