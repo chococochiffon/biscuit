@@ -55,7 +55,7 @@ paths:
 - 次の子レコードは専用の管理画面を持たず、親のフォームに埋め込んで編集する。
   - SNS リンク（`SocialLink`、サービス種別は `SocialService` enum）：サイト全体で共通のレコード。サイト設定の作成/編集フォームに埋め込む。
   - トップスライダー画像（`TopSliderImage`）：サイト設定の作成/編集フォームに埋め込む。
-  - ユーザー詳細のスキル（`UserSkill`、習熟度 0〜100）：ユーザーの作成/編集フォームに埋め込む。
+  - ユーザー詳細のスキル（`UserSkill`、習熟度 1〜5 の 5 段階）：ユーザーの作成/編集フォームに埋め込む。
 - 行の追加・削除・並び替えは `admin.js` の汎用リピーター `initRepeaterRows()`（`data-role="repeater"`）で行う。
 - フォームに表示する行は `Support\RepeaterRows::build()` で組み立てる（入力エラーで戻った場合は `old()` の入力値、それ以外は保存済みのモデルから。`index`（0 から振り直した入力名の番号）・`id`・`sortOrder` は共通で付き、ビューでは行ごとの項目の対応だけを書く。選択欄の値は `RepeaterRows::intOrNull()` で整数に変換する）。スライダー・SNS リンク・呼び出しコンテンツ（サイト設定）、スキル（ユーザー）、詳細（固定ページ）で使っている。
 - `GET /api/site-setting` は `social_links`・`top_slider_images` を並び順で含む。
