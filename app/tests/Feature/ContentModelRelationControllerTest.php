@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\CallContentType;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use App\Models\CustomPageType;
+use App\Support\CustomPages\CustomPageSchema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Schema;
@@ -64,17 +66,25 @@ class ContentModelRelationControllerTest extends TestCase
         $response->assertSee('<option value="user_details"', false);
     }
 
-    public function test_create_screen_offers_user_made_tables_that_exist_in_the_database(): void
+    public function test_create_screen_offers_only_main_tables_of_custom_page_types(): void
     {
-        Schema::create('user_make_recipes', fn (Blueprint $table) => $table->id());
+        $shop = CustomPageType::factory()->singlePage()->create(['name' => 'shop']);
+        (new CustomPageSchema)->create($shop);
+        $deleted = CustomPageType::factory()->create(['name' => 'recipe']);
+        (new CustomPageSchema)->create($deleted);
+        $deleted->delete();
+        Schema::create('user_make_others', fn (Blueprint $table) => $table->id());
         $this->actingAsAdmin();
 
         $response = $this->get(route('admin.content-model-relations.create'));
 
         $response->assertOk();
-        $response->assertSee('<option value="user_make_recipes"', false);
-
-        Schema::dropIfExists('user_make_recipes');
+        $response->assertSee('<option value="user_make_shops"', false);
+        // 詳細・カスタムフォームのテーブル、削除済みの種類、種類のないテーブルは候補に出さない
+        $response->assertDontSee('<option value="user_make_shop_details"', false);
+        $response->assertDontSee('<option value="customs_shop_forms"', false);
+        $response->assertDontSee('<option value="user_make_recipes"', false);
+        $response->assertDontSee('<option value="user_make_others"', false);
     }
 
     public function test_edit_screen_keeps_the_current_table_name_as_an_option_even_if_not_a_real_table(): void
@@ -106,18 +116,35 @@ class ContentModelRelationControllerTest extends TestCase
         ]);
     }
 
-    public function test_store_allows_user_made_table_name(): void
+    public function test_store_allows_main_table_of_custom_page_type(): void
     {
         $this->actingAsAdmin();
+        $type = CustomPageType::factory()->create(['name' => 'recipe']);
+        (new CustomPageSchema)->create($type);
 
         $response = $this->post(route('admin.content-model-relations.store'), [
             'content_type' => CallContentType::Custom->value,
-            'model_name' => 'user_made_list',
+            'model_name' => 'Recipe',
             'table_name' => 'user_make_recipes',
         ]);
 
         $response->assertRedirect(route('admin.content-model-relations.index'));
         $this->assertDatabaseHas('content_model_relations', ['table_name' => 'user_make_recipes']);
+    }
+
+    public function test_store_rejects_details_table_or_user_made_table_without_type(): void
+    {
+        $this->actingAsAdmin();
+        $type = CustomPageType::factory()->singlePage()->create(['name' => 'shop']);
+        (new CustomPageSchema)->create($type);
+
+        foreach (['user_make_shop_details', 'customs_shop_forms', 'user_make_recipes'] as $tableName) {
+            $this->post(route('admin.content-model-relations.store'), [
+                'content_type' => CallContentType::Custom->value,
+                'model_name' => 'Shop',
+                'table_name' => $tableName,
+            ])->assertSessionHasErrors('table_name');
+        }
     }
 
     public function test_store_fails_validation_with_missing_fields(): void
