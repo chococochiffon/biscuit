@@ -217,4 +217,20 @@ class CustomPageEntryControllerTest extends TestCase
 
         $this->get(route('admin.custom-pages.entries.index', $type))->assertNotFound();
     }
+
+    public function test_create_screen_uses_date_picker_and_shows_one_empty_detail_row(): void
+    {
+        $this->actingAsAdmin();
+        $type = $this->createType('shop', CustomPageBaseType::SinglePage);
+        $date = $this->createForm($type, '開店日', CustomFormType::Date);
+
+        $response = $this->get(route('admin.custom-pages.entries.create', $type));
+
+        $response->assertOk();
+        // 日付はブラウザ標準の入力ではなく、ほかの管理画面と同じ日付ピッカーにする
+        $response->assertSee('name="custom_fields['.$date->id.']" value="" class="form-control" data-role="date-picker"', false);
+        $response->assertDontSee('type="date"', false);
+        // 固定ページと同じく、空の詳細ブロックを1つ表示する
+        $response->assertSee('name="details[0][sub_title]"', false);
+    }
 }

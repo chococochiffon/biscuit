@@ -37,13 +37,17 @@
                     @endforeach
                 </select>
                 @break
+            @case(\App\Enums\CustomFormType::Date)
+                {{-- ほかの管理画面と同じ日付ピッカー(forms.js の initDateTimePickers()。表示は Y/m/d、送信は Y-m-d) --}}
+                <input id="{{ $inputId }}" type="text" name="{{ $name }}" value="{{ $value }}" class="form-control" data-role="date-picker" autocomplete="off">
+                @break
             @default
                 <input
                     id="{{ $inputId }}"
-                    type="{{ match ($type) { \App\Enums\CustomFormType::Date => 'date', \App\Enums\CustomFormType::Email => 'email', default => 'text' } }}"
+                    type="{{ $type === \App\Enums\CustomFormType::Email ? 'email' : 'text' }}"
                     name="{{ $name }}"
                     value="{{ $value }}"
-                    @if ($type === \App\Enums\CustomFormType::Text || $type === \App\Enums\CustomFormType::Email) maxlength="255" @endif
+                    maxlength="255"
                     class="form-control"
                 >
         @endswitch

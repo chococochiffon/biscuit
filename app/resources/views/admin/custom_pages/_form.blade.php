@@ -33,6 +33,17 @@
                         fn (array $row) => ['subTitle' => $row['sub_title'] ?? '', 'contents' => $row['contents'] ?? ''],
                         fn ($detail) => ['subTitle' => $detail->sub_title, 'contents' => $detail->contents],
                     );
+
+                    // 新規登録時(入力値の復元もない場合)は、固定ページと同じく空の詳細ブロックを1つ表示する
+                    if ($entry === null && old('details') === null) {
+                        $detailRows = collect([(object) [
+                            'index' => '0',
+                            'id' => null,
+                            'sortOrder' => 0,
+                            'subTitle' => '',
+                            'contents' => '',
+                        ]]);
+                    }
                 @endphp
 
                 {{-- 詳細は固定ページと同じ入力(single-pages.js の initSinglePageDetailRows())を使う --}}
