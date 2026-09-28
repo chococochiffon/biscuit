@@ -65,4 +65,18 @@ class ArticleControllerTest extends TestCase
         $response->assertOk();
         $this->assertSame([$newer->id, $sameSecond->id, $sameFirst->id, $older->id], array_column($response->json('data'), 'id'));
     }
+
+    public function test_index_returns_publication_start_datetime_as_published_at(): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        Article::factory()->published()->create([
+            'publication_start_datetime' => '2026-09-20 09:30:00',
+            'created_at' => '2026-09-01 00:00:00',
+        ]);
+
+        $response = $this->getJson(route('articles.index'));
+
+        $response->assertOk();
+        $response->assertJsonPath('data.0.published_at', '2026-09-20T09:30:00+09:00');
+    }
 }
