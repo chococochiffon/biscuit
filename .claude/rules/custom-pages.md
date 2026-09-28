@@ -28,6 +28,7 @@ paths:
   - カスタムフォームの項目定義 `formsTableName()`: `customs_recipe_forms`
   - カスタムフォームの入力値 `formValuesTableName()`: `customs_recipe_form_values`
 - テーブルは `Support\CustomPages\CustomPageSchema::create()` が作る。MySQL ではテーブルの作成が暗黙にコミットされトランザクションで囲めないため、`CustomPageTypeController::store()` はテーブルを先に作ってから種類を保存し、保存に失敗したら `drop()` で削除する(作成の途中で失敗した場合は `create()` が作った分を削除する)。外部キーの制約名は MySQL の 64 文字に収まるよう、テーブル名と列名のハッシュから短い名前(`fk_…`)を付ける。
+- 種類ごとのテーブルはマイグレーションの管理外。`custom_page_types` のマイグレーションの `down()` が、登録済みの種類(論理削除済みを含む)のテーブルを `CustomPageSchema::drop()` で先に削除するため、`migrate:refresh` でもテーブルは残らない(DB を作り直すと登録済みのカスタムページのデータも消える)。
 
 ## 種類ごとのテーブルのモデル
 

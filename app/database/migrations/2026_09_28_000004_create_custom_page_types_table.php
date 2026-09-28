@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\CustomPageType;
+use App\Support\CustomPages\CustomPageSchema;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -25,10 +27,17 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * 種類ごとのテーブルはマイグレーションの管理外のため、登録済みの種類(論理削除済みを含む)のテーブルを先に削除してから、
+     * 種類のテーブルを削除する(migrate:refresh などで、どの種類にも紐づかないテーブルが残らないようにする)。
      */
     public function down(): void
     {
+        if (Schema::hasTable('custom_page_types')) {
+            $schema = new CustomPageSchema;
+
+            CustomPageType::withTrashed()->get()->each(fn (CustomPageType $type) => $schema->drop($type));
+        }
+
         Schema::dropIfExists('custom_page_types');
     }
 };
