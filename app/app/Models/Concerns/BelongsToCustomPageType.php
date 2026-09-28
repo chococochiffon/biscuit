@@ -13,13 +13,41 @@ use Illuminate\Database\Eloquent\Builder;
 trait BelongsToCustomPageType
 {
     /**
+     * このインスタンスのテーブルの種類(Eloquent が作るインスタンスにも newInstance() で引き継ぐ)。
+     */
+    protected ?CustomPageType $customPageType = null;
+
+    /**
      * 指定した種類のテーブルを設定したインスタンスを返す。
      */
     public static function forType(CustomPageType $type): static
     {
         $model = new static;
+        $model->customPageType = $type;
         $model->setTable(static::tableNameFor($type));
         $model->mergeCasts(static::castsFor($type));
+
+        return $model;
+    }
+
+    /**
+     * このインスタンスのテーブルの種類。
+     */
+    public function customPageType(): CustomPageType
+    {
+        return $this->customPageType;
+    }
+
+    /**
+     * Eloquent が取得・作成するインスタンスにも、種類を引き継ぐ(テーブルとキャストは Eloquent が引き継ぐ)。
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  bool  $exists
+     */
+    public function newInstance($attributes = [], $exists = false): static
+    {
+        $model = parent::newInstance($attributes, $exists);
+        $model->customPageType = $this->customPageType;
 
         return $model;
     }

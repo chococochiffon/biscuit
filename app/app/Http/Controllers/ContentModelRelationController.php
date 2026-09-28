@@ -128,7 +128,7 @@ class ContentModelRelationController extends Controller
 
     /**
      * データ種別紐付け管理モーダル(サイト設定画面)向けのJSONペイロードを整形する。
-     * 表示用のcontent_type_labelを含める。
+     * 表示用のcontent_type_labelと、呼び出し方の組み合わせで使うモデル名(matrix_model_name。カスタムページは種類のベースの型)を含める。
      *
      * @return array<string, mixed>
      */
@@ -140,6 +140,7 @@ class ContentModelRelationController extends Controller
             'content_type_label' => $contentModelRelation->content_type->label(),
             'model_name' => $contentModelRelation->model_name,
             'table_name' => $contentModelRelation->table_name,
+            'matrix_model_name' => $contentModelRelation->matrixModelName(),
         ];
     }
 }

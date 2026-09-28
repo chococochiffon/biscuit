@@ -6,6 +6,7 @@ use App\Enums\ArticleApprovalStatus;
 use App\Enums\CustomFormType;
 use App\Models\CustomPages\CustomForm;
 use App\Models\CustomPageType;
+use App\Models\SinglePage;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Collection;
@@ -31,8 +32,17 @@ class StoreCustomPageEntryRequest extends FormRequest
     }
 
     /**
+     * スラッグの前後の空白と「/」を除く(未入力は null)。
+     */
+    protected function prepareForValidation(): void
+    {
+        $this->merge(['slug' => trim((string) $this->input('slug'), ' /') ?: null]);
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      * 更新(UpdateCustomPageEntryRequest)と共通のルール。
+     * スラッグは公開側の URL(/カスタム名の複数形/スラッグ)に使い、種類の中で一意にする(固定ページ型は必須、記事型は未入力なら id)。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -42,6 +52,13 @@ class StoreCustomPageEntryRequest extends FormRequest
 
         return [
             'title' => ['required', 'string', 'max:255'],
+            'slug' => [
+                $type->hasDetails() ? 'required' : 'nullable',
+                'string', 'max:255',
+                'regex:#^'.SinglePage::SLUG_PATTERN.'$#',
+                'not_regex:#^[0-9]+$#',
+                Rule::unique($type->tableName(), 'slug')->ignore($this->route('entry'))->withoutTrashed(),
+            ],
             ...($type->hasDetails() ? $this->singlePageRules($type) : $this->articleRules()),
             'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],
@@ -74,6 +91,8 @@ class StoreCustomPageEntryRequest extends FormRequest
     {
         return [
             'details.max' => __('詳細は:max件まで登録できます。'),
+            'slug.regex' => __('スラッグは半角英小文字・数字・ハイフンで入力してください。'),
+            'slug.not_regex' => __('数字だけのスラッグは記事番号用のため使えません。'),
         ];
     }
 
@@ -102,6 +121,7 @@ class StoreCustomPageEntryRequest extends FormRequest
     {
         return [
             'content' => ['required', 'string'],
+            'thumbnail' => ['nullable', 'image', 'max:10240'],
             'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
         ];
     }
@@ -115,6 +135,7 @@ class StoreCustomPageEntryRequest extends FormRequest
     {
         return [
             'short_sentences' => ['required', 'string', 'max:255'],
+            'header_image' => ['nullable', 'image', 'max:10240'],
             'details' => ['nullable', 'array', 'max:'.config('limits.single_page_details')],
             'details.*.id' => [
                 'nullable', 'integer',

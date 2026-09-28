@@ -4,6 +4,7 @@ namespace App\Http\Requests\Concerns;
 
 use App\Models\SinglePage;
 use App\Rules\AvailablePath;
+use App\Rules\NotReservedByCustomPage;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -31,13 +32,14 @@ trait ValidatesPath
     protected function pathRules(bool $slugRequired, ?Model $ignore = null): array
     {
         return [
-            'parent_path' => ['nullable', 'string', 'max:255', 'regex:#^'.SinglePage::SLUG_PATTERN.'(?:/'.SinglePage::SLUG_PATTERN.')*$#'],
+            'parent_path' => ['nullable', 'string', 'max:255', 'regex:#^'.SinglePage::SLUG_PATTERN.'(?:/'.SinglePage::SLUG_PATTERN.')*$#', new NotReservedByCustomPage],
             'slug' => [
                 $slugRequired ? 'required' : 'nullable',
                 'string', 'max:255',
                 'regex:#^'.SinglePage::SLUG_PATTERN.'$#',
                 'not_regex:#^[0-9]+$#',
                 new AvailablePath($ignore),
+                new NotReservedByCustomPage,
             ],
         ];
     }

@@ -66,7 +66,7 @@
                 <option
                     value="{{ $relation->id }}"
                     data-content-type="{{ $relation->content_type->value }}"
-                    data-model-name="{{ $relation->model_name }}"
+                    data-model-name="{{ $relation->matrixModelName() }}"
                     @selected($contentModelRelationId === $relation->id)
                 >
                     {{ $relation->content_type->label() }} / {{ $relation->model_name }}

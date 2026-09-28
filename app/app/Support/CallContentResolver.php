@@ -6,6 +6,7 @@ use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use App\Models\CallContent;
 use App\Support\CallContent\ArticleContentSource;
+use App\Support\CallContent\CustomPageContentSource;
 use App\Support\CallContent\GalleryImageContentSource;
 use App\Support\CallContent\QuestionAnswerContentSource;
 use App\Support\CallContent\SinglePageContentSource;
@@ -28,6 +29,7 @@ class CallContentResolver
         private readonly UserDetailContentSource $userDetailContentSource = new UserDetailContentSource,
         private readonly GalleryImageContentSource $galleryImageContentSource = new GalleryImageContentSource,
         private readonly QuestionAnswerContentSource $questionAnswerContentSource = new QuestionAnswerContentSource,
+        private readonly CustomPageContentSource $customPageContentSource = new CustomPageContentSource,
     ) {}
 
     /**
@@ -44,12 +46,13 @@ class CallContentResolver
             return $this->appliesToPage($callContent, $pageContent) ? $pageContent : null;
         }
 
-        return match ($callContent->contentModelRelation->model_name) {
+        return match ($callContent->contentModelRelation->matrixModelName()) {
             'Article' => $this->resolveArticle($callContent),
             'SinglePage' => $this->resolveSinglePage($callContent),
             'UserDetail' => $this->resolveUserDetail($callContent),
             'GalleryImage' => $this->resolveGalleryImage($callContent),
             'QuestionAnswer' => $this->resolveQuestionAnswer($callContent),
+            CallType::CUSTOM_ARTICLE, CallType::CUSTOM_SINGLE_PAGE => $this->resolveCustomPage($callContent),
             default => throw new InvalidArgumentException(
                 "未対応のmodel_nameです: {$callContent->contentModelRelation->model_name}"
             ),
@@ -130,6 +133,22 @@ class CallContentResolver
         return match ($callContent->call_type) {
             CallType::Accordion => $this->questionAnswerContentSource->getAccordion($callContent->view_count),
             default => throw $this->unsupportedCallType($callContent, 'QuestionAnswer'),
+        };
+    }
+
+    /**
+     * カスタムページ(データ種別紐付けの table_name が種類の本体のテーブル)を、記事型・固定ページ型ごとの組み合わせで解決する。
+     */
+    private function resolveCustomPage(CallContent $callContent): Model|EloquentCollection|null
+    {
+        $modelName = $callContent->contentModelRelation->matrixModelName();
+        $type = $callContent->contentModelRelation->customPageType();
+        $this->assertSupported($callContent, $modelName);
+
+        return match ($callContent->call_type) {
+            CallType::LinkList, CallType::Archive => $this->customPageContentSource->getList($type, $callContent->view_count),
+            CallType::Link => $this->customPageContentSource->getLink($type),
+            default => throw $this->unsupportedCallType($callContent, $modelName),
         };
     }
 

@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use Illuminate\Support\Str;
+
 enum CustomFormType: int
 {
     case Text = 0;
@@ -26,6 +28,14 @@ enum CustomFormType: int
             self::Radio => __('ラジオ'),
             self::Checkbox => __('チェックボックス'),
         };
+    }
+
+    /**
+     * API でフロントエンドが表示を切り替えるための識別子(例: text / checkbox)。
+     */
+    public function apiName(): string
+    {
+        return Str::snake($this->name);
     }
 
     /**

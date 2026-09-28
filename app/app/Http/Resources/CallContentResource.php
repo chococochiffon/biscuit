@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Article;
+use App\Models\CustomPages\CustomPageEntry;
 use App\Models\GalleryImage;
 use App\Models\QuestionAnswer;
 use App\Models\SinglePage;
@@ -78,6 +79,7 @@ class CallContentResource extends JsonResource
             $items->first() instanceof SinglePage => SinglePageResource::collection($items),
             $items->first() instanceof UserDetail => UserDetailResource::collection($items),
             $items->first() instanceof GalleryImage => GalleryImageResource::collection($items),
+            $items->first() instanceof CustomPageEntry => CustomPageEntryResource::collection($items),
             $items->first() instanceof QuestionAnswer => QuestionAnswerResource::collection($items),
             default => [],
         };
@@ -89,6 +91,7 @@ class CallContentResource extends JsonResource
             $model instanceof Article => new ArticleResource($model),
             $model instanceof SinglePage => new SinglePageResource($model),
             $model instanceof UserDetail => new UserDetailResource($model),
+            $model instanceof CustomPageEntry => new CustomPageEntryResource($model),
             default => null,
         };
     }
