@@ -50,7 +50,7 @@
     </form>
 
     @if ($canReorder && $singlePages->isNotEmpty())
-        <form id="single-page-reorder-form" method="POST" action="{{ route('admin.single-pages.reorder') }}">
+        <form id="single-page-reorder-form" method="POST" action="{{ route('admin.single-pages.reorder') }}" class="d-none">
             @csrf
             @method('PATCH')
             <input type="hidden" name="offset" value="{{ $singlePages->firstItem() ? $singlePages->firstItem() - 1 : 0 }}">

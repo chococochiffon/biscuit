@@ -69,7 +69,7 @@
     </form>
 
     @if ($canReorder && $galleryImages->isNotEmpty())
-        <form id="gallery-image-reorder-form" method="POST" action="{{ route('admin.gallery-images.reorder') }}">
+        <form id="gallery-image-reorder-form" method="POST" action="{{ route('admin.gallery-images.reorder') }}" class="d-none">
             @csrf
             @method('PATCH')
             <input type="hidden" name="offset" value="{{ $galleryImages->firstItem() - 1 }}">
