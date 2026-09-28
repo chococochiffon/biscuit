@@ -61,6 +61,25 @@
                         ><i class="bi bi-gear"></i>{{ __('サイト設定') }}</a>
                     </li>
                 </ul>
+
+                <hr class="admin-sidebar-divider">
+
+                {{-- カスタムページ管理: 種類の管理と、登録した種類ごとのページ一覧 --}}
+                <div class="admin-sidebar-heading">{{ __('カスタムページ管理') }}</div>
+                <ul class="nav flex-column admin-sidebar-nav">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.custom-page-types.index') }}" class="nav-link">
+                            <i class="bi bi-ui-checks-grid"></i>{{ __('種類の管理') }}
+                        </a>
+                    </li>
+                    @foreach ($sidebarCustomPageTypes as $sidebarCustomPageType)
+                        <li class="nav-item">
+                            <a href="{{ route('admin.custom-pages.entries.index', $sidebarCustomPageType) }}" class="nav-link">
+                                <i class="bi {{ $sidebarCustomPageType->hasDetails() ? 'bi-file-earmark-richtext' : 'bi-file-earmark-text' }}"></i>{{ $sidebarCustomPageType->label }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
             </aside>
 
             <div class="d-flex flex-column flex-grow-1 min-vh-100">
