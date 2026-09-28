@@ -16,13 +16,13 @@ class CallContentSeeder extends Seeder
     {
         $callContents = [
             [
-                'call_name' => 'ArticleLinkList',
+                'call_name' => 'ArticleArchive',
                 'title' => '最新記事',
-                'call_type' => CallType::LinkList,
+                'call_type' => CallType::Archive,
                 'content_model_relation_id' => 1,
                 'view_count' => 6,
-                'place' => CallContentPlace::Others,
-                'sort_order' => 0,
+                'place' => CallContentPlace::Top,
+                'sort_order' => 5,
             ],
             [
                 'call_name' => 'SinglePage',
@@ -50,6 +50,15 @@ class CallContentSeeder extends Seeder
                 'view_count' => 1,
                 'place' => CallContentPlace::Inside,
                 'sort_order' => 3,
+            ],
+            // トップで、トップへ表示するユーザーのプロフィールとスキルを並べる枠
+            [
+                'call_name' => 'UserSkill',
+                'call_type' => CallType::SkillList,
+                'content_model_relation_id' => 3,
+                'view_count' => 3,
+                'place' => CallContentPlace::Top,
+                'sort_order' => 4,
             ],
         ];
 

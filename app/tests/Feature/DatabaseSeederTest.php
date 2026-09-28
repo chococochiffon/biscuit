@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CallContentPlace;
 use App\Models\Article;
+use App\Models\CallContent;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Models\TopSliderImage;
@@ -41,6 +43,28 @@ class DatabaseSeederTest extends TestCase
         $this->getJson(route('api.resolve', ['path' => '/news/biscuit-v1-0-release']))
             ->assertOk()
             ->assertJsonPath('type', 'article');
+    }
+
+    public function test_seeded_call_contents_use_allowed_combinations(): void
+    {
+        Storage::fake('public');
+
+        $this->seed();
+
+        $callContents = CallContent::query()->with('contentModelRelation')->ordered()->get();
+
+        // 管理画面で選べない組み合わせ(表示箇所 × データ種別 × 呼び出し方)を初期データに入れていないこと
+        foreach ($callContents as $callContent) {
+            $this->assertTrue(
+                $callContent->call_type->supports($callContent->contentModelRelation->model_name, $callContent->place),
+                "{$callContent->call_name} の組み合わせは選択できません。"
+            );
+        }
+
+        $this->assertSame(
+            ['SinglePage', 'UserSkill', 'ArticleArchive'],
+            $callContents->where('place', CallContentPlace::Top)->pluck('call_name')->values()->all()
+        );
     }
 
     public function test_top_slider_images_are_not_duplicated_when_seeding_again(): void
