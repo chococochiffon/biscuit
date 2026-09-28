@@ -8,9 +8,35 @@
 
 ## インストール
 
+リポジトリを取得し、`app/.env` を作成します。`.env.example` は Docker Compose の MySQL（`db` サービス）を使う設定になっているので、コピーすればそのまま使えます。
+
 ```
-❯ composer create-project --prefer-dist laravel/laravel .
+❯ git clone git@github.com:chococochiffon/biscuit.git
+❯ cd biscuit
+❯ cp app/.env.example app/.env
 ```
+
+コンテナを起動します。`app` コンテナは起動時に `composer install` を実行します。`biscuit` データベースは MySQL の初回起動時に作成されます。
+
+```
+❯ docker compose up -d
+```
+
+アプリケーションキーを生成します。
+
+```
+❯ docker compose exec app php artisan key:generate
+```
+
+管理画面の CSS・JS をビルドします。`app` コンテナには Node.js が入っていないので、ホスト側の `app/` で実行してください。
+
+```
+❯ cd app
+❯ npm install
+❯ npm run build
+```
+
+続けて「storage の権限」と「マイグレーション」の手順を済ませると、http://localhost/admin から管理画面にログインできます。phpMyAdmin は http://localhost:8081 で開けます。
 
 ## storage の権限
 
