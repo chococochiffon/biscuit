@@ -92,6 +92,16 @@ class Article extends Model
     }
 
     /**
+     * 公開開始日時の新しい順(同じ日時なら id の大きい順)に並べる。
+     * 記事一覧 API・呼び出しコンテンツで、公開側に記事を新着順で出すときの共通の並び順。
+     */
+    #[Scope]
+    protected function newest(Builder $query): void
+    {
+        $query->orderByDesc('publication_start_datetime')->orderByDesc('id');
+    }
+
+    /**
      * 記事を投稿したユーザーを取得する(Nullの場合は管理者が登録したこととする)。
      */
     public function user(): BelongsTo

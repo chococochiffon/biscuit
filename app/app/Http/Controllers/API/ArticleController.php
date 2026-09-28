@@ -16,7 +16,7 @@ class ArticleController extends Controller
      */
     #[OA\Get(
         path: '/articles',
-        summary: '公開済みかつ公開期間内の記事一覧を取得する',
+        summary: '公開済みかつ公開期間内の記事一覧を、公開開始日時の新しい順に取得する',
         tags: ['Articles'],
         parameters: [
             new OA\Parameter(name: 'page', in: 'query', required: false, description: 'ページ番号', schema: new OA\Schema(type: 'integer', default: 1)),
@@ -30,7 +30,7 @@ class ArticleController extends Controller
         $articles = Article::query()
             ->published()
             ->with(['user', 'tags'])
-            ->latest('created_at')
+            ->newest()
             ->paginate(config('limits.api_per_page'));
 
         return ArticleResource::collection($articles);

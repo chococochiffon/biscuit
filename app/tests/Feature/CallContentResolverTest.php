@@ -29,9 +29,10 @@ class CallContentResolverTest extends TestCase
 
     public function test_article_original_text_resolves_the_latest_published_article(): void
     {
-        Article::factory()->published()->create(['created_at' => now()->subDay()]);
-        $latest = Article::factory()->published()->create(['created_at' => now()]);
-        Article::factory()->create(['created_at' => now()->addDay()]); // 下書きは対象外
+        Article::factory()->published()->create(['publication_start_datetime' => now()->subDays(2)]);
+        // 作成日時が古くても、公開開始日時が新しい記事を最新とする
+        $latest = Article::factory()->published()->create(['publication_start_datetime' => now()->subDay(), 'created_at' => now()->subDays(3)]);
+        Article::factory()->create(['publication_start_datetime' => now()->subHour()]); // 下書きは対象外
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::OriginalText,
             'content_model_relation_id' => $this->relation('Article')->id,
@@ -45,9 +46,9 @@ class CallContentResolverTest extends TestCase
 
     public function test_article_link_list_resolves_the_latest_published_articles_up_to_view_count(): void
     {
-        $oldest = Article::factory()->published()->create(['created_at' => now()->subDays(3)]);
-        $middle = Article::factory()->published()->create(['created_at' => now()->subDays(2)]);
-        $newest = Article::factory()->published()->create(['created_at' => now()->subDay()]);
+        $newest = Article::factory()->published()->create(['publication_start_datetime' => now()->subDay()]);
+        $oldest = Article::factory()->published()->create(['publication_start_datetime' => now()->subDays(3)]);
+        $middle = Article::factory()->published()->create(['publication_start_datetime' => now()->subDays(2)]);
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::LinkList,
             'content_model_relation_id' => $this->relation('Article')->id,
@@ -78,7 +79,9 @@ class CallContentResolverTest extends TestCase
 
     public function test_article_archive_resolves_the_latest_published_articles_up_to_view_count(): void
     {
-        Article::factory()->published()->count(3)->create();
+        $this->freezeSecond();
+        // 公開開始日時が同じ記事は、id の大きい順(後から登録した順)に並べる
+        [, $second, $third] = Article::factory()->published()->count(3)->create(['publication_start_datetime' => now()->subDay()])->all();
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::Archive,
             'content_model_relation_id' => $this->relation('Article')->id,
@@ -89,7 +92,7 @@ class CallContentResolverTest extends TestCase
         $result = (new CallContentResolver)->resolve($callContent);
 
         $this->assertInstanceOf(EloquentCollection::class, $result);
-        $this->assertCount(2, $result);
+        $this->assertSame([$third->id, $second->id], $result->pluck('id')->all());
     }
 
     // --- SinglePage ---

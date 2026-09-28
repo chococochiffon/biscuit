@@ -50,4 +50,19 @@ class ArticleControllerTest extends TestCase
         $response->assertJsonCount(1, 'data');
         $response->assertJsonPath('data.0.id', $visible->id);
     }
+
+    public function test_index_orders_articles_by_publication_start_datetime_desc(): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        $older = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-10 00:00:00', 'created_at' => '2026-09-20 00:00:00']);
+        $newer = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-20 00:00:00', 'created_at' => '2026-09-01 00:00:00']);
+        // 公開開始日時が同じ記事は、id の大きい順に並べる
+        $sameFirst = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-15 00:00:00']);
+        $sameSecond = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-15 00:00:00']);
+
+        $response = $this->getJson(route('articles.index'));
+
+        $response->assertOk();
+        $this->assertSame([$newer->id, $sameSecond->id, $sameFirst->id, $older->id], array_column($response->json('data'), 'id'));
+    }
 }
