@@ -11,11 +11,15 @@
      * @var int|null $viewCount
      * @var string|null $content
      * @var int $sortOrder
+     * @var \Illuminate\Support\Collection $navItems 表示用の行(RepeaterRows)
      * @var \Illuminate\Support\Collection $contentModelRelations
+     * @var \Illuminate\Support\Collection $singlePages
+     * @var \Illuminate\Support\Collection $customPageTypes
      */
     $selectedBlockType = \App\Enums\LayoutBlockType::tryFrom((int) $blockType);
     $isCallContent = $selectedBlockType === \App\Enums\LayoutBlockType::CallContent;
     $isFreeText = $selectedBlockType === \App\Enums\LayoutBlockType::FreeText;
+    $isNavMenu = $selectedBlockType === \App\Enums\LayoutBlockType::NavMenu;
     $hasHeading = (bool) $selectedBlockType?->hasHeading();
 @endphp
 
@@ -119,6 +123,47 @@
                         @disabled(! $isCallContent)
                     >
                 </div>
+            </div>
+
+            <div class="mt-2" data-role="nav-menu-fields" @if (! $isNavMenu) hidden @endif>
+                <label class="form-label small mb-0">{{ __('ナビメニューの項目') }}</label>
+                <div class="form-text mb-2">{{ __('項目を登録しない場合は、Home・固定ページ(リンクリスト表示対象)・Articles・カスタムページの一覧・Gallery・FAQ を自動で並べます。') }}</div>
+
+                <div data-role="nav-item-rows" data-next-index="{{ $navItems->count() }}" data-max-rows="{{ config('limits.layout_nav_items') }}">
+                    @foreach ($navItems as $navItem)
+                        @include('admin.layouts._nav_item_row', [
+                            'blockIndex' => $index,
+                            'index' => $navItem->index,
+                            'id' => $navItem->id,
+                            'linkType' => $navItem->linkType,
+                            'label' => $navItem->label,
+                            'url' => $navItem->url,
+                            'singlePageId' => $navItem->singlePageId,
+                            'customPageTypeId' => $navItem->customPageTypeId,
+                            'sortOrder' => $navItem->sortOrder,
+                            'enabled' => $isNavMenu,
+                        ])
+                    @endforeach
+                </div>
+
+                <button type="button" class="btn btn-outline-secondary btn-sm" data-role="nav-item-add">
+                    {{ __('+ 項目を追加') }}
+                </button>
+
+                <template data-role="nav-item-template">
+                    @include('admin.layouts._nav_item_row', [
+                        'blockIndex' => $index,
+                        'index' => '__NAV_INDEX__',
+                        'id' => null,
+                        'linkType' => null,
+                        'label' => null,
+                        'url' => null,
+                        'singlePageId' => null,
+                        'customPageTypeId' => null,
+                        'sortOrder' => 0,
+                        'enabled' => true,
+                    ])
+                </template>
             </div>
 
             <div class="mt-2" data-role="free-text-fields" @if (! $isFreeText) hidden @endif>

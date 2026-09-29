@@ -22,14 +22,20 @@ class LayoutController extends Controller
         summary: '公開側のレイアウト(サイドバーの位置と領域ごとの部品)を取得する',
         tags: ['Layout'],
         responses: [
-            new OA\Response(response: 200, description: 'data.pages: ページの種類(top/article/single_page/other)ごとの sidebar_position(none/left/right)。data.regions: 領域(header/sidebar/footer)ごとの部品の一覧(並び順)。各部品は block_type(site_title/nav_menu/social_links/free_text/copyright/call_content)・title・subtitle と、nav_menu は single_pages・custom_page_types、free_text は content(HTML)、call_content は call_content(呼び出しコンテンツ API の 1 要素と同じ形)'),
+            new OA\Response(response: 200, description: 'data.pages: ページの種類(top/article/single_page/other)ごとの sidebar_position(none/left/right)。data.regions: 領域(header/sidebar/footer)ごとの部品の一覧(並び順)。各部品は block_type(site_title/nav_menu/social_links/free_text/copyright/call_content)・title・subtitle と、nav_menu は items(label・path・prefix)、free_text は content(HTML)、call_content は call_content(呼び出しコンテンツ API の 1 要素と同じ形)'),
         ]
     )]
     public function show(): JsonResponse
     {
         $sidebarPositions = Layout::sidebarPositions();
         $blocks = LayoutBlock::query()
-            ->with('contentModelRelation')
+            ->with([
+                'contentModelRelation',
+                'navItems' => fn ($query) => $query->ordered(),
+                // 公開期間外の固定ページへの項目はナビに出さない
+                'navItems.singlePage' => fn ($query) => $query->published(),
+                'navItems.customPageType',
+            ])
             ->ordered()
             ->get()
             ->groupBy(fn (LayoutBlock $block) => $block->region->value);

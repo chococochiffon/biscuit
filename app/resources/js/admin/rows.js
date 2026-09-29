@@ -22,7 +22,7 @@ export function initRepeaterRows() {
 
 /**
  * 行の追加・削除・ドラッグでの並び替えができる繰り返し入力の共通処理。
- * 追加ボタンでテンプレート(行番号は __INDEX__。コンテナの data-next-index から採番する)の行をコンテナの末尾に追加し、
+ * 追加ボタンでテンプレート(行番号は placeholder。既定は __INDEX__。コンテナの data-next-index から採番する)の行をコンテナの末尾に追加し、
  * 各行の削除ボタン(removeSelector)で行を削除する。maxRows(0 なら無制限)に達したら追加ボタンを無効にする。
  * 行ごとの独自の初期化は onBindRow、削除時の後始末は onRemoveRow で行う。
  * 返り値の updateSortOrders で、各行の並び順の隠しinputを画面上の順番に設定し直せる。
@@ -32,6 +32,7 @@ export function initEditableRows(container, {
     addButton,
     template,
     removeSelector = '[data-role="remove-row"]',
+    placeholder = '__INDEX__',
     maxRows = 0,
     onBindRow = () => {},
     onRemoveRow = () => {},
@@ -61,7 +62,7 @@ export function initEditableRows(container, {
 
     addButton.addEventListener('click', () => {
         const wrapper = document.createElement('div');
-        wrapper.innerHTML = template.innerHTML.replaceAll('__INDEX__', String(nextIndex)).trim();
+        wrapper.innerHTML = template.innerHTML.replaceAll(placeholder, String(nextIndex)).trim();
         const row = wrapper.firstElementChild;
 
         container.appendChild(row);

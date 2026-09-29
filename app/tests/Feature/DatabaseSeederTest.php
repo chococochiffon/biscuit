@@ -79,10 +79,8 @@ class DatabaseSeederTest extends TestCase
             ['SinglePage', 'UserSkill', 'ArticleArchive', 'GalleryTileList', 'QuestionAnswerAccordion'],
             $callContents->where('place', CallContentPlace::Top)->pluck('call_name')->values()->all()
         );
-        $this->assertSame(
-            ['SinglePageLinkList'],
-            $callContents->where('place', CallContentPlace::Others)->pluck('call_name')->values()->all()
-        );
+        // ヘッダー・フッターの部品はレイアウト管理(LayoutSeeder)で登録し、呼び出しコンテンツには登録しない
+        $this->assertSame([], $callContents->where('place', CallContentPlace::Layout)->pluck('call_name')->values()->all());
     }
 
     public function test_top_slider_images_are_not_duplicated_when_seeding_again(): void

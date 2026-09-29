@@ -4,6 +4,20 @@
 
 @section('content')
     @php
+        $navItemFromInput = fn (array $row) => [
+            'linkType' => \App\Support\RepeaterRows::intOrNull($row['link_type'] ?? null),
+            'label' => $row['label'] ?? null,
+            'url' => $row['url'] ?? null,
+            'singlePageId' => \App\Support\RepeaterRows::intOrNull($row['single_page_id'] ?? null),
+            'customPageTypeId' => \App\Support\RepeaterRows::intOrNull($row['custom_page_type_id'] ?? null),
+        ];
+        $navItemFromModel = fn ($navItem) => [
+            'linkType' => $navItem->link_type->value,
+            'label' => $navItem->label,
+            'url' => $navItem->url,
+            'singlePageId' => $navItem->single_page_id,
+            'customPageTypeId' => $navItem->custom_page_type_id,
+        ];
         $blockRows = \App\Support\RepeaterRows::build(
             'blocks',
             $blocks,
@@ -16,6 +30,7 @@
                 'contentModelRelationId' => \App\Support\RepeaterRows::intOrNull($row['content_model_relation_id'] ?? null),
                 'viewCount' => $row['view_count'] ?? 1,
                 'content' => $row['content'] ?? null,
+                'navItems' => \App\Support\RepeaterRows::fromInput($row['nav_items'] ?? [], $navItemFromInput),
             ],
             fn ($block) => [
                 'region' => $block->region->value,
@@ -26,6 +41,7 @@
                 'contentModelRelationId' => $block->content_model_relation_id,
                 'viewCount' => $block->view_count ?? 1,
                 'content' => $block->content,
+                'navItems' => \App\Support\RepeaterRows::fromModels($block->navItems, $navItemFromModel),
             ],
         );
         $regionDescriptions = [
@@ -87,10 +103,11 @@
                 data-block-types="{{ json_encode([
                     'callContent' => \App\Enums\LayoutBlockType::CallContent->value,
                     'freeText' => \App\Enums\LayoutBlockType::FreeText->value,
+                    'navMenu' => \App\Enums\LayoutBlockType::NavMenu->value,
                     'withHeading' => collect(\App\Enums\LayoutBlockType::cases())->filter->hasHeading()->map->value->values(),
                 ]) }}"
             >
-                <div class="form-text mb-2">{{ __('左端のハンドルをドラッグすると、領域の中で並び替えたり、別の領域へ移したりできます。呼び出しコンテンツの部品は、サイト設定の呼び出しコンテンツ(表示箇所: その他)と同じ組み合わせで選べます。') }}</div>
+                <div class="form-text mb-2">{{ __('左端のハンドルをドラッグすると、領域の中で並び替えたり、別の領域へ移したりできます。呼び出しコンテンツの部品は、ヘッダー・サイドバー・フッターに収まる呼び出し方(リンクリスト・リンク・アーカイブ)で選べます。') }}</div>
 
                 @foreach (\App\Enums\LayoutRegion::cases() as $region)
                     <div class="card mb-4">
@@ -111,8 +128,11 @@
                                         'contentModelRelationId' => $row->contentModelRelationId,
                                         'viewCount' => $row->viewCount,
                                         'content' => $row->content,
+                                        'navItems' => $row->navItems,
                                         'sortOrder' => $row->sortOrder,
                                         'contentModelRelations' => $contentModelRelations,
+                                        'singlePages' => $singlePages,
+                                        'customPageTypes' => $customPageTypes,
                                     ])
                                 @endforeach
                             </div>
@@ -136,8 +156,11 @@
                         'contentModelRelationId' => null,
                         'viewCount' => 1,
                         'content' => null,
+                        'navItems' => collect(),
                         'sortOrder' => 0,
                         'contentModelRelations' => $contentModelRelations,
+                        'singlePages' => $singlePages,
+                        'customPageTypes' => $customPageTypes,
                     ])
                 </template>
             </div>

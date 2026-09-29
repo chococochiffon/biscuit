@@ -138,7 +138,7 @@ class ResolveControllerTest extends TestCase
         $article = Article::factory()->published()->create();
         $this->callContent('2番目', CallType::Link, 'Article', CallContentPlace::Top, 1);
         $this->callContent('1番目', CallType::Archive, 'Article', CallContentPlace::Top, 0);
-        $this->callContent('その他', CallType::LinkList, 'Article', CallContentPlace::Others, 0);
+        $this->callContent('その他', CallType::LinkList, 'Article', CallContentPlace::Layout, 0);
 
         $response = $this->getJson(route('api.resolve', ['path' => '/']));
 

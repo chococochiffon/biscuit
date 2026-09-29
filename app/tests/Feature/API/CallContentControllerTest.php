@@ -146,17 +146,17 @@ class CallContentControllerTest extends TestCase
         $this->assertSame(['1番目', '2番目', '3番目'], array_column($response->json('data'), 'call_name'));
     }
 
-    public function test_index_resolves_article_link_list_up_to_view_count(): void
+    public function test_index_resolves_article_archive_up_to_view_count(): void
     {
         Article::factory()->published()->count(3)->create();
         CallContent::factory()->create([
-            'call_type' => CallType::LinkList,
-            'place' => CallContentPlace::Others,
+            'call_type' => CallType::Archive,
+            'place' => CallContentPlace::Top,
             'view_count' => 2,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
 
-        $response = $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Others->value]));
+        $response = $this->getJson(route('call-contents.index'));
 
         $response->assertOk();
         $response->assertJsonCount(2, 'data.0.articles');
@@ -186,13 +186,13 @@ class CallContentControllerTest extends TestCase
         Article::factory()->published()->create(['publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => '2026-09-30 00:00:00']);
         $visible = Article::factory()->published()->create(['publication_start_datetime' => '2026-09-01 00:00:00', 'publication_end_datetime' => null]);
         CallContent::factory()->create([
-            'call_type' => CallType::LinkList,
-            'place' => CallContentPlace::Others,
+            'call_type' => CallType::Archive,
+            'place' => CallContentPlace::Top,
             'view_count' => 10,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
 
-        $response = $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Others->value]));
+        $response = $this->getJson(route('call-contents.index'));
 
         $response->assertOk();
         $response->assertJsonCount(1, 'data.0.articles');
@@ -275,16 +275,24 @@ class CallContentControllerTest extends TestCase
 
     public function test_index_fails_when_the_stored_combination_has_no_defined_rule(): void
     {
-        // OriginalTextはOthers(その他)では、どのモデルに対しても許可されていない組み合わせ。
+        // OriginalTextはトップでは、どのモデルに対しても許可されていない組み合わせ。
         CallContent::factory()->create([
             'call_type' => CallType::OriginalText,
-            'place' => CallContentPlace::Others,
+            'place' => CallContentPlace::Top,
             'content_model_relation_id' => $this->relation('Article')->id,
         ]);
 
-        $response = $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Others->value]));
+        $response = $this->getJson(route('call-contents.index'));
 
         $response->assertStatus(500);
+    }
+
+    public function test_index_rejects_layout_place(): void
+    {
+        // レイアウトの部品の設置場所は、レイアウト API(/api/layout)で取得する
+        $this->getJson(route('call-contents.index', ['place' => CallContentPlace::Layout->value]))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('place');
     }
 
     public function test_index_fails_when_model_name_is_unrecognized_at_top_place(): void

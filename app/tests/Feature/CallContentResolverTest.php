@@ -54,7 +54,7 @@ class CallContentResolverTest extends TestCase
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::LinkList,
             'content_model_relation_id' => $this->relation('Article')->id,
-            'place' => CallContentPlace::Others,
+            'place' => CallContentPlace::Layout,
             'view_count' => 2,
         ]);
 
@@ -269,7 +269,7 @@ class CallContentResolverTest extends TestCase
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::TileList,
             'content_model_relation_id' => $this->relation('GalleryImage')->id,
-            'place' => CallContentPlace::Others,
+            'place' => CallContentPlace::Layout,
         ]);
 
         $this->expectException(InvalidArgumentException::class);
@@ -307,7 +307,7 @@ class CallContentResolverTest extends TestCase
 
     public function test_resolve_throws_for_a_call_type_not_supported_at_the_given_place(): void
     {
-        // LinkはTop/Othersでのみ許可され、Inside(本文内)ではどのモデルでも許可されない。
+        // LinkはTop/Layoutでのみ許可され、Inside(本文内)ではどのモデルでも許可されない。
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::Link,
             'content_model_relation_id' => $this->relation('Article')->id,

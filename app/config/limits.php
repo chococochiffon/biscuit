@@ -24,6 +24,9 @@ return [
     // カスタムページの種類の最大件数
     'custom_page_types' => (int) env('LIMIT_CUSTOM_PAGE_TYPES', 5),
 
+    // レイアウトのナビメニューの部品 1 件あたりの項目の最大件数
+    'layout_nav_items' => (int) env('LIMIT_LAYOUT_NAV_ITEMS', 15),
+
     /*
     |--------------------------------------------------------------------------
     | 一覧の 1 ページの件数

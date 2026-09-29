@@ -71,7 +71,7 @@ enum CallType: int
                 'SinglePage' => [self::OriginalText],
                 'UserDetail' => [self::LinkList, self::SkillList],
             ],
-            CallContentPlace::Others->value => [
+            CallContentPlace::Layout->value => [
                 'Article' => [self::LinkList, self::Link, self::Archive],
                 'SinglePage' => [self::LinkList],
                 'UserDetail' => [self::LinkList],
