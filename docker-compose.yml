@@ -38,4 +38,9 @@ services:
       - PMA_USER=root
       - PMA_PASSWORD=password
     ports:
-      - "8081:80"
+      - "8081:80"  # 開発用のメールサーバー。アプリが送ったメールは外へ送らずに受け取り、http://localhost:8025 で見られる
+  mailpit:
+    container_name: mailpit
+    image: axllent/mailpit
+    ports:
+      - "8025:8025"

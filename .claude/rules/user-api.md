@@ -4,6 +4,10 @@ paths:
   - app/app/Http/Controllers/API/MeController.php
   - app/app/Http/Controllers/API/MyArticleController.php
   - app/app/Http/Controllers/API/AuthorController.php
+  - app/app/Http/Controllers/API/PasswordResetController.php
+  - app/app/Notifications/ResetPasswordNotification.php
+  - app/resources/views/mail/reset-password.blade.php
+  - app/tests/Feature/API/PasswordResetControllerTest.php
   - app/app/Http/Resources/AuthorResource.php
   - app/tests/Feature/API/AuthorControllerTest.php
   - app/app/Http/Controllers/ArticlePathOptionController.php
@@ -49,6 +53,16 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 - 本文は保存前に `HtmlSanitizer::cleanArticle()` で無害化する（見出しと、本文用にアップロードした画像 `Article::contentImageUrlPrefix()` 以外の画像は取り除く）。本文の画像は `POST /me/articles/content-images`、タグの候補は `GET /me/tags?q=`（`Tag::suggest()`）。画像のアップロードは `throttle:user-uploads`（ユーザーごと）。
 - 保存処理（タグの同期・監査ログのタグ）は管理画面の `ArticleController` と共通のトレイト `Http\Controllers\Concerns\SavesArticle`。
 - 管理画面では承認待ちの件数をサイドメニューと記事一覧に出し（`View\Composers\PendingArticleComposer`）、ユーザーの記事の編集画面で差し戻しの理由を入力できる。
+
+## パスワード再設定（`API\PasswordResetController`）
+
+- ログイン前に使う。`POST /api/auth/forgot-password`（メールアドレス）で再設定のメールを送り、`POST /api/auth/reset-password`（`token`・`email`・`password`・`password_confirmation`）でパスワードを変える。どちらも回数制限 `throttle:user-password-reset`（メールアドレスと接続元ごと）。
+- Laravel のパスワードブローカー（`password_reset_tokens`。有効期限 60 分、同じメールアドレスへの再送は 60 秒あける）を使う。トークンは使い捨てで、ブローカーが物理削除する（論理削除の方針の例外）。
+- 登録の有無を知られないよう、`forgot-password` は登録がない・論理削除した・再送の間隔内のメールアドレスでも同じ応答を返す。
+- メールは `ResetPasswordNotification`（`mail/reset-password.blade.php`。件名・差出人名・ヘッダーはサイト名）で、キューを使わずその場で送る（Docker にキューのワーカーがないため）。リンク先は公開側の `{サイト設定の front_url}/reset-password?token=…&email=…`（未登録なら `config('app.front_url')`、`.env` の `FRONT_URL`）。
+- 再設定すると、発行済みの API トークン（ほかの端末を含むすべてのログイン）を無効にする（`User::expireTokens()`）。自動ではログインさせない。
+- 監査ログは、依頼を `password_reset_requested`（入力されたメールアドレスだけ）、再設定を `password_reset`（操作者 `user`、パスワードの値は残さない）で残す。
+- chococo は `/forgot-password`・`/reset-password` のページと、トークンなしで中継する `server/api/auth/forgot-password.post.ts`・`reset-password.post.ts`（`postToBiscuitAsGuest()`）を持つ。
 
 ## 投稿者ページ（`API\AuthorController`）
 

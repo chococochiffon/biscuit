@@ -11,6 +11,7 @@ use App\Http\Controllers\API\GalleryImageController;
 use App\Http\Controllers\API\LayoutController;
 use App\Http\Controllers\API\MeController;
 use App\Http\Controllers\API\MyArticleController;
+use App\Http\Controllers\API\PasswordResetController;
 use App\Http\Controllers\API\QuestionAnswerController;
 use App\Http\Controllers\API\ResolveController;
 use App\Http\Controllers\API\SiteSettingController;
@@ -42,6 +43,14 @@ Route::get('custom-pages/{customPageType:name}', [CustomPageController::class, '
 Route::post('auth/login', [AuthController::class, 'login'])
     ->middleware('throttle:user-login')
     ->name('api.auth.login');
+
+// パスワード再設定(ログイン前。メールのリンクは chococo の /reset-password を開く)
+Route::post('auth/forgot-password', [PasswordResetController::class, 'forgot'])
+    ->middleware('throttle:user-password-reset')
+    ->name('api.auth.forgot-password');
+Route::post('auth/reset-password', [PasswordResetController::class, 'reset'])
+    ->middleware('throttle:user-password-reset')
+    ->name('api.auth.reset-password');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
