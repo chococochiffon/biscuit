@@ -17,30 +17,6 @@ class TagControllerTest extends TestCase
         $response->assertRedirect(route('admin.login'));
     }
 
-    public function test_search_returns_matching_tags(): void
-    {
-        $this->actingAsAdmin();
-        Tag::factory()->create(['tag_name' => 'Laravel']);
-        Tag::factory()->create(['tag_name' => 'PHP']);
-
-        $response = $this->getJson(route('admin.tags.search', ['q' => 'lara']));
-
-        $response->assertOk();
-        $response->assertJsonFragment(['tag_name' => 'Laravel']);
-        $response->assertJsonMissing(['tag_name' => 'PHP']);
-    }
-
-    public function test_search_without_keyword_returns_all_tags(): void
-    {
-        $this->actingAsAdmin();
-        Tag::factory()->create(['tag_name' => 'Laravel']);
-
-        $response = $this->getJson(route('admin.tags.search'));
-
-        $response->assertOk();
-        $response->assertJsonFragment(['tag_name' => 'Laravel']);
-    }
-
     public function test_index_displays_tags(): void
     {
         $this->actingAsAdmin();
@@ -222,65 +198,6 @@ class TagControllerTest extends TestCase
         $response = $this->delete(route('admin.tags.destroy', $target));
 
         $response->assertRedirect(route('admin.tags.index'));
-        $this->assertSoftDeleted('tags', ['id' => $target->id]);
-    }
-
-    public function test_index_as_json_returns_all_tags(): void
-    {
-        $this->actingAsAdmin();
-        $tag = Tag::factory()->create(['tag_name' => 'Laravel']);
-
-        $response = $this->getJson(route('admin.tags.index'));
-
-        $response->assertOk();
-        $response->assertJsonFragment(['id' => $tag->id, 'tag_name' => 'Laravel']);
-    }
-
-    public function test_store_as_json_creates_tag_and_returns_it(): void
-    {
-        $this->actingAsAdmin();
-
-        $response = $this->postJson(route('admin.tags.store'), [
-            'tag_name' => 'PHP',
-        ]);
-
-        $response->assertCreated();
-        $response->assertJsonFragment(['tag_name' => 'PHP']);
-        $this->assertDatabaseHas('tags', ['tag_name' => 'PHP']);
-    }
-
-    public function test_store_as_json_fails_validation_with_missing_fields(): void
-    {
-        $this->actingAsAdmin();
-
-        $response = $this->postJson(route('admin.tags.store'), []);
-
-        $response->assertUnprocessable();
-        $response->assertJsonValidationErrors(['tag_name']);
-    }
-
-    public function test_update_as_json_modifies_tag_and_returns_it(): void
-    {
-        $this->actingAsAdmin();
-        $target = Tag::factory()->create();
-
-        $response = $this->putJson(route('admin.tags.update', $target), [
-            'tag_name' => 'Updated Tag',
-        ]);
-
-        $response->assertOk();
-        $response->assertJsonFragment(['tag_name' => 'Updated Tag']);
-        $this->assertSame('Updated Tag', $target->fresh()->tag_name);
-    }
-
-    public function test_destroy_as_json_deletes_tag(): void
-    {
-        $this->actingAsAdmin();
-        $target = Tag::factory()->create();
-
-        $response = $this->deleteJson(route('admin.tags.destroy', $target));
-
-        $response->assertNoContent();
         $this->assertSoftDeleted('tags', ['id' => $target->id]);
     }
 }

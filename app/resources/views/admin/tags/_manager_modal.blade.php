@@ -22,7 +22,7 @@
                 <div
                     id="tag-manager-list"
                     class="d-flex flex-wrap gap-2"
-                    data-index-url="{{ route('admin.tags.index') }}"
+                    data-index-url="{{ route('admin.json.tags.index') }}"
                 ></div>
             </div>
             <div class="modal-footer">

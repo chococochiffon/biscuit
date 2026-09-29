@@ -6,6 +6,7 @@ use App\Http\Controllers\ArticlePathOptionController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
+use App\Http\Controllers\ContentModelRelationJsonController;
 use App\Http\Controllers\CustomPageEntryController;
 use App\Http\Controllers\CustomPageTypeController;
 use App\Http\Controllers\GalleryCategoryController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
 use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
+use App\Http\Controllers\TagJsonController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,11 +40,21 @@ Route::prefix('admin')->name('admin.')->group(function () {
         ->name('logout');
 });
 
-// 管理画面(ログインが必要なルート)。独自ルート(tags/search・articles/bulk-approval・single-pages/reorder・gallery-images/reorder・gallery-categories/reorder など)は
+// 管理画面(ログインが必要なルート)。独自ルート(articles/bulk-approval・single-pages/reorder・gallery-images/reorder・gallery-categories/reorder など)は
 // 対応する Route::resource より前に置き、/admin/{administrator} が他の /admin/* を飲み込む管理者の resource は最後に置く
 Route::middleware('auth:admin')->group(function () {
-    Route::get('admin/tags/search', [TagController::class, 'search'])
-        ->name('admin.tags.search');
+    // 管理モーダル・タグ選択が Ajax で使う JSON(画面用のコントローラーとは分ける)
+    Route::get('admin/json/tags/search', [TagJsonController::class, 'search'])
+        ->name('admin.json.tags.search');
+
+    Route::resource('admin/json/tags', TagJsonController::class)
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->names('admin.json.tags');
+
+    Route::resource('admin/json/content-model-relations', ContentModelRelationJsonController::class)
+        ->parameters(['content-model-relations' => 'contentModelRelation'])
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->names('admin.json.content-model-relations');
 
     Route::post('admin/articles/content-images', [ArticleController::class, 'uploadContentImage'])
         ->name('admin.articles.content-images');

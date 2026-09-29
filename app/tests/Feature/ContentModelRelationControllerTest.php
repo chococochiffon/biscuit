@@ -308,10 +308,5 @@ class ContentModelRelationControllerTest extends TestCase
         $this->withSession(['locale' => 'en'])
             ->delete(route('admin.content-model-relations.destroy', $target))
             ->assertSessionHas('error', 'This data type mapping cannot be deleted because it is used by call contents.');
-
-        $this->withSession(['locale' => 'en'])
-            ->deleteJson(route('admin.content-model-relations.destroy', $target))
-            ->assertStatus(422)
-            ->assertJsonPath('message', 'This data type mapping cannot be deleted because it is used by call contents.');
     }
 }

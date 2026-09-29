@@ -6,41 +6,24 @@ use App\Http\Requests\StoreTagRequest;
 use App\Http\Requests\UpdateTagRequest;
 use App\Models\Tag;
 use App\Support\AuditLogger;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+/**
+ * タグ管理の画面。記事一覧のタグ管理モーダル・記事編集のタグ選択が使う JSON は TagJsonController が返す。
+ */
 class TagController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): View|JsonResponse
+    public function index(): View
     {
-        if ($request->wantsJson()) {
-            $tags = Tag::query()->orderBy('tag_name')->get(['id', 'tag_name']);
-
-            return response()->json($tags);
-        }
-
         $tags = Tag::query()
             ->orderBy('tag_name')
             ->paginate(config('limits.admin_per_page'));
 
         return view('admin.tags.index', compact('tags'));
-    }
-
-    /**
-     * タグ名の部分一致でタグを検索する(記事編集画面のタグ選択用)。
-     */
-    public function search(Request $request): JsonResponse
-    {
-        $keyword = trim((string) $request->query('q', ''));
-
-        $tags = Tag::query()->suggest($keyword)->get(['id', 'tag_name']);
-
-        return response()->json($tags);
     }
 
     /**
@@ -54,13 +37,9 @@ class TagController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTagRequest $request): RedirectResponse|JsonResponse
+    public function store(StoreTagRequest $request): RedirectResponse
     {
-        $tag = AuditLogger::createWithLog(fn () => Tag::create($request->validated()));
-
-        if ($request->wantsJson()) {
-            return response()->json($tag, 201);
-        }
+        AuditLogger::createWithLog(fn () => Tag::create($request->validated()));
 
         return redirect()->route('admin.tags.index')->with('status', __('タグを登録しました。'));
     }
@@ -84,13 +63,9 @@ class TagController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateTagRequest $request, Tag $tag): RedirectResponse|JsonResponse
+    public function update(UpdateTagRequest $request, Tag $tag): RedirectResponse
     {
         AuditLogger::updateWithLog($tag, fn () => $tag->update($request->validated()));
-
-        if ($request->wantsJson()) {
-            return response()->json($tag);
-        }
 
         return redirect()->route('admin.tags.index')->with('status', __('タグを更新しました。'));
     }
@@ -98,13 +73,9 @@ class TagController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Request $request, Tag $tag): RedirectResponse|JsonResponse
+    public function destroy(Tag $tag): RedirectResponse
     {
         AuditLogger::deleteWithLog($tag);
-
-        if ($request->wantsJson()) {
-            return response()->json(status: 204);
-        }
 
         return redirect()->route('admin.tags.index')->with('status', __('タグを削除しました。'));
     }
