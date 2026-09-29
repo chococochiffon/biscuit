@@ -407,6 +407,16 @@ class ArticleControllerTest extends TestCase
             ->assertSessionHasErrors('slug');
     }
 
+    public function test_store_rejects_url_prefix_used_by_author_pages(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => 'authors/news', 'slug' => 'post']))
+            ->assertSessionHasErrors('parent_path');
+        $this->post(route('admin.articles.store'), $this->validArticlePayload(['parent_path' => null, 'slug' => 'authors']))
+            ->assertSessionHasErrors('slug');
+    }
+
     public function test_create_screen_uses_parent_path_of_latest_article_as_default(): void
     {
         $this->actingAsAdmin();

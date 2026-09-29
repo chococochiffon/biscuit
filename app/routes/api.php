@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\API\ArticleController;
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\API\AuthorController;
 use App\Http\Controllers\API\CallContentController;
 use App\Http\Controllers\API\CustomPageController;
 use App\Http\Controllers\API\CustomPageTypeController;
@@ -20,6 +21,8 @@ Route::get('site-setting', [SiteSettingController::class, 'show'])->name('api.si
 Route::get('layout', [LayoutController::class, 'show'])->name('api.layout.show');
 
 Route::apiResource('articles', ArticleController::class)->only(['index']);
+
+Route::get('authors/{id}', [AuthorController::class, 'show'])->whereNumber('id')->name('api.authors.show');
 
 Route::apiResource('call-contents', CallContentController::class)->only(['index']);
 

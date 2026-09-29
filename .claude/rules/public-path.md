@@ -25,8 +25,10 @@ paths:
 - 固定ページの `slug` は必須。記事の `slug` は任意で、未入力なら記事 ID を使う（例: `/news/123`）。新規作成時は ID 確定後に `created` イベントで組み立て直す。
 - 数字だけのスラッグは記事 ID 用に予約しているため入力不可。
 - `path` はテーブルをまたいで重複させないため、`Rules\AvailablePath` が記事・固定ページの両方を検索して検証する。フォームリクエストの共通ルール・入力整形は `Http\Requests\Concerns\ValidatesPath`。
-- カスタムページの URL の先頭(例: `/recipes`。`custom-pages.md` を参照)は、記事・固定ページの親パスの最初の階層(親パスがなければスラッグ)に使えない(`Rules\NotReservedByCustomPage`)。
+- カスタムページの URL の先頭(例: `/recipes`。`custom-pages.md` を参照)は、記事・固定ページの親パスの最初の階層(親パスがなければスラッグ)に使えない(`Rules\NotReservedPath`)。
+- 投稿者ページの URL の先頭 `/authors`(`User::AUTHOR_PATH_PREFIX`。chococo の `/authors/{id}`)も、同じく記事・固定ページの URL の先頭に使えない(`Rules\NotReservedPath`)。
 - 各 Resource にも `path` を含める。
+- 記事の投稿者は `Article::author()`(`ArticleResource` の `author`・`author_name`)で返す。名前はユーザー詳細の名前の表示設定に従い(非表示・未登録なら「投稿者」。アカウント名は出さない)、`profile_path` は投稿者ページを公開しているとき(`User::hasPublicProfile()`)だけ入れる。管理者の記事は「管理者」でリンクなし。記事を返すクエリは `user.detail` を読み込む。
 
 ## resolve API
 

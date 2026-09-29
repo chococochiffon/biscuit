@@ -89,4 +89,19 @@ class UserDetail extends Model
     {
         return Attribute::get(fn () => self::publicImageUrl($this->user_image));
     }
+
+    /**
+     * 公開側に出す名前(名前の表示設定に従う。非表示・未入力なら null)。chococo の userDisplayName() と同じ規則。
+     */
+    public function displayName(): ?string
+    {
+        $name = match ($this->name_settings) {
+            UserDetailNameSetting::FullName => trim($this->family_name.' '.$this->first_name),
+            UserDetailNameSetting::NickName => $this->nick_name,
+            UserDetailNameSetting::FirstNameOnly => $this->first_name,
+            default => null,
+        };
+
+        return filled($name) ? $name : null;
+    }
 }

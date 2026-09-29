@@ -34,7 +34,7 @@ class CustomPageType extends Model
      *
      * @var list<string>
      */
-    public const RESERVED_PATHS = ['articles', 'gallery', 'faq'];
+    public const RESERVED_PATHS = ['articles', 'gallery', 'faq', User::AUTHOR_PATH_PREFIX];
 
     /**
      * Get the attributes that should be cast.

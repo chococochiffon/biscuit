@@ -153,7 +153,20 @@ class Article extends Model
     }
 
     /**
-     * 投稿者名を取得する(user_idがNullの場合は「管理者」)。
+     * 公開側に出す投稿者(user_id が null なら管理者で投稿者ページなし)。名前はユーザー詳細の名前の表示設定に従う。
+     * 記事一覧 API・パス解決 API・呼び出しコンテンツで共通。user.detail を読み込んでおく。
+     *
+     * @return array{id: int|null, name: string, profile_path: string|null}
+     */
+    public function author(): array
+    {
+        return $this->user === null
+            ? ['id' => null, 'name' => __('管理者'), 'profile_path' => null]
+            : ['id' => $this->user->id, 'name' => $this->user->authorName(), 'profile_path' => $this->user->authorProfilePath()];
+    }
+
+    /**
+     * 投稿者名を取得する(管理画面用のアカウント名。user_idがNullの場合は「管理者」)。
      */
     protected function userName(): Attribute
     {

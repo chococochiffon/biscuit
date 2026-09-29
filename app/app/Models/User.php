@@ -22,6 +22,11 @@ class User extends Authenticatable
     use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
+     * 公開側(chococo)の投稿者ページの URL の先頭(/authors/{id})。記事・固定ページ・カスタムページの URL の先頭には使えない。
+     */
+    public const AUTHOR_PATH_PREFIX = 'authors';
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -60,5 +65,29 @@ class User extends Authenticatable
     public function articles(): HasMany
     {
         return $this->hasMany(Article::class);
+    }
+
+    /**
+     * 公開側に出す投稿者名。ユーザー詳細の名前の表示設定に従い、非表示・未登録なら「投稿者」にする(アカウント名は出さない)。
+     */
+    public function authorName(): string
+    {
+        return $this->detail?->displayName() ?? __('投稿者');
+    }
+
+    /**
+     * 投稿者ページを公開しているか(ユーザー詳細の「プロフィールを公開する」がオンで、論理削除されていない)。
+     */
+    public function hasPublicProfile(): bool
+    {
+        return ! $this->trashed() && $this->detail?->view_flag === true;
+    }
+
+    /**
+     * 投稿者ページの URL(公開していなければ null)。
+     */
+    public function authorProfilePath(): ?string
+    {
+        return $this->hasPublicProfile() ? '/'.self::AUTHOR_PATH_PREFIX.'/'.$this->id : null;
     }
 }

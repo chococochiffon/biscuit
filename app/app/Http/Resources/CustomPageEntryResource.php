@@ -82,6 +82,7 @@ class CustomPageEntryResource extends JsonResource
                     'content' => $this->content,
                     'thumbnail_url' => $this->thumbnail_url,
                     'author_name' => null,
+                    'author' => null,
                     'tags' => [],
                     'published_at' => $this->publication_start_datetime?->toIso8601String(),
                     'updated_at' => $this->updated_at?->toIso8601String(),

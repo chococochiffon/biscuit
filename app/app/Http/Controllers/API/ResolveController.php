@@ -99,7 +99,7 @@ class ResolveController extends Controller
         return $singlePage ?? Article::query()
             ->where('path', $path)
             ->published()
-            ->with(['user', 'tags'])
+            ->with(['user.detail', 'tags'])
             ->firstOrFail();
     }
 

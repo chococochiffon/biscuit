@@ -104,6 +104,15 @@ class CustomPageTypeControllerTest extends TestCase
             ->assertSessionHasErrors('name');
     }
 
+    public function test_store_rejects_name_whose_url_is_used_by_author_pages(): void
+    {
+        $this->actingAsSuperAdmin();
+
+        // 複数形が /authors になるカスタム名は、投稿者ページと重なるため使えない
+        $this->post(route('admin.custom-page-types.store'), ['name' => 'author', 'label' => '著者', 'base_type' => 1])
+            ->assertSessionHasErrors('name');
+    }
+
     public function test_store_rejects_name_whose_table_already_exists(): void
     {
         $this->actingAsSuperAdmin();

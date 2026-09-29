@@ -364,5 +364,6 @@
     "投稿先を削除": "Delete destination",
     "投稿先の削除に失敗しました。": "Failed to delete the destination.",
     "投稿先の保存に失敗しました。": "Failed to save the destination.",
-    "投稿先の並び替えの保存に失敗しました。": "Failed to save the order of destinations."
+    "投稿先の並び替えの保存に失敗しました。": "Failed to save the order of destinations.",
+    "URL の先頭「/:prefix」は投稿者ページで使われています。": "The URL prefix \"/:prefix\" is used by author pages."
 }
