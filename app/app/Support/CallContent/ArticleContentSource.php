@@ -15,7 +15,7 @@ class ArticleContentSource
      */
     public function getOriginalText(): ?Article
     {
-        return Article::query()->published()->newest()->first();
+        return Article::query()->published()->with('user.detail')->newest()->first();
     }
 
     /**
@@ -25,7 +25,7 @@ class ArticleContentSource
      */
     public function getLinkList(int $count): Collection
     {
-        return Article::query()->published()->newest()->take($count)->get();
+        return Article::query()->published()->with('user.detail')->newest()->take($count)->get();
     }
 
     /**
@@ -33,7 +33,7 @@ class ArticleContentSource
      */
     public function getLink(): ?Article
     {
-        return Article::query()->published()->newest()->first();
+        return Article::query()->published()->with('user.detail')->newest()->first();
     }
 
     /**
@@ -43,6 +43,6 @@ class ArticleContentSource
      */
     public function getArchive(int $count): Collection
     {
-        return Article::query()->published()->newest()->take($count)->get();
+        return Article::query()->published()->with('user.detail')->newest()->take($count)->get();
     }
 }

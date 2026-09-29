@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\ArticlePathOption;
 use App\Models\SinglePage;
-use App\Rules\NotReservedByCustomPage;
+use App\Rules\NotReservedPath;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -44,7 +44,7 @@ class StoreArticlePathOptionRequest extends FormRequest
             'parent_path' => [
                 'required', 'string', 'max:255',
                 'regex:#^'.SinglePage::SLUG_PATTERN.'(?:/'.SinglePage::SLUG_PATTERN.')*$#',
-                new NotReservedByCustomPage,
+                new NotReservedPath,
                 Rule::unique('article_path_options', 'parent_path')->ignore($this->route('articlePathOption'))->withoutTrashed(),
             ],
         ];

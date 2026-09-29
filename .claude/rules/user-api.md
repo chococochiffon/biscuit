@@ -3,6 +3,9 @@ paths:
   - app/app/Http/Controllers/API/AuthController.php
   - app/app/Http/Controllers/API/MeController.php
   - app/app/Http/Controllers/API/MyArticleController.php
+  - app/app/Http/Controllers/API/AuthorController.php
+  - app/app/Http/Resources/AuthorResource.php
+  - app/tests/Feature/API/AuthorControllerTest.php
   - app/app/Http/Controllers/ArticlePathOptionController.php
   - app/app/Http/Controllers/Concerns/SavesArticle.php
   - app/app/Models/ArticlePathOption.php
@@ -46,6 +49,14 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 - 本文は保存前に `HtmlSanitizer::cleanArticle()` で無害化する（見出しと、本文用にアップロードした画像 `Article::contentImageUrlPrefix()` 以外の画像は取り除く）。本文の画像は `POST /me/articles/content-images`、タグの候補は `GET /me/tags?q=`（`Tag::suggest()`）。画像のアップロードは `throttle:user-uploads`（ユーザーごと）。
 - 保存処理（タグの同期・監査ログのタグ）は管理画面の `ArticleController` と共通のトレイト `Http\Controllers\Concerns\SavesArticle`。
 - 管理画面では承認待ちの件数をサイドメニューと記事一覧に出し（`View\Composers\PendingArticleComposer`）、ユーザーの記事の編集画面で差し戻しの理由を入力できる。
+
+## 投稿者ページ（`API\AuthorController`）
+
+- 公開側（chococo）の `/authors/{ユーザーの id}` で、投稿者のプロフィールとその人の公開中の記事を表示する。ログインは不要。
+- `GET /api/authors/{id}`（`AuthorResource`）は表示名・アイコン画像・コメント・スキルを返す。アカウント名・メールアドレス・誕生日は返さない。表示名は `User::authorName()`（ユーザー詳細の名前の表示設定に従い、非表示・未登録なら「投稿者」）。
+- 公開するのは、ユーザー詳細の「プロフィールを公開する」（`view_flag`）がオンで論理削除されていないユーザーだけ（`User::hasPublicProfile()`）。それ以外は 404。
+- 投稿者の記事は記事一覧 API の `GET /api/articles?author={id}` で取る。
+- 記事・固定ページ・カスタムページの URL の先頭に `authors` は使えない（`Rules\NotReservedPath`、`CustomPageType::RESERVED_PATHS`）。
 
 ## chococo 側（BFF）
 
