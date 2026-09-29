@@ -16,6 +16,8 @@ enum AuditAction: string
     case Login = 'login';
     case Logout = 'logout';
     case LoginFailed = 'login_failed';
+    case PasswordResetRequested = 'password_reset_requested';
+    case PasswordReset = 'password_reset';
 
     /**
      * 表示用のラベルを取得する(現在の言語設定に応じて翻訳される)。
@@ -32,6 +34,8 @@ enum AuditAction: string
             self::Login => __('ログイン'),
             self::Logout => __('ログアウト'),
             self::LoginFailed => __('ログイン失敗'),
+            self::PasswordResetRequested => __('パスワード再設定の依頼'),
+            self::PasswordReset => __('パスワード再設定'),
         };
     }
 
@@ -42,9 +46,9 @@ enum AuditAction: string
     {
         return match ($this) {
             self::Created, self::Login => 'success',
-            self::Updated, self::StatusChanged, self::Reordered, self::Uploaded => 'primary',
+            self::Updated, self::StatusChanged, self::Reordered, self::Uploaded, self::PasswordReset => 'primary',
             self::Deleted, self::LoginFailed => 'danger',
-            self::Logout => 'secondary',
+            self::Logout, self::PasswordResetRequested => 'secondary',
         };
     }
 }

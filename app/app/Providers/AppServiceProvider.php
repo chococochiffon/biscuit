@@ -46,6 +46,13 @@ class AppServiceProvider extends ServiceProvider
             ));
         });
 
+        // パスワード再設定(メールの送信・再設定)も、メールアドレスと接続元ごとに制限する
+        RateLimiter::for('user-password-reset', function (Request $request) {
+            return Limit::perMinute(5)->by(Str::transliterate(
+                Str::lower($request->string('email')).'|'.$request->ip()
+            ));
+        });
+
         // chococo のマイページからの画像のアップロード(記事の本文・サムネイル)は、ユーザーごとに回数を制限する
         RateLimiter::for('user-uploads', function (Request $request) {
             return Limit::perMinute(30)->by((string) $request->user()?->getAuthIdentifier());
