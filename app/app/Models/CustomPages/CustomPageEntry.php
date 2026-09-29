@@ -8,6 +8,7 @@ use App\Models\Article;
 use App\Models\Concerns\BelongsToCustomPageType;
 use App\Models\Concerns\HasPublicationPeriod;
 use App\Models\Concerns\HasPublicImages;
+use App\Models\Concerns\HasSortOrder;
 use App\Models\CustomPageType;
 use App\Models\SinglePage;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,7 +23,7 @@ use Illuminate\Http\UploadedFile;
  */
 class CustomPageEntry extends Model
 {
-    use BelongsToCustomPageType, HasPublicationPeriod, HasPublicImages, SoftDeletes;
+    use BelongsToCustomPageType, HasPublicationPeriod, HasPublicImages, HasSortOrder, SoftDeletes;
 
     /**
      * 一括代入の制限をかけない(フォームリクエストで検証した値だけを渡す)。
@@ -51,20 +52,29 @@ class CustomPageEntry extends Model
     }
 
     /**
+     * 種類のページを、その種類の並び順(記事型は公開開始日時の新しい順、固定ページ型は表示順。同じなら id)で取得するクエリ。
+     * 管理画面の一覧と公開側で共通の並び順。
+     *
+     * @return Builder<self>
+     */
+    public static function orderedQueryFor(CustomPageType $type): Builder
+    {
+        $query = self::queryFor($type);
+
+        return $type->hasDetails() ? $query->ordered() : $query->newest();
+    }
+
+    /**
      * 公開側に出すページ(記事型は公開ステータスが「公開」かつ公開期間内、固定ページ型は公開期間内)を、
-     * 公開側の並び順(記事型は公開開始日時の新しい順、固定ページ型は表示順。同じなら id)で取得するクエリ。
+     * 種類の並び順(orderedQueryFor())で取得するクエリ。
      *
      * @return Builder<self>
      */
     public static function publishedQueryFor(CustomPageType $type): Builder
     {
-        $query = self::queryFor($type)->withinPublicationPeriod();
-
-        return $type->hasDetails()
-            ? $query->orderBy('sort_order')->orderBy('id')
-            : $query->where('approval', ArticleApprovalStatus::Published)
-                ->orderByDesc('publication_start_datetime')
-                ->orderByDesc('id');
+        return self::orderedQueryFor($type)
+            ->withinPublicationPeriod()
+            ->when(! $type->hasDetails(), fn (Builder $query) => $query->where('approval', ArticleApprovalStatus::Published));
     }
 
     /**

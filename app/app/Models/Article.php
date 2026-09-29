@@ -114,16 +114,6 @@ class Article extends Model
     }
 
     /**
-     * 公開開始日時の新しい順(同じ日時なら id の大きい順)に並べる。
-     * 記事一覧 API・呼び出しコンテンツで、公開側に記事を新着順で出すときの共通の並び順。
-     */
-    #[Scope]
-    protected function newest(Builder $query): void
-    {
-        $query->orderByDesc('publication_start_datetime')->orderByDesc('id');
-    }
-
-    /**
      * 公開ステータスを変える(保存はしない)。管理画面の個別・一括の公開設定の変更と記事の編集で共通の処理。
      * ユーザーの記事を初めて公開するときは、公開開始日時を承認した日時にする(予約公開のため未来の日時にしてあればそのまま)。
      * 一度公開した記事を編集して再承認したときは、最初に公開した日時を残す。

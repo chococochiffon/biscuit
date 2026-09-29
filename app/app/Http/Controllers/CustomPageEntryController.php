@@ -29,12 +29,7 @@ class CustomPageEntryController extends Controller
      */
     public function index(CustomPageType $customPageType): View
     {
-        $query = CustomPageEntry::queryFor($customPageType);
-
-        $entries = ($customPageType->hasDetails()
-            ? $query->orderBy('sort_order')->orderBy('id')
-            : $query->orderByDesc('publication_start_datetime')->orderByDesc('id'))
-            ->paginate(config('limits.admin_per_page'));
+        $entries = CustomPageEntry::orderedQueryFor($customPageType)->paginate(config('limits.admin_per_page'));
 
         return view('admin.custom_pages.index', compact('customPageType', 'entries'));
     }
@@ -58,7 +53,7 @@ class CustomPageEntryController extends Controller
         DB::transaction(function () use ($request, $customPageType) {
             $entry = CustomPageEntry::queryFor($customPageType)->create([
                 ...$this->entryAttributes($request, $customPageType),
-                ...($customPageType->hasDetails() ? ['sort_order' => (CustomPageEntry::queryFor($customPageType)->max('sort_order') ?? -1) + 1] : []),
+                ...($customPageType->hasDetails() ? ['sort_order' => CustomPageEntry::nextSortOrder(CustomPageEntry::queryFor($customPageType))] : []),
             ]);
 
             $details = $this->saveRelatedRows($request, $customPageType, $entry);

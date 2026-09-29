@@ -63,7 +63,7 @@ class SinglePageController extends Controller
                 'slug' => $request->validated('slug'),
                 'top_page_view' => $request->boolean('top_page_view'),
                 'link_list_view' => $request->boolean('link_list_view'),
-                'sort_order' => (SinglePage::max('sort_order') ?? -1) + 1,
+                'sort_order' => SinglePage::nextSortOrder(),
                 'publication_start_datetime' => $request->validated('publication_start_datetime'),
                 'publication_end_datetime' => $request->validated('publication_end_datetime'),
             ]);

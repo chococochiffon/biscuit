@@ -38,7 +38,7 @@ class StoreSiteSettingRequest extends FormRequest
             'site_image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
 
             'call_contents' => ['nullable', 'array'],
-            'call_contents.*.id' => ['nullable', 'integer', Rule::exists('call_contents', 'id')],
+            'call_contents.*.id' => ['nullable', 'integer', Rule::exists('call_contents', 'id')->withoutTrashed()],
             'call_contents.*.call_name' => ['required', 'string', 'max:255'],
             'call_contents.*.title' => ['nullable', 'string', 'max:255'],
             'call_contents.*.subtitle' => ['nullable', 'string', 'max:255'],
@@ -49,14 +49,14 @@ class StoreSiteSettingRequest extends FormRequest
             'call_contents.*.sort_order' => ['nullable', 'integer', 'min:0'],
 
             'social_links' => ['nullable', 'array'],
-            'social_links.*.id' => ['nullable', 'integer', Rule::exists('social_links', 'id')],
+            'social_links.*.id' => ['nullable', 'integer', Rule::exists('social_links', 'id')->withoutTrashed()],
             'social_links.*.service' => ['required', new Enum(SocialService::class)],
             'social_links.*.name' => ['required', 'string', 'max:255'],
             'social_links.*.url' => ['required', 'url:http,https', 'max:2048'],
             'social_links.*.sort_order' => ['nullable', 'integer', 'min:0'],
 
             'top_slider_images' => ['nullable', 'array', 'max:'.config('limits.top_slider_images')],
-            'top_slider_images.*.id' => ['nullable', 'integer', Rule::exists('top_slider_images', 'id')],
+            'top_slider_images.*.id' => ['nullable', 'integer', Rule::exists('top_slider_images', 'id')->withoutTrashed()],
             'top_slider_images.*.image' => ['required_without:top_slider_images.*.id', 'nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'top_slider_images.*.url' => ['nullable', 'url:http,https', 'max:255'],
             'top_slider_images.*.crop_x' => ['nullable', 'numeric', 'min:0'],

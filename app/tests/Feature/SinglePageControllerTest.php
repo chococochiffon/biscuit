@@ -626,6 +626,26 @@ class SinglePageControllerTest extends TestCase
         $this->assertSame('他のページ', $otherDetail->fresh()->sub_title);
     }
 
+    public function test_update_rejects_details_of_other_pages_and_deleted_details(): void
+    {
+        $this->actingAsAdmin();
+        $target = SinglePage::factory()->create();
+        $otherDetail = SinglePageDetail::factory()->create(['single_page_id' => SinglePage::factory()->create()->id]);
+        $deletedDetail = SinglePageDetail::factory()->create(['single_page_id' => $target->id]);
+        $deletedDetail->delete();
+
+        // 以前はエラーにならず、送った行が保存されないまま消えていた
+        $response = $this->put(route('admin.single-pages.update', $target), $this->validSinglePagePayload([
+            'slug' => $target->slug,
+            'details' => [
+                ['id' => $otherDetail->id, 'sub_title' => 'ほかのページの詳細'],
+                ['id' => $deletedDetail->id, 'sub_title' => '削除済みの詳細'],
+            ],
+        ]));
+
+        $response->assertSessionHasErrors(['details.0.id', 'details.1.id']);
+    }
+
     public function test_destroy_deletes_single_page(): void
     {
         $this->actingAsAdmin();

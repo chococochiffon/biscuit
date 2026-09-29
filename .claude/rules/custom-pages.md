@@ -51,7 +51,7 @@ paths:
 
 - URL は種類ごとの固定の先頭(`publicPath()`、カスタム名の複数形。例: `/recipes`)の下に「/スラッグ」(`CustomPageEntry::path()`)。スラッグは種類の中で一意で、固定ページ型は必須、記事型は未入力なら id を使う(スラッグがあるページは id では開けない)。
 - URL の先頭の重なりは両方向で防ぐ。種類の登録時は、chococo の固定のページ(`CustomPageType::RESERVED_PATHS`: articles・gallery・faq・authors)と、記事・固定ページの URL が使っている先頭を使えない(`StoreCustomPageTypeRequest`)。記事・固定ページは、親パスの最初の階層(親パスがなければスラッグ)にカスタムページの先頭(論理削除済みの種類を含む)を使えない(`Rules\NotReservedPath`、`ValidatesPath::pathRules()`)。
-- 公開中の条件と並び順は `CustomPageEntry::publishedQueryFor()`(記事型は公開ステータスが「公開」かつ公開期間内を公開開始日時の新しい順、固定ページ型は公開期間内を表示順)。
+- 公開中の条件と並び順は `CustomPageEntry::publishedQueryFor()`(記事型は公開ステータスが「公開」かつ公開期間内、固定ページ型は公開期間内)。並び順は管理画面の一覧と共通の `CustomPageEntry::orderedQueryFor()`(記事型は `newest()`、固定ページ型は `ordered()`)。
 - API: `GET /api/custom-page-types`(ナビ用の種類の一覧)、`GET /api/custom-pages/{name}`(種類ごとの一覧。ページネーション)。パス解決 API(`ResolveController`)は、URL の先頭が種類の先頭なら `type=custom_page_list`(一覧。`custom_page_type` だけ返し、一覧は上の API で取る)か `type=custom_page`(1 件。詳細とカスタムフォームの項目 `custom_fields` を含む)を返す。
 - `CustomPageEntryResource` は、公開側が記事・固定ページと同じ部品で表示できるよう、記事型は `ArticleResource`、固定ページ型は `SinglePageResource` と同じ項目名で返し、`custom_page_type` で種類を示す。
 - 呼び出しコンテンツ: データ種別紐付けの `table_name` を種類の本体のテーブル(例: `user_make_recipes`)にすると、組み合わせのマトリクスでは `ContentModelRelation::matrixModelName()` が種類のベースの型(`CallType::CUSTOM_ARTICLE`/`CUSTOM_SINGLE_PAGE`)として扱う(記事型はトップのリンク・アーカイブ、その他のリンクリスト・リンク・アーカイブ。固定ページ型はトップのリンクリスト・リンク、その他のリンクリスト)。実データは `Support\CallContent\CustomPageContentSource`、API のキーは本体のテーブル名。

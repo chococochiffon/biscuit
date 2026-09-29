@@ -18,4 +18,15 @@ trait HasSortOrder
     {
         $query->orderBy('sort_order')->orderBy('id');
     }
+
+    /**
+     * 末尾に追加する行の並び順(今の最大値 + 1。行がなければ 0)。
+     * 論理削除した行も含めるなど対象を絞り込む/広げる場合は、そのクエリを渡す。
+     *
+     * @param  Builder<static>|null  $query
+     */
+    public static function nextSortOrder(?Builder $query = null): int
+    {
+        return (int) (($query ?? static::query())->max('sort_order') ?? -1) + 1;
+    }
 }

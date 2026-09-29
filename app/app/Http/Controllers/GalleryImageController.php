@@ -84,7 +84,7 @@ class GalleryImageController extends Controller
         AuditLogger::createWithLog(fn () => GalleryImage::create([
             ...$request->safe()->except('image'),
             'image' => GalleryImage::storeImage($request->file('image')),
-            'sort_order' => (GalleryImage::max('sort_order') ?? -1) + 1,
+            'sort_order' => GalleryImage::nextSortOrder(),
         ]));
 
         return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を登録しました。'));
