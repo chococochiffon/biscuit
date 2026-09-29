@@ -289,6 +289,11 @@ main > form {
     background-color: #fff;
 }
 
+/* 操作ログの変更前・変更後の値(改行を保って表示する) */
+.audit-log-value {
+    white-space: pre-wrap;
+}
+
 .single-page-detail-editor {
     height: 160px;
     background-color: #fff;

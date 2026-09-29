@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdministratorController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
 use App\Http\Controllers\CustomPageEntryController;
@@ -114,6 +115,14 @@ Route::middleware('auth:admin')->group(function () {
 
     Route::put('admin/layouts', [LayoutController::class, 'update'])
         ->name('admin.layouts.update');
+
+    // 操作ログ(監査ログ)は閲覧だけで、スーパー管理者だけが見られる(AppServiceProvider の view-audit-logs)
+    Route::middleware('can:view-audit-logs')->group(function () {
+        Route::resource('admin/audit-logs', AuditLogController::class)
+            ->parameters(['audit-logs' => 'auditLog'])
+            ->only(['index', 'show'])
+            ->names('admin.audit-logs');
+    });
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)
         ->parameters(['question-answers' => 'questionAnswer'])

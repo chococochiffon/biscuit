@@ -87,6 +87,20 @@
                     @endforeach
                 </ul>
                 @endcan
+
+                {{-- 操作ログ(監査ログ。スーパー管理者のみ) --}}
+                @can('view-audit-logs')
+                <hr class="admin-sidebar-divider">
+
+                <div class="admin-sidebar-heading">{{ __('システム') }}</div>
+                <ul class="nav flex-column admin-sidebar-nav">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.audit-logs.index') }}" class="nav-link">
+                            <i class="bi bi-clock-history"></i>{{ __('操作ログ') }}
+                        </a>
+                    </li>
+                </ul>
+                @endcan
             </aside>
 
             <div class="d-flex flex-column flex-grow-1 min-vh-100">

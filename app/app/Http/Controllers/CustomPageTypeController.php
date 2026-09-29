@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCustomPageTypeRequest;
 use App\Http\Requests\UpdateCustomPageTypeRequest;
 use App\Models\CustomPages\CustomForm;
 use App\Models\CustomPageType;
+use App\Support\AuditLogger;
 use App\Support\CustomPages\CustomPageSchema;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -54,7 +55,10 @@ class CustomPageTypeController extends Controller
         $schema->create($customPageType);
 
         try {
-            $customPageType->save();
+            DB::transaction(function () use ($customPageType) {
+                $customPageType->save();
+                AuditLogger::created($customPageType);
+            });
         } catch (Throwable $exception) {
             $schema->drop($customPageType);
 
@@ -82,9 +86,11 @@ class CustomPageTypeController extends Controller
     public function update(UpdateCustomPageTypeRequest $request, CustomPageType $customPageType): RedirectResponse
     {
         DB::transaction(function () use ($request, $customPageType) {
+            $before = AuditLogger::snapshot($customPageType);
+
             $customPageType->update(['label' => $request->validated('label')]);
 
-            $this->syncSortableRows(CustomForm::queryFor($customPageType), $request->validated('forms', []), function (array $row) {
+            $forms = $this->syncSortableRows(CustomForm::queryFor($customPageType), $request->validated('forms', []), function (array $row) {
                 $formType = CustomFormType::from((int) $row['customs_form_type']);
 
                 return [
@@ -93,6 +99,8 @@ class CustomPageTypeController extends Controller
                     'customs_form_options' => $formType->hasOptions() ? self::parseOptions($row['options'] ?? '') : null,
                 ];
             });
+
+            AuditLogger::updated($customPageType, $before, ['forms' => $forms->summary()]);
         });
 
         return redirect()->route('admin.custom-page-types.edit', $customPageType)->with('status', __('カスタムページを更新しました。'));
@@ -103,7 +111,7 @@ class CustomPageTypeController extends Controller
      */
     public function destroy(CustomPageType $customPageType): RedirectResponse
     {
-        $customPageType->delete();
+        AuditLogger::deleteWithLog($customPageType);
 
         return redirect()->route('admin.custom-page-types.index')->with('status', __('カスタムページを削除しました。'));
     }

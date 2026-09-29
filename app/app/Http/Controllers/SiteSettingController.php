@@ -11,6 +11,8 @@ use App\Models\SiteSetting;
 use App\Models\SocialLink;
 use App\Models\TopSliderImage;
 use App\Rules\AllowedTableName;
+use App\Support\AuditLogger;
+use App\Support\SyncedRows;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -55,9 +57,7 @@ class SiteSettingController extends Controller
                 $siteSetting->update(['site_image' => $siteSetting->storeSiteImage($request->file('site_image'))]);
             }
 
-            $this->syncCallContents($request->validated('call_contents', []));
-            $this->syncSocialLinks($request->validated('social_links', []));
-            $this->syncTopSliderImages($request->validated('top_slider_images', []));
+            AuditLogger::created($siteSetting, $this->syncRows($request));
 
             return $siteSetting;
         });
@@ -97,6 +97,8 @@ class SiteSettingController extends Controller
     public function update(UpdateSiteSettingRequest $request, SiteSetting $siteSetting): RedirectResponse
     {
         DB::transaction(function () use ($request, $siteSetting) {
+            $before = AuditLogger::snapshot($siteSetting);
+
             $siteSetting->fill([
                 'site_title' => $request->validated('site_title'),
                 'description' => $request->validated('description'),
@@ -114,12 +116,25 @@ class SiteSettingController extends Controller
 
             $siteSetting->save();
 
-            $this->syncCallContents($request->validated('call_contents', []));
-            $this->syncSocialLinks($request->validated('social_links', []));
-            $this->syncTopSliderImages($request->validated('top_slider_images', []));
+            AuditLogger::updated($siteSetting, $before, $this->syncRows($request));
         });
 
         return redirect()->route('admin.site-settings.show', $siteSetting)->with('status', __('サイト設定を更新しました。'));
+    }
+
+    /**
+     * フォームに埋め込んだ繰り返し入力(呼び出しコンテンツ・SNSリンク・トップスライダー画像)をすべて同期し、
+     * 監査ログの補足に残す、種類ごとの作成・更新・削除した行の件数を返す。
+     *
+     * @return array<string, array{created: int, updated: int, deleted: int}>
+     */
+    private function syncRows(StoreSiteSettingRequest $request): array
+    {
+        return [
+            'call_contents' => $this->syncCallContents($request->validated('call_contents', []))->summary(),
+            'social_links' => $this->syncSocialLinks($request->validated('social_links', []))->summary(),
+            'top_slider_images' => $this->syncTopSliderImages($request->validated('top_slider_images', []))->summary(),
+        ];
     }
 
     /**
@@ -128,9 +143,9 @@ class SiteSettingController extends Controller
      *
      * @param  array<int, array{id?: int|string|null, call_type: int|string, call_name: string, title?: string|null, subtitle?: string|null, content_model_relation_id: int|string, view_count: int|string, place: int|string, sort_order?: int|string|null}>  $rows
      */
-    private function syncCallContents(array $rows): void
+    private function syncCallContents(array $rows): SyncedRows
     {
-        $this->syncSortableRows(CallContent::query(), $rows, fn (array $row) => [
+        return $this->syncSortableRows(CallContent::query(), $rows, fn (array $row) => [
             'call_type' => $row['call_type'],
             'call_name' => $row['call_name'],
             'title' => $row['title'] ?? null,
@@ -147,9 +162,9 @@ class SiteSettingController extends Controller
      *
      * @param  array<int, array{id?: int|string|null, service: int|string, name: string, url: string, sort_order?: int|string|null}>  $rows
      */
-    private function syncSocialLinks(array $rows): void
+    private function syncSocialLinks(array $rows): SyncedRows
     {
-        $this->syncSortableRows(SocialLink::query(), $rows, fn (array $row) => [
+        return $this->syncSortableRows(SocialLink::query(), $rows, fn (array $row) => [
             'service' => $row['service'],
             'name' => $row['name'],
             'url' => $row['url'],
@@ -163,9 +178,9 @@ class SiteSettingController extends Controller
      *
      * @param  array<int, array{id?: int|string|null, image?: UploadedFile|null, url?: string|null, crop_x?: int|float|string|null, crop_y?: int|float|string|null, crop_width?: int|float|string|null, crop_height?: int|float|string|null, sort_order?: int|string|null}>  $rows
      */
-    private function syncTopSliderImages(array $rows): void
+    private function syncTopSliderImages(array $rows): SyncedRows
     {
-        $this->syncSortableRows(TopSliderImage::query(), $rows, function (array $row): array {
+        return $this->syncSortableRows(TopSliderImage::query(), $rows, function (array $row): array {
             $attributes = ['url' => $row['url'] ?? null];
 
             if (($row['image'] ?? null) instanceof UploadedFile) {

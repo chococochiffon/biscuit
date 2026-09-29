@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AuditAction;
 use App\Http\Controllers\Concerns\FiltersPublishableList;
 use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreSinglePageRequest;
 use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
+use App\Support\AuditLogger;
+use App\Support\SyncedRows;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -70,7 +73,9 @@ class SinglePageController extends Controller
                 $singlePage->update(['header_image' => $singlePage->storeHeaderImage($request->file('header_image'))]);
             }
 
-            $this->syncDetails($singlePage, $request->validated('details', []));
+            $details = $this->syncDetails($singlePage, $request->validated('details', []));
+
+            AuditLogger::created($singlePage, ['details' => $details->summary()]);
         });
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを登録しました。'));
@@ -92,6 +97,8 @@ class SinglePageController extends Controller
     public function update(UpdateSinglePageRequest $request, SinglePage $singlePage): RedirectResponse
     {
         DB::transaction(function () use ($request, $singlePage) {
+            $before = AuditLogger::snapshot($singlePage);
+
             $singlePage->fill([
                 'title' => $request->validated('title'),
                 'short_sentences' => $request->validated('short_sentences'),
@@ -109,7 +116,9 @@ class SinglePageController extends Controller
 
             $singlePage->save();
 
-            $this->syncDetails($singlePage, $request->validated('details', []));
+            $details = $this->syncDetails($singlePage, $request->validated('details', []));
+
+            AuditLogger::updated($singlePage, $before, ['details' => $details->summary()]);
         });
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを更新しました。'));
@@ -120,7 +129,10 @@ class SinglePageController extends Controller
      */
     public function destroy(SinglePage $singlePage): RedirectResponse
     {
-        $singlePage->delete();
+        DB::transaction(function () use ($singlePage) {
+            $singlePage->delete();
+            AuditLogger::deleted($singlePage);
+        });
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを削除しました。'));
     }
@@ -144,6 +156,8 @@ class SinglePageController extends Controller
             foreach (array_values($validated['order']) as $index => $id) {
                 SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
             }
+
+            AuditLogger::record(AuditAction::Reordered, 'single_page', metadata: ['order' => array_map('intval', array_values($validated['order'])), 'offset' => $offset]);
         });
 
         return redirect()->route('admin.single-pages.index', ['sort' => self::REORDERABLE_SORT])->with('status', __('並び替えを保存しました。'));
@@ -155,9 +169,9 @@ class SinglePageController extends Controller
      *
      * @param  array<int, array{id?: int|string|null, sub_title: string, contents?: string|null, sort_order?: int|string|null}>  $rows
      */
-    private function syncDetails(SinglePage $singlePage, array $rows): void
+    private function syncDetails(SinglePage $singlePage, array $rows): SyncedRows
     {
-        $this->syncSortableRows($singlePage->details(), $rows, fn (array $row) => [
+        return $this->syncSortableRows($singlePage->details(), $rows, fn (array $row) => [
             'sub_title' => $row['sub_title'],
             'contents' => $row['contents'] ?? '',
         ]);

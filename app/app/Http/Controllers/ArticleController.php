@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Enums\AuditAction;
 use App\Http\Controllers\Concerns\FiltersPublishableList;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Models\Article;
 use App\Models\Tag;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -72,6 +74,8 @@ class ArticleController extends Controller
             }
 
             $this->syncTags($article, $request->validated('tags', []));
+
+            AuditLogger::created($article, extra: $this->auditTags($article));
         });
 
         return redirect()->route('admin.articles.index')->with('status', __('記事を登録しました。'));
@@ -93,6 +97,8 @@ class ArticleController extends Controller
     public function update(UpdateArticleRequest $request, Article $article): RedirectResponse
     {
         DB::transaction(function () use ($request, $article) {
+            $before = AuditLogger::snapshot($article, $this->auditTags($article));
+
             $article->fill([
                 'title' => $request->validated('title'),
                 'content' => $request->validated('content'),
@@ -110,6 +116,8 @@ class ArticleController extends Controller
             $article->save();
 
             $this->syncTags($article, $request->validated('tags', []));
+
+            AuditLogger::updated($article, $before, extra: $this->auditTags($article->load('tags')));
         });
 
         return redirect()->route('admin.articles.index')->with('status', __('記事を更新しました。'));
@@ -120,7 +128,10 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article): RedirectResponse
     {
-        $article->delete();
+        DB::transaction(function () use ($article) {
+            $article->delete();
+            AuditLogger::deleted($article);
+        });
 
         return redirect()->route('admin.articles.index')->with('status', __('記事を削除しました。'));
     }
@@ -134,13 +145,18 @@ class ArticleController extends Controller
             'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
         ]);
 
-        $article->update(['approval' => $validated['approval']]);
+        DB::transaction(function () use ($article, $validated) {
+            $before = AuditLogger::snapshot($article);
+            $article->update(['approval' => $validated['approval']]);
+            AuditLogger::updated($article, $before, action: AuditAction::StatusChanged);
+        });
 
         return back()->with('status', __('公開設定を更新しました。'));
     }
 
     /**
      * 記事一覧でチェックボックスにより選択した複数の記事の公開ステータス(approval)を一括更新する。
+     * 監査ログは記事ごとの履歴として追えるよう、記事ごとに 1 件ずつ残す。
      */
     public function bulkUpdateApproval(Request $request): RedirectResponse
     {
@@ -150,7 +166,15 @@ class ArticleController extends Controller
             'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
         ]);
 
-        Article::query()->whereIn('id', $validated['article_ids'])->update(['approval' => $validated['approval']]);
+        DB::transaction(function () use ($validated) {
+            $articles = Article::query()->whereIn('id', $validated['article_ids'])->get();
+
+            foreach ($articles as $article) {
+                $before = AuditLogger::snapshot($article);
+                $article->update(['approval' => $validated['approval']]);
+                AuditLogger::updated($article, $before, metadata: ['bulk_count' => $articles->count()], action: AuditAction::StatusChanged);
+            }
+        });
 
         return back()->with('status', __('選択した記事の公開設定を一括更新しました。'));
     }
@@ -165,8 +189,19 @@ class ArticleController extends Controller
         ]);
 
         $path = $request->file('image')->store('image/content', 'public');
+        AuditLogger::record(AuditAction::Uploaded, 'article_content_image', label: $path);
 
         return response()->json(['url' => Article::publicImageUrl($path)]);
+    }
+
+    /**
+     * 監査ログの変更内容に、本体の列と並べて残す記事のタグ(タグ名をカンマ区切りで)。
+     *
+     * @return array{tags: string}
+     */
+    private function auditTags(Article $article): array
+    {
+        return ['tags' => $article->tags->pluck('tag_name')->sort()->implode(', ')];
     }
 
     /**

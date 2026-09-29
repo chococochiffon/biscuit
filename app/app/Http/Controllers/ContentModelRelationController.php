@@ -8,6 +8,7 @@ use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\LayoutBlock;
 use App\Rules\AllowedTableName;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -53,7 +54,7 @@ class ContentModelRelationController extends Controller
      */
     public function store(StoreContentModelRelationRequest $request): RedirectResponse|JsonResponse
     {
-        $contentModelRelation = ContentModelRelation::create($request->validated());
+        $contentModelRelation = AuditLogger::createWithLog(fn () => ContentModelRelation::create($request->validated()));
 
         if ($request->wantsJson()) {
             return response()->json($this->toJsonPayload($contentModelRelation), 201);
@@ -91,7 +92,7 @@ class ContentModelRelationController extends Controller
      */
     public function update(UpdateContentModelRelationRequest $request, ContentModelRelation $contentModelRelation): RedirectResponse|JsonResponse
     {
-        $contentModelRelation->update($request->validated());
+        AuditLogger::updateWithLog($contentModelRelation, fn () => $contentModelRelation->update($request->validated()));
 
         if ($request->wantsJson()) {
             return response()->json($this->toJsonPayload($contentModelRelation));
@@ -119,7 +120,7 @@ class ContentModelRelationController extends Controller
             return redirect()->route('admin.content-model-relations.index')->with('error', $inUseMessage);
         }
 
-        $contentModelRelation->delete();
+        AuditLogger::deleteWithLog($contentModelRelation);
 
         if ($request->wantsJson()) {
             return response()->json(status: 204);
