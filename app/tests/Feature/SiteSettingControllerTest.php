@@ -253,11 +253,11 @@ class SiteSettingControllerTest extends TestCase
                     'place' => CallContentPlace::Inside->value,
                 ],
                 [
-                    'call_type' => CallType::LinkList->value,
+                    'call_type' => CallType::Archive->value,
                     'call_name' => '記事一覧',
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 3,
-                    'place' => CallContentPlace::Others->value,
+                    'place' => CallContentPlace::Top->value,
                 ],
             ],
         ]);
@@ -272,11 +272,11 @@ class SiteSettingControllerTest extends TestCase
             'place' => CallContentPlace::Inside->value,
         ]);
         $this->assertDatabaseHas('call_contents', [
-            'call_type' => CallType::LinkList->value,
+            'call_type' => CallType::Archive->value,
             'call_name' => '記事一覧',
             'content_model_relation_id' => $relation->id,
             'view_count' => 3,
-            'place' => CallContentPlace::Others->value,
+            'place' => CallContentPlace::Top->value,
         ]);
     }
 
@@ -301,6 +301,39 @@ class SiteSettingControllerTest extends TestCase
         $response->assertSessionHasErrors(['call_contents.0.content_model_relation_id']);
     }
 
+    public function test_store_rejects_layout_place_for_call_contents(): void
+    {
+        $this->actingAsAdmin();
+        $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
+
+        // レイアウトの部品の設置場所は、レイアウト管理でだけ使う
+        $response = $this->post(route('admin.site-settings.store'), [
+            'site_title' => 'テストサイト',
+            'call_contents' => [
+                [
+                    'call_type' => CallType::LinkList->value,
+                    'call_name' => '記事一覧',
+                    'content_model_relation_id' => $relation->id,
+                    'view_count' => 3,
+                    'place' => CallContentPlace::Layout->value,
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors('call_contents.0.place');
+        $this->assertDatabaseCount('call_contents', 0);
+    }
+
+    public function test_create_screen_offers_only_top_and_inside_places(): void
+    {
+        $this->actingAsAdmin();
+
+        $response = $this->get(route('admin.site-settings.create'));
+
+        $response->assertSee(CallContentPlace::Inside->label());
+        $response->assertDontSee(CallContentPlace::Layout->label());
+    }
+
     public function test_store_fails_when_call_type_is_not_allowed_for_place(): void
     {
         $this->actingAsAdmin();
@@ -314,7 +347,7 @@ class SiteSettingControllerTest extends TestCase
                     'call_name' => '短文',
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 1,
-                    'place' => CallContentPlace::Others->value,
+                    'place' => CallContentPlace::Inside->value,
                 ],
             ],
         ]);
@@ -328,7 +361,7 @@ class SiteSettingControllerTest extends TestCase
         $this->actingAsAdmin();
         $relation = ContentModelRelation::factory()->create(['content_type' => CallContentType::Article, 'model_name' => 'Article']);
 
-        // リンクリストはTopで選択可能だが、TopでArticleのリンクリストは許可されていない(Othersのみ)
+        // リンクリストはTopで選択可能だが、TopでArticleのリンクリストは許可されていない(レイアウトの部品のみ)
         $response = $this->post(route('admin.site-settings.store'), [
             'site_title' => 'テストサイト',
             'call_contents' => [
@@ -477,7 +510,7 @@ class SiteSettingControllerTest extends TestCase
                     'call_name' => 'ギャラリー',
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 12,
-                    'place' => CallContentPlace::Others->value,
+                    'place' => CallContentPlace::Inside->value,
                 ],
             ],
         ]);
@@ -501,7 +534,7 @@ class SiteSettingControllerTest extends TestCase
                     'call_name' => 'レシピアーカイブ',
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 5,
-                    'place' => CallContentPlace::Others->value,
+                    'place' => CallContentPlace::Top->value,
                 ],
             ],
         ]);
@@ -525,7 +558,7 @@ class SiteSettingControllerTest extends TestCase
                     'call_name' => '記事アーカイブ',
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 5,
-                    'place' => CallContentPlace::Others->value,
+                    'place' => CallContentPlace::Top->value,
                 ],
             ],
         ]);
@@ -535,7 +568,7 @@ class SiteSettingControllerTest extends TestCase
             'call_type' => CallType::Archive->value,
             'content_model_relation_id' => $relation->id,
             'view_count' => 5,
-            'place' => CallContentPlace::Others->value,
+            'place' => CallContentPlace::Top->value,
         ]);
     }
 
@@ -591,11 +624,11 @@ class SiteSettingControllerTest extends TestCase
             'call_contents' => [
                 [
                     'id' => $kept->id,
-                    'call_type' => CallType::LinkList->value,
+                    'call_type' => CallType::Archive->value,
                     'call_name' => $kept->call_name,
                     'content_model_relation_id' => $relation->id,
                     'view_count' => 5,
-                    'place' => CallContentPlace::Others->value,
+                    'place' => CallContentPlace::Top->value,
                 ],
                 [
                     'call_type' => CallType::Link->value,
@@ -610,8 +643,8 @@ class SiteSettingControllerTest extends TestCase
         $response->assertRedirect(route('admin.site-settings.show', $siteSetting));
         $this->assertDatabaseHas('call_contents', [
             'id' => $kept->id,
+            'call_type' => CallType::Archive->value,
             'view_count' => 5,
-            'place' => CallContentPlace::Others->value,
         ]);
         $this->assertDatabaseHas('call_contents', [
             'call_name' => '固定ページリンク',

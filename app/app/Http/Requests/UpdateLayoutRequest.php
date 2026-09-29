@@ -6,6 +6,7 @@ use App\Enums\CallType;
 use App\Enums\LayoutBlockType;
 use App\Enums\LayoutPageType;
 use App\Enums\LayoutRegion;
+use App\Enums\NavItemLinkType;
 use App\Enums\SidebarPosition;
 use App\Models\LayoutBlock;
 use App\Rules\ValidCallContentCombination;
@@ -38,6 +39,8 @@ class UpdateLayoutRequest extends FormRequest
     {
         $callContent = 'exclude_unless:blocks.*.block_type,'.LayoutBlockType::CallContent->value;
         $freeText = 'exclude_unless:blocks.*.block_type,'.LayoutBlockType::FreeText->value;
+        $navMenu = 'exclude_unless:blocks.*.block_type,'.LayoutBlockType::NavMenu->value;
+        $linkType = fn (NavItemLinkType $type) => 'exclude_unless:blocks.*.nav_items.*.link_type,'.$type->value;
         $place = LayoutBlock::CALL_CONTENT_PLACE;
 
         $sidebarRules = collect(LayoutPageType::cases())
@@ -60,6 +63,30 @@ class UpdateLayoutRequest extends FormRequest
             'blocks.*.view_count' => [$callContent, 'required', 'integer', 'min:1', 'max:100', new ValidCallContentCombination('view_count', $place)],
             'blocks.*.content' => [$freeText, 'nullable', 'string', 'max:65535'],
             'blocks.*.sort_order' => ['nullable', 'integer', 'min:0'],
+
+            // ナビメニューの項目。リンク先は種類に応じた項目だけ受け付け、URL はサイト内のパス(/・#)・http(s)・mailto だけ許可する
+            'blocks.*.nav_items' => [$navMenu, 'nullable', 'array', 'max:'.config('limits.layout_nav_items')],
+            'blocks.*.nav_items.*.id' => [$navMenu, 'nullable', 'integer', Rule::exists('layout_nav_items', 'id')->withoutTrashed()],
+            'blocks.*.nav_items.*.link_type' => [$navMenu, 'required', new Enum(NavItemLinkType::class)],
+            'blocks.*.nav_items.*.label' => [$navMenu, 'nullable', 'required_if:blocks.*.nav_items.*.link_type,'.NavItemLinkType::Url->value, 'string', 'max:255'],
+            'blocks.*.nav_items.*.url' => [$navMenu, $linkType(NavItemLinkType::Url), 'required', 'string', 'max:2048', 'regex:#^(/|\#|https?://|mailto:)#i'],
+            'blocks.*.nav_items.*.single_page_id' => [$navMenu, $linkType(NavItemLinkType::SinglePage), 'required', 'integer', Rule::exists('single_pages', 'id')->withoutTrashed()],
+            'blocks.*.nav_items.*.custom_page_type_id' => [$navMenu, $linkType(NavItemLinkType::CustomPageType), 'required', 'integer', Rule::exists('custom_page_types', 'id')->withoutTrashed()],
+            'blocks.*.nav_items.*.sort_order' => [$navMenu, 'nullable', 'integer', 'min:0'],
+        ];
+    }
+
+    /**
+     * Get custom messages for validator errors.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'blocks.*.nav_items.*.url.regex' => __('URLは「/」から始まるサイト内のパス、または http(s)・mailto のURLを入力してください。'),
+            'blocks.*.nav_items.*.label.required_if' => __('リンク先がURLの項目は表示名を入力してください。'),
+            'blocks.*.nav_items.max' => __('ナビメニューの項目は:max件まで登録できます。'),
         ];
     }
 
@@ -79,6 +106,12 @@ class UpdateLayoutRequest extends FormRequest
             'blocks.*.content_model_relation_id' => __('データ種別'),
             'blocks.*.view_count' => __('表示件数'),
             'blocks.*.content' => __('本文'),
+            'blocks.*.nav_items' => __('ナビメニューの項目'),
+            'blocks.*.nav_items.*.link_type' => __('リンク先の種類'),
+            'blocks.*.nav_items.*.label' => __('表示名'),
+            'blocks.*.nav_items.*.url' => __('URL'),
+            'blocks.*.nav_items.*.single_page_id' => __('固定ページ'),
+            'blocks.*.nav_items.*.custom_page_type_id' => __('カスタムページの種類'),
         ];
     }
 }

@@ -277,7 +277,6 @@
     "フロントで確認": "View on the site",
     "ページの種類ごとのサイドバーの位置": "Sidebar position by page type",
     "カスタムページは、記事型を「記事」、固定ページ型を「固定ページ」として扱います。": "Custom pages of the article type follow \"Article\", and those of the single page type follow \"Page\".",
-    "左端のハンドルをドラッグすると、領域の中で並び替えたり、別の領域へ移したりできます。呼び出しコンテンツの部品は、サイト設定の呼び出しコンテンツ(表示箇所: その他)と同じ組み合わせで選べます。": "Drag the handle on the left to reorder blocks within an area or move them to another area. Call content blocks offer the same combinations as call contents placed in \"Others\" in the site settings.",
     "全ページの上部に、左から順に並べます。": "Shown at the top of every page, from left to right.",
     "サイドバーを表示するページ(上の設定)で、本文の横に上から順に並べます。": "Shown next to the main content, from top to bottom, on pages that display the sidebar (see above).",
     "全ページの下部に並べます。見出しを持つ部品は上段に列で、それ以外(サイトタイトル・コピーライト・SNSリンクなど)は下段に並べます。": "Shown at the bottom of every page. Blocks with a heading are placed in columns on the upper row, and the others (site title, copyright, social links, etc.) on the lower row.",
@@ -299,5 +298,18 @@
     "呼び出し方": "Display style",
     "データ種別": "Data type",
     "表示件数": "Number of items",
-    "このデータ種別の紐付けはレイアウトの部品で使用されているため削除できません。": "This data type mapping cannot be deleted because it is used by a layout block."
+    "このデータ種別の紐付けはレイアウトの部品で使用されているため削除できません。": "This data type mapping cannot be deleted because it is used by a layout block.",
+    "左端のハンドルをドラッグすると、領域の中で並び替えたり、別の領域へ移したりできます。呼び出しコンテンツの部品は、ヘッダー・サイドバー・フッターに収まる呼び出し方(リンクリスト・リンク・アーカイブ)で選べます。": "Drag the handle on the left to reorder blocks within an area or move them to another area. Call content blocks can use display styles that fit the header, sidebar, and footer (link list, link, archive).",
+    "レイアウトの部品": "Layout block",
+    "カスタムページの一覧": "Custom page list",
+    "ナビメニューの項目": "Navigation menu items",
+    "リンク先の種類": "Link type",
+    "URLは「/」から始まるサイト内のパス、または http(s)・mailto のURLを入力してください。": "Enter a site path starting with \"/\", or an http(s) or mailto URL.",
+    "リンク先がURLの項目は表示名を入力してください。": "Enter a display name for items that link to a URL.",
+    "ナビメニューの項目は:max件まで登録できます。": "You can register up to :max navigation menu items.",
+    "項目を登録しない場合は、Home・固定ページ(リンクリスト表示対象)・Articles・カスタムページの一覧・Gallery・FAQ を自動で並べます。": "If no items are registered, Home, pages (shown in link lists), Articles, custom page lists, Gallery, and FAQ are listed automatically.",
+    "+ 項目を追加": "+ Add item",
+    "例: /articles、https://example.com": "e.g. /articles, https://example.com",
+    "空欄ならページのタイトル": "Leave blank to use the page title",
+    "本文内": "Inside content"
 }

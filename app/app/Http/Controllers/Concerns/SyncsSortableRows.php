@@ -23,24 +23,30 @@ trait SyncsSortableRows
      * @param  Builder<TModel>|HasMany<TModel, covariant \Illuminate\Database\Eloquent\Model>  $query
      * @param  array<int|string, array<string, mixed>>  $rows
      * @param  callable(array<string, mixed>): array<string, mixed>  $attributes  行から保存する属性(sort_order 以外)を組み立てる
+     * @return array<int|string, int> 送信された行のキー → 保存した行の id(行に属する子の行を続けて同期するときに使う)
      */
-    protected function syncSortableRows(Builder|HasMany $query, array $rows, callable $attributes): void
+    protected function syncSortableRows(Builder|HasMany $query, array $rows, callable $attributes): array
     {
         // validated() は行をルールの順に組み立て直すため(id のある行が先になるなど)、行のキーの順に並べ直す
         ksort($rows);
-        $rows = array_values($rows);
         $submittedIds = collect($rows)->pluck('id')->filter()->map(fn ($id) => (int) $id)->all();
 
         (clone $query)->whereNotIn('id', $submittedIds)->delete();
 
-        foreach ($rows as $index => $row) {
+        $savedIds = [];
+
+        foreach (array_keys($rows) as $index => $key) {
+            $row = $rows[$key];
             $values = $attributes($row) + ['sort_order' => $row['sort_order'] ?? $index];
 
             if (! empty($row['id'])) {
                 (clone $query)->whereKey($row['id'])->update($values);
+                $savedIds[$key] = (int) $row['id'];
             } else {
-                (clone $query)->create($values);
+                $savedIds[$key] = (clone $query)->create($values)->getKey();
             }
         }
+
+        return $savedIds;
     }
 }

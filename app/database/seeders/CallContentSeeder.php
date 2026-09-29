@@ -60,15 +60,6 @@ class CallContentSeeder extends Seeder
                 'place' => CallContentPlace::Top,
                 'sort_order' => 4,
             ],
-            // ヘッダーのナビ(その他)に、固定ページへのリンクを並べる枠(ナビでは見出しを使わない)
-            [
-                'call_name' => 'SinglePageLinkList',
-                'call_type' => CallType::LinkList,
-                'content_model_relation_id' => 2,
-                'view_count' => 10,
-                'place' => CallContentPlace::Others,
-                'sort_order' => 0,
-            ],
             // トップで、ギャラリー画像をタイル状に並べる枠
             [
                 'call_name' => 'GalleryTileList',

@@ -26,18 +26,51 @@ class RepeaterRows
     {
         $oldRows = old($oldKey);
 
-        $rows = $oldRows !== null
-            ? collect($oldRows)->values()->map(fn (array $row, int $index) => [
-                'id' => $row['id'] ?? null,
-                'sortOrder' => $row['sort_order'] ?? $index,
-                ...$fromInput($row),
-            ])
-            : collect($models)->values()->map(fn (Model $model) => [
-                'id' => $model->getKey(),
-                'sortOrder' => $model->getAttribute('sort_order'),
-                ...$fromModel($model),
-            ]);
+        return $oldRows !== null ? self::fromInput($oldRows, $fromInput) : self::fromModels($models, $fromModel);
+    }
 
+    /**
+     * 入力値の行(入力エラーで戻った値など)から表示用の行を組み立てる。部品の中の行など、入れ子の繰り返し入力で使う。
+     *
+     * @param  array<int|string, array<string, mixed>>  $rows
+     * @param  callable(array<string, mixed>): array<string, mixed>  $fromInput
+     * @return Collection<int, object>
+     */
+    public static function fromInput(array $rows, callable $fromInput): Collection
+    {
+        return self::withIndex(collect($rows)->values()->map(fn (array $row, int $index) => [
+            'id' => $row['id'] ?? null,
+            'sortOrder' => $row['sort_order'] ?? $index,
+            ...$fromInput($row),
+        ]));
+    }
+
+    /**
+     * 保存済みのモデルから表示用の行を組み立てる。部品の中の行など、入れ子の繰り返し入力で使う。
+     *
+     * @template TModel of Model
+     *
+     * @param  iterable<TModel>  $models
+     * @param  callable(TModel): array<string, mixed>  $fromModel
+     * @return Collection<int, object>
+     */
+    public static function fromModels(iterable $models, callable $fromModel): Collection
+    {
+        return self::withIndex(collect($models)->values()->map(fn (Model $model) => [
+            'id' => $model->getKey(),
+            'sortOrder' => $model->getAttribute('sort_order'),
+            ...$fromModel($model),
+        ]));
+    }
+
+    /**
+     * 各行に入力名の番号(index。0 から振り直す)を付ける。
+     *
+     * @param  Collection<int, array<string, mixed>>  $rows
+     * @return Collection<int, object>
+     */
+    private static function withIndex(Collection $rows): Collection
+    {
         return $rows->map(fn (array $row, int $index) => (object) ['index' => (string) $index, ...$row]);
     }
 

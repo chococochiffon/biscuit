@@ -270,7 +270,7 @@ class CustomPagePublicTest extends TestCase
             'model_name' => 'Shop',
             'table_name' => 'user_make_shops',
         ]);
-        $row = ['call_name' => '店舗', 'content_model_relation_id' => $relation->id, 'view_count' => 5, 'place' => CallContentPlace::Others->value];
+        $row = ['call_name' => '店舗', 'content_model_relation_id' => $relation->id, 'view_count' => 5, 'place' => CallContentPlace::Top->value];
 
         // 固定ページ型はリンクリストを選べるが、アーカイブは選べない
         $this->post(route('admin.site-settings.store'), ['site_title' => 'テスト', 'call_contents' => [[...$row, 'call_type' => CallType::Archive->value]]])

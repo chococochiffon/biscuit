@@ -42,7 +42,7 @@ class StoreSiteSettingRequest extends FormRequest
             'call_contents.*.call_name' => ['required', 'string', 'max:255'],
             'call_contents.*.title' => ['nullable', 'string', 'max:255'],
             'call_contents.*.subtitle' => ['nullable', 'string', 'max:255'],
-            'call_contents.*.place' => ['required', new Enum(CallContentPlace::class)],
+            'call_contents.*.place' => ['required', Rule::enum(CallContentPlace::class)->only(CallContentPlace::forCallContents())],
             'call_contents.*.call_type' => ['required', new Enum(CallType::class), new ValidCallContentCombination('call_type')],
             'call_contents.*.content_model_relation_id' => ['required', 'integer', Rule::exists('content_model_relations', 'id'), new ValidCallContentCombination('content_model_relation_id')],
             'call_contents.*.view_count' => ['required', 'integer', 'min:1', new ValidCallContentCombination('view_count')],

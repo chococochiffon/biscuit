@@ -7,10 +7,14 @@ use App\Enums\CallType;
 use App\Enums\LayoutBlockType;
 use App\Enums\LayoutPageType;
 use App\Enums\LayoutRegion;
+use App\Enums\NavItemLinkType;
 use App\Enums\SidebarPosition;
 use App\Models\ContentModelRelation;
+use App\Models\CustomPageType;
 use App\Models\Layout;
 use App\Models\LayoutBlock;
+use App\Models\LayoutNavItem;
+use App\Models\SinglePage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -240,5 +244,133 @@ class LayoutControllerTest extends TestCase
             'blocks.1.region',
             'blocks.1.block_type',
         ]);
+    }
+
+    public function test_update_saves_nav_menu_items_in_order(): void
+    {
+        $this->actingAsAdmin();
+        $page = SinglePage::factory()->create();
+        $type = CustomPageType::factory()->create();
+
+        $this->put(route('admin.layouts.update'), [
+            'layouts' => $this->layoutsInput(),
+            'blocks' => [
+                [
+                    'region' => LayoutRegion::Header->value,
+                    'block_type' => LayoutBlockType::NavMenu->value,
+                    'nav_items' => [
+                        ['link_type' => NavItemLinkType::Url->value, 'label' => 'Home', 'url' => '/', 'single_page_id' => $page->id, 'sort_order' => 0],
+                        ['link_type' => NavItemLinkType::CustomPageType->value, 'custom_page_type_id' => $type->id, 'url' => '/ignored', 'sort_order' => 2],
+                        ['link_type' => NavItemLinkType::SinglePage->value, 'label' => '', 'single_page_id' => $page->id, 'sort_order' => 1],
+                    ],
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $block = LayoutBlock::query()->sole();
+        $items = $block->navItems()->ordered()->get();
+        $this->assertSame(
+            [NavItemLinkType::Url, NavItemLinkType::SinglePage, NavItemLinkType::CustomPageType],
+            $items->pluck('link_type')->all()
+        );
+        // リンク先の種類で使わない項目は保存しない
+        $this->assertSame(['/', null, null], $items->pluck('url')->all());
+        $this->assertSame([null, $page->id, null], $items->pluck('single_page_id')->all());
+        $this->assertSame([null, null, $type->id], $items->pluck('custom_page_type_id')->all());
+        $this->assertNull($items[1]->label);
+    }
+
+    public function test_update_syncs_nav_items_and_removes_items_of_blocks_that_are_no_longer_nav_menus(): void
+    {
+        $this->actingAsAdmin();
+        $navBlock = LayoutBlock::factory()->create(['region' => LayoutRegion::Header, 'block_type' => LayoutBlockType::NavMenu]);
+        $kept = LayoutNavItem::factory()->create(['layout_block_id' => $navBlock->id, 'label' => '変更前']);
+        $removed = LayoutNavItem::factory()->create(['layout_block_id' => $navBlock->id]);
+        $changedBlock = LayoutBlock::factory()->create(['region' => LayoutRegion::Footer, 'block_type' => LayoutBlockType::NavMenu]);
+        $orphan = LayoutNavItem::factory()->create(['layout_block_id' => $changedBlock->id]);
+
+        $this->put(route('admin.layouts.update'), [
+            'layouts' => $this->layoutsInput(),
+            'blocks' => [
+                [
+                    'id' => $navBlock->id,
+                    'region' => LayoutRegion::Header->value,
+                    'block_type' => LayoutBlockType::NavMenu->value,
+                    'nav_items' => [
+                        ['id' => $kept->id, 'link_type' => NavItemLinkType::Url->value, 'label' => '変更後', 'url' => 'https://example.com'],
+                    ],
+                ],
+                [
+                    'id' => $changedBlock->id,
+                    'region' => LayoutRegion::Footer->value,
+                    'block_type' => LayoutBlockType::Copyright->value,
+                    'nav_items' => [['id' => $orphan->id, 'link_type' => NavItemLinkType::Url->value, 'label' => '捨てる', 'url' => '/']],
+                ],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame('変更後', $kept->fresh()->label);
+        $this->assertSoftDeleted('layout_nav_items', ['id' => $removed->id]);
+        $this->assertSoftDeleted('layout_nav_items', ['id' => $orphan->id]);
+    }
+
+    public function test_update_rejects_invalid_nav_items(): void
+    {
+        $this->actingAsAdmin();
+
+        $response = $this->put(route('admin.layouts.update'), [
+            'layouts' => $this->layoutsInput(),
+            'blocks' => [
+                [
+                    'region' => LayoutRegion::Header->value,
+                    'block_type' => LayoutBlockType::NavMenu->value,
+                    'nav_items' => [
+                        ['link_type' => NavItemLinkType::Url->value, 'label' => '危険', 'url' => 'javascript:alert(1)'],
+                        ['link_type' => NavItemLinkType::Url->value, 'label' => '', 'url' => '/about'],
+                        ['link_type' => NavItemLinkType::SinglePage->value],
+                        ['link_type' => NavItemLinkType::CustomPageType->value, 'custom_page_type_id' => 999],
+                    ],
+                ],
+            ],
+        ]);
+
+        $response->assertSessionHasErrors([
+            'blocks.0.nav_items.0.url',
+            'blocks.0.nav_items.1.label',
+            'blocks.0.nav_items.2.single_page_id',
+            'blocks.0.nav_items.3.custom_page_type_id',
+        ]);
+        $this->assertSame(0, LayoutBlock::query()->count());
+    }
+
+    public function test_update_rejects_nav_items_over_the_limit(): void
+    {
+        $this->actingAsAdmin();
+        config(['limits.layout_nav_items' => 1]);
+        $item = ['link_type' => NavItemLinkType::Url->value, 'label' => 'Home', 'url' => '/'];
+
+        $this->put(route('admin.layouts.update'), [
+            'layouts' => $this->layoutsInput(),
+            'blocks' => [['region' => LayoutRegion::Header->value, 'block_type' => LayoutBlockType::NavMenu->value, 'nav_items' => [$item, $item]]],
+        ])->assertSessionHasErrors('blocks.0.nav_items');
+    }
+
+    public function test_edit_screen_restores_nav_items_after_a_validation_error(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->from(route('admin.layouts.edit'))->put(route('admin.layouts.update'), [
+            'blocks' => [
+                [
+                    'region' => LayoutRegion::Header->value,
+                    'block_type' => LayoutBlockType::NavMenu->value,
+                    'nav_items' => [['link_type' => NavItemLinkType::Url->value, 'label' => '入力した項目', 'url' => '/typed']],
+                ],
+            ],
+        ])->assertRedirect(route('admin.layouts.edit'));
+
+        $this->get(route('admin.layouts.edit'))
+            ->assertSee('value="入力した項目"', false)
+            ->assertSee('name="blocks[0][nav_items][0][url]"', false);
     }
 }

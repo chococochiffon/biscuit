@@ -41,7 +41,7 @@
         <label class="form-label small">{{ __('表示箇所') }}</label>
         <select name="call_contents[{{ $index }}][place]" class="form-select form-select-sm" data-role="place-select" required>
             <option value="" disabled @selected(! $place)>{{ __('選択してください') }}</option>
-            @foreach (\App\Enums\CallContentPlace::cases() as $placeOption)
+            @foreach (\App\Enums\CallContentPlace::forCallContents() as $placeOption)
                 <option value="{{ $placeOption->value }}" @selected($place === $placeOption->value)>{{ $placeOption->label() }}</option>
             @endforeach
         </select>
