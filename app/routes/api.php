@@ -6,12 +6,15 @@ use App\Http\Controllers\API\CustomPageController;
 use App\Http\Controllers\API\CustomPageTypeController;
 use App\Http\Controllers\API\GalleryCategoryController;
 use App\Http\Controllers\API\GalleryImageController;
+use App\Http\Controllers\API\LayoutController;
 use App\Http\Controllers\API\QuestionAnswerController;
 use App\Http\Controllers\API\ResolveController;
 use App\Http\Controllers\API\SiteSettingController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('site-setting', [SiteSettingController::class, 'show'])->name('api.site-setting.show');
+
+Route::get('layout', [LayoutController::class, 'show'])->name('api.layout.show');
 
 Route::apiResource('articles', ArticleController::class)->only(['index']);
 

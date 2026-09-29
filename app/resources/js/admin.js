@@ -13,6 +13,7 @@ import { initImageDropzones, initImageCroppers } from './admin/images.js';
 import { initArticleApprovalControls } from './admin/articles.js';
 import { initQuestionAnswerForm, initQuestionAnswerFlows } from './admin/question-answers.js';
 import { initGalleryImageReorder, initGalleryCategoryManagerModal } from './admin/gallery-images.js';
+import { initLayoutBlocks } from './admin/layouts.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
@@ -32,4 +33,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initQuestionAnswerFlows();
     initGalleryImageReorder();
     initGalleryCategoryManagerModal();
+    initLayoutBlocks();
 });

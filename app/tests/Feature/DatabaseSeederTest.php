@@ -50,6 +50,13 @@ class DatabaseSeederTest extends TestCase
         $this->getJson(route('api.resolve', ['path' => '/news/biscuit-v1-0-release']))
             ->assertOk()
             ->assertJsonPath('type', 'article');
+
+        // レイアウトの初期値(記事ページだけ右サイドバーに新着記事)が公開側の API で取得できる
+        $this->getJson(route('api.layout.show'))
+            ->assertOk()
+            ->assertJsonPath('data.pages.article.sidebar_position', 'right')
+            ->assertJsonPath('data.regions.header.1.block_type', 'nav_menu')
+            ->assertJsonPath('data.regions.sidebar.0.call_content.call_type', 'link_list');
     }
 
     public function test_seeded_call_contents_use_allowed_combinations(): void

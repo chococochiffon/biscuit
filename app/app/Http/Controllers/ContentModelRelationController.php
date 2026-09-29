@@ -6,6 +6,7 @@ use App\Http\Requests\StoreContentModelRelationRequest;
 use App\Http\Requests\UpdateContentModelRelationRequest;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use App\Models\LayoutBlock;
 use App\Rules\AllowedTableName;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -100,21 +101,22 @@ class ContentModelRelationController extends Controller
     }
 
     /**
-     * Remove the specified resource from storage(call_contentsで使用中の場合は削除しない)。
+     * Remove the specified resource from storage(call_contents・レイアウトの部品で使用中の場合は削除しない)。
      */
     public function destroy(Request $request, ContentModelRelation $contentModelRelation): RedirectResponse|JsonResponse
     {
-        $isInUseByCallContent = CallContent::query()
-            ->where('content_model_relation_id', $contentModelRelation->id)
-            ->exists();
+        $inUseMessage = match (true) {
+            CallContent::query()->where('content_model_relation_id', $contentModelRelation->id)->exists() => __('このデータ種別の紐付けはcall_contentsで使用されているため削除できません。'),
+            LayoutBlock::query()->where('content_model_relation_id', $contentModelRelation->id)->exists() => __('このデータ種別の紐付けはレイアウトの部品で使用されているため削除できません。'),
+            default => null,
+        };
 
-        if ($isInUseByCallContent) {
+        if ($inUseMessage !== null) {
             if ($request->wantsJson()) {
-                return response()->json(['message' => __('このデータ種別の紐付けはcall_contentsで使用されているため削除できません。')], 422);
+                return response()->json(['message' => $inUseMessage], 422);
             }
 
-            return redirect()->route('admin.content-model-relations.index')
-                ->with('error', __('このデータ種別の紐付けはcall_contentsで使用されているため削除できません。'));
+            return redirect()->route('admin.content-model-relations.index')->with('error', $inUseMessage);
         }
 
         $contentModelRelation->delete();

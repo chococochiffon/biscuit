@@ -267,6 +267,28 @@ main > form {
     opacity: 0.5;
 }
 
+/* レイアウト管理の部品の行(空の領域にもドラッグで落とせるよう高さを取る) */
+.layout-block-rows {
+    min-height: 3rem;
+    margin-bottom: 0.5rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+}
+
+.layout-block-row {
+    background-color: #fff;
+}
+
+.layout-block-row.dragging {
+    opacity: 0.5;
+}
+
+.layout-block-editor {
+    height: 120px;
+    background-color: #fff;
+}
+
 .single-page-detail-editor {
     height: 160px;
     background-color: #fff;

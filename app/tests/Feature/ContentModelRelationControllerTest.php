@@ -6,6 +6,7 @@ use App\Enums\CallContentType;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
 use App\Models\CustomPageType;
+use App\Models\LayoutBlock;
 use App\Support\CustomPages\CustomPageSchema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -282,6 +283,19 @@ class ContentModelRelationControllerTest extends TestCase
         $response = $this->delete(route('admin.content-model-relations.destroy', $target));
 
         $response->assertRedirect(route('admin.content-model-relations.index'));
+        $this->assertDatabaseHas('content_model_relations', ['id' => $target->id, 'deleted_at' => null]);
+    }
+
+    public function test_destroy_is_blocked_when_used_by_layout_block(): void
+    {
+        $this->actingAsAdmin();
+        $target = ContentModelRelation::factory()->create();
+        LayoutBlock::factory()->callContent(relation: $target)->create();
+
+        $response = $this->delete(route('admin.content-model-relations.destroy', $target));
+
+        $response->assertRedirect(route('admin.content-model-relations.index'));
+        $response->assertSessionHas('error', 'このデータ種別の紐付けはレイアウトの部品で使用されているため削除できません。');
         $this->assertDatabaseHas('content_model_relations', ['id' => $target->id, 'deleted_at' => null]);
     }
 
