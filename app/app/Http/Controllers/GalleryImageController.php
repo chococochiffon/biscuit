@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\AuditAction;
+use App\Http\Controllers\Concerns\ReordersRows;
 use App\Http\Requests\StoreGalleryImageRequest;
 use App\Http\Requests\UpdateGalleryImageRequest;
 use App\Models\GalleryCategory;
@@ -11,13 +11,14 @@ use App\Support\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class GalleryImageController extends Controller
 {
+    use ReordersRows;
+
     /**
      * 分類の絞り込みで「未分類」を表す値。
      */
@@ -128,25 +129,9 @@ class GalleryImageController extends Controller
      */
     public function reorder(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'order' => ['required', 'array'],
-            'order.*' => ['integer', Rule::exists('gallery_images', 'id')],
-            'offset' => ['nullable', 'integer', 'min:0'],
-            'page' => ['nullable', 'integer', 'min:1'],
-        ]);
+        $saved = $this->saveReorder($request, GalleryImage::class, paginated: true);
 
-        $offset = (int) ($validated['offset'] ?? 0);
-
-        // 途中で失敗しても並び順が中途半端にならないよう、まとめて保存する
-        DB::transaction(function () use ($validated, $offset) {
-            foreach (array_values($validated['order']) as $index => $id) {
-                GalleryImage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
-            }
-
-            AuditLogger::record(AuditAction::Reordered, 'gallery_image', metadata: ['order' => array_map('intval', array_values($validated['order'])), 'offset' => $offset]);
-        });
-
-        return redirect()->route('admin.gallery-images.index', array_filter(['sort' => self::REORDERABLE_SORT, 'page' => $validated['page'] ?? null]))
+        return redirect()->route('admin.gallery-images.index', array_filter(['sort' => self::REORDERABLE_SORT, 'page' => $saved['page']]))
             ->with('status', __('並び替えを保存しました。'));
     }
 

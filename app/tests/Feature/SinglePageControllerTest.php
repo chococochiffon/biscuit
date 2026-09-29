@@ -692,6 +692,20 @@ class SinglePageControllerTest extends TestCase
         $response->assertSessionHasErrors(['order.0']);
     }
 
+    public function test_reorder_fails_validation_for_a_deleted_single_page(): void
+    {
+        $this->actingAsAdmin();
+        $deleted = SinglePage::factory()->create(['sort_order' => 5]);
+        $deleted->delete();
+
+        $response = $this->patch(route('admin.single-pages.reorder'), [
+            'order' => [$deleted->id],
+        ]);
+
+        $response->assertSessionHasErrors(['order.0']);
+        $this->assertSame(5, SinglePage::withTrashed()->find($deleted->id)->sort_order);
+    }
+
     /**
      * 固定ページの登録・更新で必須項目を満たす入力値。
      *

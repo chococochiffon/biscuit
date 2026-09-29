@@ -16,7 +16,7 @@ class UpdateGalleryImageRequest extends StoreGalleryImageRequest
     {
         return [
             ...parent::rules(),
-            'image' => ['nullable', 'image', 'max:10240'],
+            'image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
         ];
     }
 }

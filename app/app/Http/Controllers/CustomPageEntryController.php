@@ -118,7 +118,7 @@ class CustomPageEntryController extends Controller
     {
         $entry = CustomPageEntry::queryFor($customPageType)->findOrFail($entry);
 
-        DB::transaction(function () use ($customPageType, $entry) {
+        AuditLogger::deleteWithLog($entry, function () use ($customPageType, $entry) {
             CustomFormValue::queryFor($customPageType)->where($customPageType->entryForeignKey(), $entry->id)->delete();
 
             if ($customPageType->hasDetails()) {
@@ -126,8 +126,6 @@ class CustomPageEntryController extends Controller
             }
 
             $entry->delete();
-
-            AuditLogger::deleted($entry);
         });
 
         return redirect()->route('admin.custom-pages.entries.index', $customPageType)

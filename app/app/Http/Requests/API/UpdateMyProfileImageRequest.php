@@ -26,7 +26,7 @@ class UpdateMyProfileImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'image' => ['required', 'image', 'max:10240'],
+            'image' => ['required', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'crop' => ['nullable', 'array'],
             'crop.x' => ['nullable', 'numeric', 'min:0'],
             'crop.y' => ['nullable', 'numeric', 'min:0'],

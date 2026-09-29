@@ -130,10 +130,7 @@ class ArticleController extends Controller
      */
     public function destroy(Article $article): RedirectResponse
     {
-        DB::transaction(function () use ($article) {
-            $article->delete();
-            AuditLogger::deleted($article);
-        });
+        AuditLogger::deleteWithLog($article);
 
         return redirect()->route('admin.articles.index')->with('status', __('記事を削除しました。'));
     }
@@ -186,14 +183,7 @@ class ArticleController extends Controller
      */
     public function uploadContentImage(Request $request): JsonResponse
     {
-        $request->validate([
-            'image' => ['required', 'image', 'max:10240'],
-        ]);
-
-        $path = $request->file('image')->store(Article::CONTENT_IMAGE_DIRECTORY, 'public');
-        AuditLogger::record(AuditAction::Uploaded, 'article_content_image', label: $path);
-
-        return response()->json(['url' => Article::publicImageUrl($path)]);
+        return $this->storeContentImage($request);
     }
 
     /**

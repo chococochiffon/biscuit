@@ -24,9 +24,7 @@
     <input type="hidden" name="{{ $name }}[sort_order]" value="{{ $sortOrder }}" data-role="sort-order" @disabled(! $enabled)>
 
     <div class="col-auto align-self-stretch d-flex">
-        <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
-            <i class="bi bi-grip-vertical"></i>
-        </span>
+        @include('admin.partials._drag_handle')
     </div>
 
     <div class="col-auto">

@@ -238,8 +238,8 @@ main > form {
     transform: rotate(-90deg);
 }
 
-/* 固定ページ詳細の並び替え可能な行 */
-.single-page-detail-handle {
+/* 並び替え可能な行のドラッグハンドル(admin.partials._drag_handle)と、ドラッグ中の行 */
+.drag-handle {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -253,18 +253,13 @@ main > form {
     align-self: stretch;
 }
 
-.single-page-detail-row.dragging {
+.dragging {
     opacity: 0.5;
 }
 
 /* 固定ページ一覧の並び替え可能な行 */
 .single-page-reorder-handle-cell {
     width: 2.75rem;
-}
-
-#single-page-reorder-rows tbody tr.dragging,
-#call-content-rows [data-role="call-content-row"].dragging {
-    opacity: 0.5;
 }
 
 /* レイアウト管理の部品の行(空の領域にもドラッグで落とせるよう高さを取る) */
@@ -278,10 +273,6 @@ main > form {
 
 .layout-block-row {
     background-color: #fff;
-}
-
-.layout-block-row.dragging {
-    opacity: 0.5;
 }
 
 .layout-block-editor {

@@ -50,7 +50,7 @@ class StoreUserRequest extends FormRequest
             'user_detail.family_name' => ['required', 'string', 'max:255'],
             'user_detail.nick_name' => ['required', 'string', 'max:255'],
             'user_detail.birthday' => ['required', 'date'],
-            'user_detail.user_image' => ['nullable', 'image', 'max:10240'],
+            'user_detail.user_image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             // アイコン画像の切り抜き範囲(元画像のピクセル基準。未指定なら中央で切り抜く)
             'user_detail.user_image_crop' => ['nullable', 'array'],
             'user_detail.user_image_crop.x' => ['nullable', 'numeric', 'min:0'],

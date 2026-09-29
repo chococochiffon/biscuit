@@ -1,27 +1,8 @@
 /**
- * ギャラリー画像一覧の並び替えと、分類管理モーダル。
+ * ギャラリー画像の分類管理モーダル。
  */
-import { initSortableRows } from './rows.js';
 import { initManagerModal } from './manager-modal.js';
-import { t, requestJson } from './utils.js';
-
-/**
- * ギャラリー画像一覧(gallery_images)の並び替えUIを初期化する。
- * ハンドルをドラッグして行を並び替えると、隠しinput(order[])のDOM順が変わり、
- * 「並び替えを保存」ボタンで並び替え用フォーム(gallery-image-reorder-form)に送信される。
- */
-export function initGalleryImageReorder() {
-    const table = document.getElementById('gallery-image-reorder-rows');
-
-    if (!table) {
-        return;
-    }
-
-    const tbody = table.querySelector('tbody');
-    const { bindRow } = initSortableRows(tbody, '[data-role="gallery-image-row"]');
-
-    tbody.querySelectorAll('[data-role="gallery-image-row"]').forEach(bindRow);
-}
+import { t } from './utils.js';
 
 /**
  * 画面の分類の選択肢(data-role="gallery-category-select")を、分類の一覧(並び順)で作り直す。
@@ -58,16 +39,13 @@ export function initGalleryCategoryManagerModal() {
 
     const input = document.getElementById('gallery-category-manager-input');
     const list = document.getElementById('gallery-category-manager-list');
-    const rowSelector = '[data-role="gallery-category-row"]';
-    const { bindRow } = initSortableRows(list, rowSelector);
-    let categories = [];
     let changed = false;
 
     function markChanged() {
         changed = true;
     }
 
-    const { showError, clearError } = initManagerModal(modal, {
+    initManagerModal(modal, {
         listContainer: list,
         submitButton: document.getElementById('gallery-category-manager-submit'),
         errorBox: document.getElementById('gallery-category-manager-error'),
@@ -92,16 +70,6 @@ export function initGalleryCategoryManagerModal() {
         renderItem(category, { edit, remove }) {
             const row = document.createElement('li');
             row.className = 'list-group-item d-flex align-items-center gap-2';
-            row.dataset.role = 'gallery-category-row';
-            row.dataset.id = String(category.id);
-
-            const handle = document.createElement('span');
-            handle.className = 'single-page-detail-handle';
-            handle.dataset.role = 'drag-handle';
-            handle.title = t('ドラッグして並び替え');
-            handle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
-            row.appendChild(handle);
-
             const name = document.createElement('span');
             name.className = 'flex-grow-1';
             name.setAttribute('role', 'button');
@@ -117,43 +85,20 @@ export function initGalleryCategoryManagerModal() {
             deleteButton.addEventListener('click', remove);
             row.appendChild(deleteButton);
 
-            bindRow(row);
-            row.addEventListener('dragend', saveOrder);
-
             return row;
         },
-        onLoaded(items) {
-            categories = items;
-            refreshCategorySelects(categories);
-        },
+        onLoaded: refreshCategorySelects,
         onSaved: markChanged,
         onDeleted: markChanged,
+        sortable: {
+            failedMessage: t('分類の並び替えの保存に失敗しました。'),
+            // 分類の選択肢もその順に並べ直す
+            onReordered(categories) {
+                refreshCategorySelects(categories);
+                markChanged();
+            },
+        },
     });
-
-    /**
-     * 一覧の行の並び順を保存し、分類の選択肢もその順に並べ直す。
-     */
-    async function saveOrder() {
-        const order = [...list.querySelectorAll(rowSelector)].map((row) => Number(row.dataset.id));
-
-        if (order.every((id, index) => categories[index]?.id === id)) {
-            return;
-        }
-
-        clearError();
-
-        const response = await requestJson(list.dataset.reorderUrl, { method: 'PATCH', body: { order } });
-
-        if (!response.ok) {
-            showError(t('分類の並び替えの保存に失敗しました。'));
-
-            return;
-        }
-
-        categories = order.map((id) => categories.find((category) => category.id === id));
-        refreshCategorySelects(categories);
-        markChanged();
-    }
 
     modal.addEventListener('hidden.bs.modal', () => {
         if (changed && modal.dataset.reloadOnChange) {

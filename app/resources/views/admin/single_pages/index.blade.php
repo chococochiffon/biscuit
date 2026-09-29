@@ -79,9 +79,7 @@
                     <tr data-role="single-page-row">
                         @if ($canReorder)
                             <td class="single-page-reorder-handle-cell">
-                                <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
-                                    <i class="bi bi-grip-vertical"></i>
-                                </span>
+                                @include('admin.partials._drag_handle')
                                 <input type="hidden" form="single-page-reorder-form" name="order[]" value="{{ $singlePage->id }}">
                             </td>
                         @endif

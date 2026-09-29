@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\AuditAction;
+use App\Http\Controllers\Concerns\ReordersRows;
 use App\Http\Requests\StoreGalleryCategoryRequest;
 use App\Http\Requests\UpdateGalleryCategoryRequest;
 use App\Models\GalleryCategory;
@@ -11,13 +11,14 @@ use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 
 /**
  * ギャラリー画像の分類を、分類管理モーダルから Ajax(JSON)で管理する。
  */
 class GalleryCategoryController extends Controller
 {
+    use ReordersRows;
+
     /**
      * 分類の一覧を並び順(sort_order、同順なら id)で返す。
      */
@@ -68,19 +69,7 @@ class GalleryCategoryController extends Controller
      */
     public function reorder(Request $request): JsonResponse
     {
-        $validated = $request->validate([
-            'order' => ['required', 'array'],
-            'order.*' => ['integer', Rule::exists('gallery_categories', 'id')->withoutTrashed()],
-        ]);
-
-        // 途中で失敗しても並び順が中途半端にならないよう、まとめて保存する
-        DB::transaction(function () use ($validated) {
-            foreach (array_values($validated['order']) as $index => $id) {
-                GalleryCategory::query()->whereKey($id)->update(['sort_order' => $index]);
-            }
-
-            AuditLogger::record(AuditAction::Reordered, 'gallery_category', metadata: ['order' => array_map('intval', array_values($validated['order']))]);
-        });
+        $this->saveReorder($request, GalleryCategory::class);
 
         return response()->json(status: 204);
     }

@@ -26,7 +26,7 @@ class StoreGalleryImageRequest extends FormRequest
     {
         return [
             'gallery_category_id' => ['nullable', 'integer', Rule::exists('gallery_categories', 'id')->withoutTrashed()],
-            'image' => ['required', 'image', 'max:10240'],
+            'image' => ['required', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'name' => ['required', 'string', 'max:128'],
             'comment' => ['nullable', 'string', 'max:255'],
         ];
