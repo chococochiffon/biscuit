@@ -31,10 +31,10 @@ class LayoutControllerTest extends TestCase
         $response->assertExactJson([
             'data' => [
                 'pages' => [
-                    'top' => ['sidebar_position' => 'none'],
-                    'article' => ['sidebar_position' => 'none'],
-                    'single_page' => ['sidebar_position' => 'none'],
-                    'other' => ['sidebar_position' => 'none'],
+                    'top' => ['sidebar_position' => 'none', 'show_breadcrumbs' => false],
+                    'article' => ['sidebar_position' => 'none', 'show_breadcrumbs' => true],
+                    'single_page' => ['sidebar_position' => 'none', 'show_breadcrumbs' => true],
+                    'other' => ['sidebar_position' => 'none', 'show_breadcrumbs' => true],
                 ],
                 'regions' => ['header' => [], 'sidebar' => [], 'footer' => []],
             ],
@@ -43,7 +43,7 @@ class LayoutControllerTest extends TestCase
 
     public function test_show_returns_sidebar_positions_and_blocks_by_region_in_order(): void
     {
-        Layout::factory()->create(['page_type' => LayoutPageType::Article, 'sidebar_position' => SidebarPosition::Right]);
+        Layout::factory()->create(['page_type' => LayoutPageType::Article, 'sidebar_position' => SidebarPosition::Right, 'show_breadcrumbs' => false]);
         LayoutBlock::factory()->create(['region' => LayoutRegion::Header, 'block_type' => LayoutBlockType::NavMenu, 'sort_order' => 1]);
         LayoutBlock::factory()->create(['region' => LayoutRegion::Header, 'block_type' => LayoutBlockType::SiteTitle, 'sort_order' => 0]);
         LayoutBlock::factory()->freeText('<p>営業時間</p>')->create(['region' => LayoutRegion::Footer, 'title' => 'お知らせ']);
@@ -53,6 +53,7 @@ class LayoutControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertJsonPath('data.pages.article.sidebar_position', 'right');
+        $response->assertJsonPath('data.pages.article.show_breadcrumbs', false);
         $response->assertJsonPath('data.pages.top.sidebar_position', 'none');
         $response->assertJsonPath('data.regions.header.0.block_type', 'site_title');
         $response->assertJsonPath('data.regions.header.1.block_type', 'nav_menu');

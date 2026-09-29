@@ -35,6 +35,36 @@ class ResolveControllerTest extends TestCase
         $response->assertJsonPath('data.details.1.sub_title', '事業内容');
     }
 
+    public function test_breadcrumbs_link_ancestors_only_when_a_published_page_exists(): void
+    {
+        $this->travelTo('2026-10-01 10:00:00');
+        SinglePage::factory()->create(['parent_path' => null, 'slug' => 'blog', 'title' => 'ブログ']);
+        // 公開期間外のページはないものとして扱う
+        SinglePage::factory()->create(['parent_path' => 'blog', 'slug' => 'life', 'title' => '暮らし', 'publication_start_datetime' => '2026-10-02 00:00:00']);
+        Article::factory()->published()->create(['parent_path' => 'blog/life', 'slug' => 'spring-cafe', 'title' => '春のカフェ']);
+
+        $response = $this->getJson(route('api.resolve', ['path' => '/blog/life/spring-cafe']));
+
+        $response->assertOk();
+        $response->assertJsonPath('breadcrumbs', [
+            ['label' => 'Home', 'path' => '/'],
+            ['label' => 'ブログ', 'path' => '/blog'],
+            ['label' => 'life', 'path' => null],
+            ['label' => '春のカフェ', 'path' => '/blog/life/spring-cafe'],
+        ]);
+    }
+
+    public function test_breadcrumbs_use_article_title_for_ancestor_and_are_empty_at_top(): void
+    {
+        Article::factory()->published()->create(['parent_path' => null, 'slug' => 'news', 'title' => 'お知らせ']);
+        $singlePage = SinglePage::factory()->create(['parent_path' => 'news', 'slug' => 'about', 'title' => '概要']);
+
+        $this->getJson(route('api.resolve', ['path' => $singlePage->path]))
+            ->assertJsonPath('breadcrumbs.1', ['label' => 'お知らせ', 'path' => '/news']);
+        $this->getJson(route('api.resolve', ['path' => '/']))
+            ->assertJsonPath('breadcrumbs', []);
+    }
+
     public function test_resolves_single_page_at_site_root_and_ignores_surrounding_slashes(): void
     {
         $singlePage = SinglePage::factory()->create(['parent_path' => null, 'slug' => 'about']);

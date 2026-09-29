@@ -17,7 +17,7 @@ class LayoutSeeder extends Seeder
     /**
      * 公開側のレイアウトの初期値を登録する。
      * ヘッダーにサイトタイトルとナビメニュー、フッターにコピーライトと SNS リンクを置き、
-     * 記事ページだけ右のサイドバーに新着記事を並べる。部品が登録済みなら部品は登録しない。
+     * 記事ページだけ右のサイドバーに新着記事を並べる。パンくずはトップ以外で表示する。部品が登録済みなら部品は登録しない。
      * データ種別の紐付け(ContentModelRelationSeeder)の後に実行する。
      */
     public function run(): void
@@ -30,7 +30,10 @@ class LayoutSeeder extends Seeder
         ];
 
         foreach ($sidebarPositions as $pageType => $sidebarPosition) {
-            Layout::query()->firstOrCreate(['page_type' => $pageType], ['sidebar_position' => $sidebarPosition]);
+            Layout::query()->firstOrCreate(
+                ['page_type' => $pageType],
+                ['sidebar_position' => $sidebarPosition, 'show_breadcrumbs' => $pageType !== LayoutPageType::Top->value],
+            );
         }
 
         if (LayoutBlock::query()->exists()) {

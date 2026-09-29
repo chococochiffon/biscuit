@@ -16,7 +16,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 /**
- * レイアウト管理(ページの種類ごとのサイドバーの位置と、領域ごとの部品)の保存。
+ * レイアウト管理(ページの種類ごとのサイドバーの位置・パンくずを表示するかと、領域ごとの部品)の保存。
  * レイアウトは新規登録の画面を持たず、常にこの画面で上書き保存する。
  */
 class UpdateLayoutRequest extends FormRequest
@@ -43,14 +43,15 @@ class UpdateLayoutRequest extends FormRequest
         $linkType = fn (NavItemLinkType $type) => 'exclude_unless:blocks.*.nav_items.*.link_type,'.$type->value;
         $place = LayoutBlock::CALL_CONTENT_PLACE;
 
-        $sidebarRules = collect(LayoutPageType::cases())
+        $pageTypeRules = collect(LayoutPageType::cases())
             ->mapWithKeys(fn (LayoutPageType $pageType) => [
                 "layouts.{$pageType->value}.sidebar_position" => ['required', new Enum(SidebarPosition::class)],
+                "layouts.{$pageType->value}.show_breadcrumbs" => ['nullable', 'boolean'],
             ])
             ->all();
 
         return [
-            ...$sidebarRules,
+            ...$pageTypeRules,
 
             'blocks' => ['nullable', 'array'],
             'blocks.*.id' => ['nullable', 'integer', Rule::exists('layout_blocks', 'id')->withoutTrashed()],

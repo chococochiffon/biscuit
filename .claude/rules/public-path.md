@@ -9,6 +9,7 @@ paths:
   - app/app/Http/Requests/*ArticleRequest.php
   - app/app/Http/Requests/*SinglePageRequest.php
   - app/app/Http/Controllers/API/ResolveController.php
+  - app/app/Support/Breadcrumbs.php
   - app/app/Http/Resources/ArticleResource.php
   - app/app/Http/Resources/SinglePageResource.php
   - app/resources/views/admin/articles/_form.blade.php
@@ -35,4 +36,5 @@ paths:
 - URL の先頭がカスタムページの種類の先頭なら、カスタムページの一覧(`type=custom_page_list`)か 1 件(`type=custom_page`)を返す(`custom-pages.md` を参照)。
 - それ以外はパスから固定ページを、なければ公開済みの記事を解決する。どちらもモデルの `published()` スコープ（記事は公開ステータスが「公開」かつ公開期間内、固定ページは公開期間内。記事一覧 API・呼び出しコンテンツと共通の条件）で絞り込む。
 - `type`（`single_page`/`article`）・本文（`data`）・本文内の呼び出しコンテンツ（`call_contents`）を返す。呼び出しコンテンツとの組み合わせ方は `call-content.md` を参照。
+- どの `type` にも、パンくず `breadcrumbs`（`Support\Breadcrumbs`。各項目は `label` と `path`、先頭は Home、末尾は表示中のページ、トップは空）を含める。記事・固定ページの途中の階層は、そのパスに公開中の固定ページ（なければ記事）があればタイトルでリンクし、なければ URL の文字列をリンクなし（`path: null`）で出す。カスタムページは「Home › 種類の一覧 › ページ」。公開側で表示するかどうかはレイアウト管理のページの種類ごとの設定（`layout.md`）で切り替える。
 - 記事・固定ページの 1 件取得はこの `resolve` に一本化している（`GET /api/articles` はページ送り用の一覧のみ）。

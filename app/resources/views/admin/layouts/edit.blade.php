@@ -69,17 +69,23 @@
 
             <div class="card mb-4">
                 <div class="card-body">
-                    <h2 class="h6">{{ __('ページの種類ごとのサイドバーの位置') }}</h2>
-                    <div class="form-text mb-3">{{ __('カスタムページは、記事型を「記事」、固定ページ型を「固定ページ」として扱います。') }}</div>
+                    <h2 class="h6">{{ __('ページの種類ごとの設定') }}</h2>
+                    <div class="form-text mb-3">{{ __('サイドバーの位置と、本文の上にパンくずを表示するかを選びます。カスタムページは、記事型を「記事」、固定ページ型を「固定ページ」として扱います。') }}</div>
 
                     <div class="row g-3">
                         @foreach (\App\Enums\LayoutPageType::cases() as $pageType)
                             @php
+                                $layout = $layouts[$pageType->value];
                                 $sidebarPosition = \App\Support\RepeaterRows::intOrNull(old("layouts.{$pageType->value}.sidebar_position"))
-                                    ?? $sidebarPositions[$pageType->value]->value;
+                                    ?? $layout->sidebar_position->value;
+                                // 入力エラーで戻った場合は、チェックを外した(送信されなかった)ことも入力値として扱う
+                                $showBreadcrumbs = old('layouts') !== null
+                                    ? (bool) old("layouts.{$pageType->value}.show_breadcrumbs")
+                                    : $layout->show_breadcrumbs;
                             @endphp
                             <div class="col-sm-6 col-lg-3">
-                                <label for="layout-sidebar-{{ $pageType->value }}" class="form-label small">{{ $pageType->label() }}</label>
+                                <div class="fw-semibold small mb-2">{{ $pageType->label() }}</div>
+                                <label for="layout-sidebar-{{ $pageType->value }}" class="form-label small">{{ __('サイドバー') }}</label>
                                 <select
                                     id="layout-sidebar-{{ $pageType->value }}"
                                     name="layouts[{{ $pageType->value }}][sidebar_position]"
@@ -90,6 +96,17 @@
                                         <option value="{{ $position->value }}" @selected($sidebarPosition === $position->value)>{{ $position->label() }}</option>
                                     @endforeach
                                 </select>
+                                <div class="form-check mt-2">
+                                    <input
+                                        type="checkbox"
+                                        id="layout-breadcrumbs-{{ $pageType->value }}"
+                                        name="layouts[{{ $pageType->value }}][show_breadcrumbs]"
+                                        value="1"
+                                        class="form-check-input"
+                                        @checked($showBreadcrumbs)
+                                    >
+                                    <label for="layout-breadcrumbs-{{ $pageType->value }}" class="form-check-label small">{{ __('パンくずを表示する') }}</label>
+                                </div>
                             </div>
                         @endforeach
                     </div>

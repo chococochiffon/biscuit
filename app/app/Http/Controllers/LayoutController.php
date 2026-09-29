@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 /**
- * レイアウト管理: 公開側のページの種類ごとのサイドバーの位置と、ヘッダー・サイドバー・フッターに置く部品を 1 画面で編集する。
+ * レイアウト管理: 公開側のページの種類ごとのサイドバーの位置・パンくずを表示するかと、ヘッダー・サイドバー・フッターに置く部品を 1 画面で編集する。
  */
 class LayoutController extends Controller
 {
@@ -31,7 +31,7 @@ class LayoutController extends Controller
      */
     public function edit(): View
     {
-        $sidebarPositions = Layout::sidebarPositions();
+        $layouts = Layout::forPageTypes();
         $blocks = LayoutBlock::query()->with(['navItems' => fn ($query) => $query->ordered()])->ordered()->get();
         $contentModelRelations = ContentModelRelation::all(['id', 'content_type', 'model_name', 'table_name']);
         // ナビメニューの項目のリンク先の候補(公開期間外の固定ページも、公開されたらナビに出るよう選べる)
@@ -39,7 +39,7 @@ class LayoutController extends Controller
         $customPageTypes = CustomPageType::query()->ordered()->get();
         $frontUrl = SiteSetting::current()?->front_url;
 
-        return view('admin.layouts.edit', compact('sidebarPositions', 'blocks', 'contentModelRelations', 'singlePages', 'customPageTypes', 'frontUrl'));
+        return view('admin.layouts.edit', compact('layouts', 'blocks', 'contentModelRelations', 'singlePages', 'customPageTypes', 'frontUrl'));
     }
 
     /**
@@ -51,7 +51,10 @@ class LayoutController extends Controller
             foreach (LayoutPageType::cases() as $pageType) {
                 Layout::query()->updateOrCreate(
                     ['page_type' => $pageType],
-                    ['sidebar_position' => $request->validated("layouts.{$pageType->value}.sidebar_position")],
+                    [
+                        'sidebar_position' => $request->validated("layouts.{$pageType->value}.sidebar_position"),
+                        'show_breadcrumbs' => $request->boolean("layouts.{$pageType->value}.show_breadcrumbs"),
+                    ],
                 );
             }
 

@@ -117,6 +117,10 @@ class CustomPagePublicTest extends TestCase
         $response->assertJsonPath('type', 'custom_page_list');
         $response->assertJsonPath('data', null);
         $response->assertJsonPath('custom_page_type.name', 'recipe');
+        $response->assertJsonPath('breadcrumbs', [
+            ['label' => 'Home', 'path' => '/'],
+            ['label' => 'レシピ', 'path' => '/recipes'],
+        ]);
         $response->assertJsonPath('call_contents', []);
     }
 
@@ -141,6 +145,11 @@ class CustomPagePublicTest extends TestCase
             ['name' => 'ジャンル', 'type' => 'checkbox', 'value' => ['和食']],
         ]);
         $response->assertJsonPath('custom_page_type.path', '/recipes');
+        $response->assertJsonPath('breadcrumbs', [
+            ['label' => 'Home', 'path' => '/'],
+            ['label' => 'レシピ', 'path' => '/recipes'],
+            ['label' => '肉じゃが', 'path' => '/recipes/nikujaga'],
+        ]);
     }
 
     public function test_resolve_finds_article_type_entry_without_slug_by_id(): void

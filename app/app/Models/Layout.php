@@ -11,9 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * 公開側のページの種類ごとのレイアウト(サイドバーの位置)。ページの種類ごとに 1 件だけ登録する。
+ * 公開側のページの種類ごとのレイアウト(サイドバーの位置・パンくずを表示するか)。ページの種類ごとに 1 件だけ登録する。
  */
-#[Fillable(['page_type', 'sidebar_position'])]
+#[Fillable(['page_type', 'sidebar_position', 'show_breadcrumbs'])]
 class Layout extends Model
 {
     /** @use HasFactory<LayoutFactory> */
@@ -29,21 +29,27 @@ class Layout extends Model
         return [
             'page_type' => LayoutPageType::class,
             'sidebar_position' => SidebarPosition::class,
+            'show_breadcrumbs' => 'boolean',
         ];
     }
 
     /**
-     * ページの種類ごとのサイドバーの位置を取得する(未登録の種類はサイドバーなし)。
+     * すべてのページの種類のレイアウトを取得する。
+     * 未登録の種類は初期値(サイドバーなし、パンくずはトップ以外で表示)の保存していないレイアウトにする。
      *
-     * @return array<int, SidebarPosition> ページの種類(LayoutPageType の値) → サイドバーの位置
+     * @return array<int, self> ページの種類(LayoutPageType の値) → レイアウト
      */
-    public static function sidebarPositions(): array
+    public static function forPageTypes(): array
     {
         $layouts = self::query()->get()->keyBy(fn (self $layout) => $layout->page_type->value);
 
         return collect(LayoutPageType::cases())
             ->mapWithKeys(fn (LayoutPageType $pageType) => [
-                $pageType->value => $layouts->get($pageType->value)?->sidebar_position ?? SidebarPosition::None,
+                $pageType->value => $layouts->get($pageType->value) ?? new self([
+                    'page_type' => $pageType,
+                    'sidebar_position' => SidebarPosition::None,
+                    'show_breadcrumbs' => $pageType !== LayoutPageType::Top,
+                ]),
             ])
             ->all();
     }

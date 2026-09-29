@@ -275,8 +275,6 @@
     "レイアウト管理": "Layout",
     "レイアウトを更新しました。": "The layout has been updated.",
     "フロントで確認": "View on the site",
-    "ページの種類ごとのサイドバーの位置": "Sidebar position by page type",
-    "カスタムページは、記事型を「記事」、固定ページ型を「固定ページ」として扱います。": "Custom pages of the article type follow \"Article\", and those of the single page type follow \"Page\".",
     "全ページの上部に、左から順に並べます。": "Shown at the top of every page, from left to right.",
     "サイドバーを表示するページ(上の設定)で、本文の横に上から順に並べます。": "Shown next to the main content, from top to bottom, on pages that display the sidebar (see above).",
     "全ページの下部に並べます。見出しを持つ部品は上段に列で、それ以外(サイトタイトル・コピーライト・SNSリンクなど)は下段に並べます。": "Shown at the bottom of every page. Blocks with a heading are placed in columns on the upper row, and the others (site title, copyright, social links, etc.) on the lower row.",
@@ -311,5 +309,8 @@
     "+ 項目を追加": "+ Add item",
     "例: /articles、https://example.com": "e.g. /articles, https://example.com",
     "空欄ならページのタイトル": "Leave blank to use the page title",
-    "本文内": "Inside content"
+    "本文内": "Inside content",
+    "ページの種類ごとの設定": "Settings by page type",
+    "サイドバーの位置と、本文の上にパンくずを表示するかを選びます。カスタムページは、記事型を「記事」、固定ページ型を「固定ページ」として扱います。": "Choose the sidebar position and whether to show breadcrumbs above the content. Custom pages of the article type follow \"Article\", and those of the single page type follow \"Page\".",
+    "パンくずを表示する": "Show breadcrumbs"
 }
