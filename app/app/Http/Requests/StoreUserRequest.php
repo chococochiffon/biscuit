@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\UserDetailNameSetting;
+use App\Models\User;
 use App\Models\UserSkill;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -21,6 +22,14 @@ class StoreUserRequest extends FormRequest
     }
 
     /**
+     * 更新対象のユーザー(ルートのモデル。新規登録時は null)。マイページのプロフィール更新ではログイン中のユーザーにする。
+     */
+    protected function targetUser(): ?User
+    {
+        return $this->route('user');
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      * 更新(UpdateUserRequest)と共通のルール。一意性などのチェックでは、更新対象(ルートのモデル。新規登録時は null)を除く。
      *
@@ -32,7 +41,7 @@ class StoreUserRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required', 'string', 'email', 'max:255',
-                Rule::unique('users', 'email')->ignore($this->route('user'))->withoutTrashed(),
+                Rule::unique('users', 'email')->ignore($this->targetUser())->withoutTrashed(),
             ],
             'password' => ['required', 'string', Password::default(), 'confirmed'],
 
@@ -55,7 +64,7 @@ class StoreUserRequest extends FormRequest
             // 既存のスキルは、このユーザーの詳細に紐づくものだけ更新できる(新規登録時は既存のスキルを指定できない)
             'user_detail.skills.*.id' => [
                 'nullable', 'integer',
-                Rule::exists('user_skills', 'id')->where('user_detail_id', $this->route('user')?->detail?->id),
+                Rule::exists('user_skills', 'id')->where('user_detail_id', $this->targetUser()?->detail?->id),
             ],
             'user_detail.skills.*.name' => ['required', 'string', 'max:255'],
             'user_detail.skills.*.level' => ['required', 'integer', 'min:'.UserSkill::MIN_LEVEL, 'max:'.UserSkill::MAX_LEVEL],

@@ -9,7 +9,7 @@ use ReflectionMethod;
 use Tests\TestCase;
 
 /**
- * 管理画面の書き込み系のルート(POST・PUT・PATCH・DELETE)が、監査ログを記録しているかを確認する(記録漏れを防ぐ)。
+ * 管理画面と API の書き込み系のルート(POST・PUT・PATCH・DELETE)が、監査ログを記録しているかを確認する(記録漏れを防ぐ)。
  * 各ルートのアクションのソースに AuditLogger の呼び出しがあることを見る。動作は AuditLogRecordingTest で確認する。
  */
 class AuditLogCoverageTest extends TestCase
@@ -21,10 +21,10 @@ class AuditLogCoverageTest extends TestCase
      */
     private const EXCLUDED_CONTROLLERS = [AdministratorSessionController::class];
 
-    public function test_every_admin_write_route_records_an_audit_log(): void
+    public function test_every_admin_and_api_write_route_records_an_audit_log(): void
     {
         $routes = collect(RouteFacade::getRoutes()->getRoutes())
-            ->filter(fn (Route $route) => str_starts_with($route->uri(), 'admin')
+            ->filter(fn (Route $route) => (str_starts_with($route->uri(), 'admin') || str_starts_with($route->uri(), 'api/'))
                 && array_diff($route->methods(), ['GET', 'HEAD']) !== []
                 && str_contains($route->getActionName(), '@'));
 

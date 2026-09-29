@@ -14,7 +14,8 @@ use Illuminate\Support\Str;
 /**
  * 監査ログ(誰が・いつ・何に・何をしたか)を記録する。
  * 管理画面の操作ごとに 1 件を、保存処理と同じトランザクションの中で記録する(取り消した操作はログにも残らない)。
- * 操作者はログイン中の管理者(admin ガード)、IP アドレス・User-Agent・ルート名は現在のリクエストから取る。
+ * 操作者はログイン中の管理者(admin ガード)、いなければ API トークンでログイン中のユーザー(sanctum ガード。chococo のマイページ)。
+ * IP アドレス・User-Agent・ルート名は現在のリクエストから取る。
  */
 class AuditLogger
 {
@@ -126,7 +127,7 @@ class AuditLogger
         array $metadata = [],
         ?Authenticatable $actor = null,
     ): AuditLog {
-        $actor ??= Auth::guard('admin')->user();
+        $actor ??= Auth::guard('admin')->user() ?? Auth::guard('sanctum')->user();
         $request = request();
 
         return AuditLog::query()->create([

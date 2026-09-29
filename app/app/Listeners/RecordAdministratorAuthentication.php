@@ -34,7 +34,7 @@ class RecordAdministratorAuthentication
     public function handleFailed(Failed $event): void
     {
         if ($event->guard === self::GUARD) {
-            AuditLogger::record(AuditAction::LoginFailed, metadata: ['email' => (string) ($event->credentials['email'] ?? '')]);
+            AuditLogger::record(AuditAction::LoginFailed, 'administrator', metadata: ['email' => (string) ($event->credentials['email'] ?? '')]);
         }
     }
 }
