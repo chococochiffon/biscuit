@@ -32,7 +32,7 @@ class ArticlePathOptionController extends Controller
     {
         $articlePathOption = AuditLogger::createWithLog(fn () => ArticlePathOption::create([
             ...$request->validated(),
-            'sort_order' => (ArticlePathOption::max('sort_order') ?? -1) + 1,
+            'sort_order' => ArticlePathOption::nextSortOrder(),
         ]));
 
         return response()->json($articlePathOption, 201);

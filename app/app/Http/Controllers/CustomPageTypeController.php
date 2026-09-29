@@ -49,7 +49,7 @@ class CustomPageTypeController extends Controller
     {
         $customPageType = new CustomPageType([
             ...$request->validated(),
-            'sort_order' => (CustomPageType::withTrashed()->max('sort_order') ?? -1) + 1,
+            'sort_order' => CustomPageType::nextSortOrder(CustomPageType::withTrashed()),
         ]);
 
         $schema->create($customPageType);

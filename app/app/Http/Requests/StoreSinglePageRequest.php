@@ -46,7 +46,11 @@ class StoreSinglePageRequest extends FormRequest
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],
 
             'details' => ['nullable', 'array', 'max:'.config('limits.single_page_details')],
-            'details.*.id' => ['nullable', 'integer', Rule::exists('single_page_details', 'id')],
+            // 既存の詳細は、この固定ページの詳細だけを更新できる(新規登録時は既存の詳細を指定できない)
+            'details.*.id' => [
+                'nullable', 'integer',
+                Rule::exists('single_page_details', 'id')->where('single_page_id', $this->route('singlePage')?->id)->withoutTrashed(),
+            ],
             'details.*.sub_title' => ['required', 'string', 'max:255'],
             'details.*.contents' => ['nullable', 'string'],
             'details.*.sort_order' => ['nullable', 'integer'],

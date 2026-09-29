@@ -34,7 +34,7 @@ class GalleryCategoryController extends Controller
     {
         $galleryCategory = AuditLogger::createWithLog(fn () => GalleryCategory::create([
             ...$request->validated(),
-            'sort_order' => (GalleryCategory::max('sort_order') ?? -1) + 1,
+            'sort_order' => GalleryCategory::nextSortOrder(),
         ]));
 
         return response()->json($galleryCategory, 201);

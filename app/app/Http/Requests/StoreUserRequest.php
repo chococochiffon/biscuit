@@ -64,7 +64,7 @@ class StoreUserRequest extends FormRequest
             // 既存のスキルは、このユーザーの詳細に紐づくものだけ更新できる(新規登録時は既存のスキルを指定できない)
             'user_detail.skills.*.id' => [
                 'nullable', 'integer',
-                Rule::exists('user_skills', 'id')->where('user_detail_id', $this->targetUser()?->detail?->id),
+                Rule::exists('user_skills', 'id')->where('user_detail_id', $this->targetUser()?->detail?->id)->withoutTrashed(),
             ],
             'user_detail.skills.*.name' => ['required', 'string', 'max:255'],
             'user_detail.skills.*.level' => ['required', 'integer', 'min:'.UserSkill::MIN_LEVEL, 'max:'.UserSkill::MAX_LEVEL],
