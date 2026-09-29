@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AuditAction;
 use App\Enums\LayoutBlockType;
 use App\Enums\LayoutPageType;
 use App\Enums\NavItemLinkType;
@@ -14,7 +15,9 @@ use App\Models\LayoutBlock;
 use App\Models\LayoutNavItem;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
+use App\Support\AuditLogger;
 use App\Support\HtmlSanitizer;
+use App\Support\SyncedRows;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -48,6 +51,8 @@ class LayoutController extends Controller
     public function update(UpdateLayoutRequest $request): RedirectResponse
     {
         DB::transaction(function () use ($request) {
+            $before = $this->auditPageSettings();
+
             foreach (LayoutPageType::cases() as $pageType) {
                 Layout::query()->updateOrCreate(
                     ['page_type' => $pageType],
@@ -59,8 +64,17 @@ class LayoutController extends Controller
             }
 
             $blocks = $request->validated('blocks', []);
-            $blockIds = $this->syncBlocks($blocks);
-            $this->syncNavItems($blocks, $blockIds);
+            $syncedBlocks = $this->syncBlocks($blocks);
+            $navItems = $this->syncNavItems($blocks, $syncedBlocks->ids);
+
+            // レイアウトは 1 画面で上書き保存するため、ページの種類ごとの設定の差分と、部品・項目の増減を 1 件にまとめて残す
+            AuditLogger::record(
+                AuditAction::Updated,
+                'layout',
+                label: __('レイアウト'),
+                changes: AuditLogger::diff($before, $this->auditPageSettings()),
+                metadata: ['blocks' => $syncedBlocks->summary(), 'nav_items' => $navItems],
+            );
         });
 
         return redirect()->route('admin.layouts.edit')->with('status', __('レイアウトを更新しました。'));
@@ -72,9 +86,8 @@ class LayoutController extends Controller
      * 部品の種類で使わない項目(見出しを持たない部品の見出しなど)は null にし、自由テキストの本文は許可したタグ・属性だけにして保存する。
      *
      * @param  array<int, array{id?: int|string|null, region: int|string, block_type: int|string, title?: string|null, subtitle?: string|null, call_type?: int|string, content_model_relation_id?: int|string, view_count?: int|string, content?: string|null, sort_order?: int|string|null}>  $rows
-     * @return array<int|string, int> 送信された行のキー → 保存した部品の id
      */
-    private function syncBlocks(array $rows): array
+    private function syncBlocks(array $rows): SyncedRows
     {
         return $this->syncSortableRows(LayoutBlock::query(), $rows, function (array $row): array {
             $blockType = LayoutBlockType::from((int) $row['block_type']);
@@ -101,10 +114,12 @@ class LayoutController extends Controller
      *
      * @param  array<int|string, array<string, mixed>>  $blocks  送信された部品の行
      * @param  array<int|string, int>  $blockIds  部品の行のキー → 保存した部品の id
+     * @return array{created: int, updated: int, deleted: int} 作成・更新・削除した項目の件数(すべての部品の合計)
      */
-    private function syncNavItems(array $blocks, array $blockIds): void
+    private function syncNavItems(array $blocks, array $blockIds): array
     {
         $navBlockIds = [];
+        $summary = ['created' => 0, 'updated' => 0, 'deleted' => 0];
 
         foreach ($blocks as $key => $block) {
             if (LayoutBlockType::from((int) $block['block_type']) !== LayoutBlockType::NavMenu) {
@@ -113,7 +128,7 @@ class LayoutController extends Controller
 
             $navBlockIds[] = $blockIds[$key];
 
-            $this->syncSortableRows(
+            $synced = $this->syncSortableRows(
                 LayoutNavItem::query()->where('layout_block_id', $blockIds[$key]),
                 $block['nav_items'] ?? [],
                 function (array $row) use ($blockIds, $key): array {
@@ -129,8 +144,29 @@ class LayoutController extends Controller
                     ];
                 },
             );
+
+            foreach ($synced->summary() as $key => $count) {
+                $summary[$key] += $count;
+            }
         }
 
-        LayoutNavItem::query()->whereNotIn('layout_block_id', $navBlockIds)->delete();
+        $summary['deleted'] += LayoutNavItem::query()->whereNotIn('layout_block_id', $navBlockIds)->delete();
+
+        return $summary;
+    }
+
+    /**
+     * 監査ログで比べる、ページの種類ごとの設定(例: article.sidebar_position → right)。
+     *
+     * @return array<string, string>
+     */
+    private function auditPageSettings(): array
+    {
+        return collect(Layout::forPageTypes())
+            ->flatMap(fn (Layout $layout) => [
+                $layout->page_type->apiName().'.sidebar_position' => $layout->sidebar_position->apiName(),
+                $layout->page_type->apiName().'.show_breadcrumbs' => $layout->show_breadcrumbs ? '1' : '0',
+            ])
+            ->all();
     }
 }

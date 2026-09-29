@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AuditAction;
 use App\Http\Requests\StoreGalleryCategoryRequest;
 use App\Http\Requests\UpdateGalleryCategoryRequest;
 use App\Models\GalleryCategory;
 use App\Models\GalleryImage;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -29,10 +31,10 @@ class GalleryCategoryController extends Controller
      */
     public function store(StoreGalleryCategoryRequest $request): JsonResponse
     {
-        $galleryCategory = GalleryCategory::create([
+        $galleryCategory = AuditLogger::createWithLog(fn () => GalleryCategory::create([
             ...$request->validated(),
             'sort_order' => (GalleryCategory::max('sort_order') ?? -1) + 1,
-        ]);
+        ]));
 
         return response()->json($galleryCategory, 201);
     }
@@ -42,7 +44,7 @@ class GalleryCategoryController extends Controller
      */
     public function update(UpdateGalleryCategoryRequest $request, GalleryCategory $galleryCategory): JsonResponse
     {
-        $galleryCategory->update($request->validated());
+        AuditLogger::updateWithLog($galleryCategory, fn () => $galleryCategory->update($request->validated()));
 
         return response()->json($galleryCategory);
     }
@@ -53,8 +55,9 @@ class GalleryCategoryController extends Controller
     public function destroy(GalleryCategory $galleryCategory): JsonResponse
     {
         DB::transaction(function () use ($galleryCategory) {
-            GalleryImage::query()->where('gallery_category_id', $galleryCategory->id)->update(['gallery_category_id' => null]);
+            $uncategorized = GalleryImage::query()->where('gallery_category_id', $galleryCategory->id)->update(['gallery_category_id' => null]);
             $galleryCategory->delete();
+            AuditLogger::deleted($galleryCategory, ['uncategorized_images' => $uncategorized]);
         });
 
         return response()->json(status: 204);
@@ -75,6 +78,8 @@ class GalleryCategoryController extends Controller
             foreach (array_values($validated['order']) as $index => $id) {
                 GalleryCategory::query()->whereKey($id)->update(['sort_order' => $index]);
             }
+
+            AuditLogger::record(AuditAction::Reordered, 'gallery_category', metadata: ['order' => array_map('intval', array_values($validated['order']))]);
         });
 
         return response()->json(status: 204);

@@ -11,6 +11,7 @@ use App\Models\CustomPages\CustomFormValue;
 use App\Models\CustomPages\CustomPageDetail;
 use App\Models\CustomPages\CustomPageEntry;
 use App\Models\CustomPageType;
+use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -60,7 +61,9 @@ class CustomPageEntryController extends Controller
                 ...($customPageType->hasDetails() ? ['sort_order' => (CustomPageEntry::queryFor($customPageType)->max('sort_order') ?? -1) + 1] : []),
             ]);
 
-            $this->saveRelatedRows($request, $customPageType, $entry);
+            $details = $this->saveRelatedRows($request, $customPageType, $entry);
+
+            AuditLogger::created($entry, array_filter(['details' => $details]), $this->auditFormValues($customPageType, $entry));
         });
 
         return redirect()->route('admin.custom-pages.entries.index', $customPageType)
@@ -95,9 +98,13 @@ class CustomPageEntryController extends Controller
         $entry = CustomPageEntry::queryFor($customPageType)->findOrFail($entry);
 
         DB::transaction(function () use ($request, $customPageType, $entry) {
+            $before = AuditLogger::snapshot($entry, $this->auditFormValues($customPageType, $entry));
+
             $entry->update($this->entryAttributes($request, $customPageType));
 
-            $this->saveRelatedRows($request, $customPageType, $entry);
+            $details = $this->saveRelatedRows($request, $customPageType, $entry);
+
+            AuditLogger::updated($entry, $before, array_filter(['details' => $details]), extra: $this->auditFormValues($customPageType, $entry));
         });
 
         return redirect()->route('admin.custom-pages.entries.index', $customPageType)
@@ -119,6 +126,8 @@ class CustomPageEntryController extends Controller
             }
 
             $entry->delete();
+
+            AuditLogger::deleted($entry);
         });
 
         return redirect()->route('admin.custom-pages.entries.index', $customPageType)
@@ -138,9 +147,27 @@ class CustomPageEntryController extends Controller
     }
 
     /**
-     * 画像を保存し、詳細(固定ページ型)を送信された行に同期して、カスタムフォームの入力値を保存する。
+     * 監査ログの変更内容に、本体の列と並べて残すカスタムフォームの入力値(項目名は field. + 項目名)。
+     *
+     * @return array<string, mixed>
      */
-    private function saveRelatedRows(StoreCustomPageEntryRequest $request, CustomPageType $customPageType, CustomPageEntry $entry): void
+    private function auditFormValues(CustomPageType $customPageType, CustomPageEntry $entry): array
+    {
+        $values = CustomFormValue::queryFor($customPageType)
+            ->where($customPageType->entryForeignKey(), $entry->id)
+            ->pluck('value', $customPageType->formForeignKey());
+
+        return CustomForm::queryFor($customPageType)->ordered()->get()
+            ->mapWithKeys(fn (CustomForm $form) => ["field.{$form->parts_name}" => $values[$form->id] ?? null])
+            ->all();
+    }
+
+    /**
+     * 画像を保存し、詳細(固定ページ型)を送信された行に同期して、カスタムフォームの入力値を保存する。
+     *
+     * @return array{created: int, updated: int, deleted: int}|null 詳細の作成・更新・削除した行の件数(記事型は null)
+     */
+    private function saveRelatedRows(StoreCustomPageEntryRequest $request, CustomPageType $customPageType, CustomPageEntry $entry): ?array
     {
         // 画像はファイル名に id を使うため、本体の保存後に保存する(未送信なら登録済みの画像のまま)
         if (! $customPageType->hasDetails() && $request->hasFile('thumbnail')) {
@@ -151,10 +178,12 @@ class CustomPageEntryController extends Controller
             $entry->update(['header_image' => $entry->storeHeaderImage($request->file('header_image'))]);
         }
 
+        $details = null;
+
         if ($customPageType->hasDetails()) {
             $foreignKey = $customPageType->entryForeignKey();
 
-            $this->syncSortableRows(
+            $details = $this->syncSortableRows(
                 CustomPageDetail::queryFor($customPageType)->where($foreignKey, $entry->id),
                 $request->validated('details', []),
                 fn (array $row) => [
@@ -162,10 +191,12 @@ class CustomPageEntryController extends Controller
                     'sub_title' => $row['sub_title'],
                     'contents' => $row['contents'] ?? null,
                 ],
-            );
+            )->summary();
         }
 
         $this->saveFormValues($request, $customPageType, $entry);
+
+        return $details;
     }
 
     /**

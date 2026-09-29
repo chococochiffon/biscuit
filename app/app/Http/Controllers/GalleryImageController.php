@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AuditAction;
 use App\Http\Requests\StoreGalleryImageRequest;
 use App\Http\Requests\UpdateGalleryImageRequest;
 use App\Models\GalleryCategory;
 use App\Models\GalleryImage;
+use App\Support\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -78,11 +80,11 @@ class GalleryImageController extends Controller
      */
     public function store(StoreGalleryImageRequest $request): RedirectResponse
     {
-        GalleryImage::create([
+        AuditLogger::createWithLog(fn () => GalleryImage::create([
             ...$request->safe()->except('image'),
             'image' => GalleryImage::storeImage($request->file('image')),
             'sort_order' => (GalleryImage::max('sort_order') ?? -1) + 1,
-        ]);
+        ]));
 
         return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を登録しました。'));
     }
@@ -102,10 +104,10 @@ class GalleryImageController extends Controller
      */
     public function update(UpdateGalleryImageRequest $request, GalleryImage $galleryImage): RedirectResponse
     {
-        $galleryImage->update([
+        AuditLogger::updateWithLog($galleryImage, fn () => $galleryImage->update([
             ...$request->safe()->except('image'),
             ...($request->hasFile('image') ? ['image' => GalleryImage::storeImage($request->file('image'))] : []),
-        ]);
+        ]));
 
         return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を更新しました。'));
     }
@@ -115,7 +117,7 @@ class GalleryImageController extends Controller
      */
     public function destroy(GalleryImage $galleryImage): RedirectResponse
     {
-        $galleryImage->delete();
+        AuditLogger::deleteWithLog($galleryImage);
 
         return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を削除しました。'));
     }
@@ -140,6 +142,8 @@ class GalleryImageController extends Controller
             foreach (array_values($validated['order']) as $index => $id) {
                 GalleryImage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
             }
+
+            AuditLogger::record(AuditAction::Reordered, 'gallery_image', metadata: ['order' => array_map('intval', array_values($validated['order'])), 'offset' => $offset]);
         });
 
         return redirect()->route('admin.gallery-images.index', array_filter(['sort' => self::REORDERABLE_SORT, 'page' => $validated['page'] ?? null]))

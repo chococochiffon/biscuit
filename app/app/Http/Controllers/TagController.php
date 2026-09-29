@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTagRequest;
 use App\Http\Requests\UpdateTagRequest;
 use App\Models\Tag;
+use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -59,7 +60,7 @@ class TagController extends Controller
      */
     public function store(StoreTagRequest $request): RedirectResponse|JsonResponse
     {
-        $tag = Tag::create($request->validated());
+        $tag = AuditLogger::createWithLog(fn () => Tag::create($request->validated()));
 
         if ($request->wantsJson()) {
             return response()->json($tag, 201);
@@ -89,7 +90,7 @@ class TagController extends Controller
      */
     public function update(UpdateTagRequest $request, Tag $tag): RedirectResponse|JsonResponse
     {
-        $tag->update($request->validated());
+        AuditLogger::updateWithLog($tag, fn () => $tag->update($request->validated()));
 
         if ($request->wantsJson()) {
             return response()->json($tag);
@@ -103,7 +104,7 @@ class TagController extends Controller
      */
     public function destroy(Request $request, Tag $tag): RedirectResponse|JsonResponse
     {
-        $tag->delete();
+        AuditLogger::deleteWithLog($tag);
 
         if ($request->wantsJson()) {
             return response()->json(status: 204);

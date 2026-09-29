@@ -7,6 +7,8 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\UserDetail;
+use App\Support\AuditLogger;
+use App\Support\SyncedRows;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -52,7 +54,9 @@ class UserController extends Controller
 
             $this->storeUserImage($request, $detail);
 
-            $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+            $skills = $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+
+            AuditLogger::created($user, ['skills' => $skills->summary()], $this->auditDetail($detail->fresh()));
         });
 
         return redirect()->route('admin.users.index')->with('status', __('ユーザーを登録しました。'));
@@ -84,6 +88,8 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, User $user): RedirectResponse
     {
         DB::transaction(function () use ($request, $user) {
+            $before = AuditLogger::snapshot($user, $this->auditDetail($user->detail));
+
             $data = [
                 'name' => $request->validated('name'),
                 'email' => $request->validated('email'),
@@ -99,7 +105,15 @@ class UserController extends Controller
 
             $this->storeUserImage($request, $detail);
 
-            $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+            $skills = $this->syncSkills($detail, $request->validated('user_detail.skills', []));
+
+            // パスワードは値を残さず、変更したことだけを残す
+            AuditLogger::updated(
+                $user,
+                $before,
+                ['skills' => $skills->summary(), 'password_changed' => isset($data['password'])],
+                extra: $this->auditDetail($detail->fresh()),
+            );
         });
 
         return redirect()->route('admin.users.index')->with('status', __('ユーザーを更新しました。'));
@@ -110,9 +124,26 @@ class UserController extends Controller
      */
     public function destroy(User $user): RedirectResponse
     {
-        $user->delete();
+        AuditLogger::deleteWithLog($user);
 
         return redirect()->route('admin.users.index')->with('status', __('ユーザーを削除しました。'));
+    }
+
+    /**
+     * 監査ログの変更内容に、ユーザー本体の列と並べて残すユーザー詳細の値(項目名は detail. から始める)。
+     *
+     * @return array<string, string|null>
+     */
+    private function auditDetail(?UserDetail $detail): array
+    {
+        if ($detail === null) {
+            return [];
+        }
+
+        return collect(AuditLogger::snapshot($detail))
+            ->except('user_id')
+            ->mapWithKeys(fn (?string $value, string $key) => ["detail.{$key}" => $value])
+            ->all();
     }
 
     /**
@@ -159,9 +190,9 @@ class UserController extends Controller
      *
      * @param  array<int, array{id?: int|string|null, name: string, level: int|string, sort_order?: int|string|null}>  $rows
      */
-    private function syncSkills(UserDetail $detail, array $rows): void
+    private function syncSkills(UserDetail $detail, array $rows): SyncedRows
     {
-        $this->syncSortableRows($detail->skills(), $rows, fn (array $row) => [
+        return $this->syncSortableRows($detail->skills(), $rows, fn (array $row) => [
             'name' => $row['name'],
             'level' => $row['level'],
         ]);

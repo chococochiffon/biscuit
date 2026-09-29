@@ -8,6 +8,7 @@ use App\Models\Answer;
 use App\Models\BranchQuestionAnswer;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
+use App\Support\AuditLogger;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -45,6 +46,8 @@ class QuestionAnswerController extends Controller
             $questionAnswer = QuestionAnswer::create($this->shortTexts($request));
 
             $this->syncQuestionTree($questionAnswer, $request->validated('question'));
+
+            AuditLogger::created($questionAnswer, ['type' => $request->validated('type')]);
         });
 
         return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを登録しました。'));
@@ -76,9 +79,14 @@ class QuestionAnswerController extends Controller
     public function update(UpdateQuestionAnswerRequest $request, QuestionAnswer $questionAnswer): RedirectResponse
     {
         DB::transaction(function () use ($request, $questionAnswer) {
+            $before = AuditLogger::snapshot($questionAnswer);
+
             $questionAnswer->update($this->shortTexts($request));
 
             $this->syncQuestionTree($questionAnswer, $request->validated('question'));
+
+            // 分岐ありの質問・回答の木は入れ子のため、差分は残さず形式だけを補足に残す
+            AuditLogger::updated($questionAnswer, $before, ['type' => $request->validated('type')]);
         });
 
         return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを更新しました。'));
@@ -89,7 +97,7 @@ class QuestionAnswerController extends Controller
      */
     public function destroy(QuestionAnswer $questionAnswer): RedirectResponse
     {
-        DB::transaction(fn () => $questionAnswer->delete());
+        AuditLogger::deleteWithLog($questionAnswer);
 
         return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを削除しました。'));
     }

@@ -40,6 +40,9 @@ class AppServiceProvider extends ServiceProvider
         // カスタムページ管理(種類の管理と種類ごとのページ)はスーパー管理者だけが使える
         Gate::define('manage-custom-pages', fn (Administrator $administrator) => $administrator->isSuperAdmin());
 
+        // 操作ログ(監査ログ)は、ほかの管理者の操作や IP アドレスを含むためスーパー管理者だけが見られる
+        Gate::define('view-audit-logs', fn (Administrator $administrator) => $administrator->isSuperAdmin());
+
         View::composer('layouts.admin', SiteSettingComposer::class);
         View::composer('layouts.admin', CustomPageTypeComposer::class);
     }
