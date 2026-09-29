@@ -27,6 +27,9 @@
                     <li class="nav-item">
                         <a href="{{ route('admin.articles.index') }}" class="nav-link">
                             <i class="bi bi-file-earmark-text"></i>{{ __('記事一覧') }}
+                            @if ($pendingArticleCount > 0)
+                                <span class="badge rounded-pill text-bg-warning ms-1" title="{{ __('承認待ちの記事') }}">{{ $pendingArticleCount }}</span>
+                            @endif
                         </a>
                     </li>
                     <li class="nav-item">

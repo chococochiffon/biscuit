@@ -348,5 +348,21 @@
     "変更後": "After",
     "変更した項目はありません。": "No fields were changed.",
     "補足": "Details",
-    "システム": "System"
+    "システム": "System",
+    "差し戻しの理由": "Reason for sending back",
+    "ユーザーの記事を下書きに戻すときに入力すると、マイページに表示されます。ユーザーが承認を申請し直すと消えます。": "When you return a user's article to draft, the reason entered here is shown on their My Page. It is cleared when the user requests approval again.",
+    "記事の投稿先": "Article destination",
+    "投稿先は:max件まで登録できます。": "You can register up to :max destinations.",
+    "投稿先管理": "Manage destinations",
+    "例: 技術ブログ": "e.g. Tech blog",
+    "例: blog/tech": "e.g. blog/tech",
+    "ユーザーはマイページで記事を投稿するときに、ここで登録した投稿先から選びます(上限 :max 件)。名前をクリックすると変更でき、ドラッグした順に選択肢が並びます。変更・削除しても、投稿済みの記事の URL は変わりません。": "Users choose one of these destinations when posting an article from My Page (up to :max). Click a name to edit it, and drag to reorder the choices. Editing or deleting a destination does not change the URLs of articles already posted.",
+    "承認待ち :count 件": ":count pending approval",
+    "承認待ちの記事": "Articles pending approval",
+    "承認を申請できるのは下書きの記事だけです。": "Only draft articles can be submitted for approval.",
+    "取り下げられるのは承認待ちの記事だけです。": "Only articles pending approval can be withdrawn.",
+    "投稿先を削除": "Delete destination",
+    "投稿先の削除に失敗しました。": "Failed to delete the destination.",
+    "投稿先の保存に失敗しました。": "Failed to save the destination.",
+    "投稿先の並び替えの保存に失敗しました。": "Failed to save the order of destinations."
 }

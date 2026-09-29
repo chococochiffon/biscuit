@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AdministratorController;
 use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\ArticlePathOptionController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use App\Http\Controllers\ContentModelRelationController;
@@ -54,6 +55,14 @@ Route::middleware('auth:admin')->group(function () {
 
     Route::patch('admin/articles/{article}/approval', [ArticleController::class, 'updateApproval'])
         ->name('admin.articles.approval');
+
+    Route::patch('admin/article-path-options/reorder', [ArticlePathOptionController::class, 'reorder'])
+        ->name('admin.article-path-options.reorder');
+
+    Route::resource('admin/article-path-options', ArticlePathOptionController::class)
+        ->parameters(['article-path-options' => 'articlePathOption'])
+        ->only(['index', 'store', 'update', 'destroy'])
+        ->names('admin.article-path-options');
 
     Route::resource('admin/articles', ArticleController::class)
         ->except(['show'])

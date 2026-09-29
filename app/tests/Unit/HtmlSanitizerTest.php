@@ -34,4 +34,27 @@ class HtmlSanitizerTest extends TestCase
     {
         $this->assertSame($expected, HtmlSanitizer::clean($html));
     }
+
+    public function test_clean_article_keeps_headings_and_own_images_only(): void
+    {
+        $prefix = 'http://localhost/storage/image/content/';
+
+        $this->assertSame(
+            '<h1>大見出し</h1><h3>小見出し</h3><p><img src="'.$prefix.'a.png" alt="写真"></p>',
+            HtmlSanitizer::cleanArticle('<h1 style="x">大見出し</h1><h3>小見出し</h3><p><img src="'.$prefix.'a.png" alt="写真" onerror="x()"><img src="https://evil.example.com/b.png"><img src="javascript:alert(1)"></p>', $prefix)
+        );
+    }
+
+    public function test_clean_article_keeps_content_with_only_an_image(): void
+    {
+        $prefix = 'http://localhost/storage/image/content/';
+
+        $this->assertSame('<p><img src="'.$prefix.'a.png"></p>', HtmlSanitizer::cleanArticle('<p><img src="'.$prefix.'a.png"></p>', $prefix));
+        $this->assertNull(HtmlSanitizer::cleanArticle('<p><img src="https://evil.example.com/b.png"></p>', $prefix));
+    }
+
+    public function test_clean_still_removes_headings_and_images(): void
+    {
+        $this->assertSame('見出し', HtmlSanitizer::clean('<h2>見出し</h2><img src="http://localhost/storage/image/content/a.png">'));
+    }
 }

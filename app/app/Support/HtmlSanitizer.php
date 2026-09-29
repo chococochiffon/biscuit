@@ -10,6 +10,7 @@ use DOMText;
 /**
  * リッチテキストエディタ(Quill)で入力した HTML から、許可したタグ・属性以外を取り除く。
  * 許可しないタグは中身を残してタグだけ外し、スクリプトなど中身ごと危険なタグは中身ごと取り除く。
+ * clean() はレイアウトの自由テキスト用、cleanArticle() はユーザー(chococo のマイページ)が書いた記事の本文用。
  */
 class HtmlSanitizer
 {
@@ -19,6 +20,13 @@ class HtmlSanitizer
      * @var list<string>
      */
     private const ALLOWED_TAGS = ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'a', 'ol', 'ul', 'li', 'span'];
+
+    /**
+     * 記事の本文だけで、ALLOWED_TAGS に加えて残すタグ(Quill の見出しと画像)。
+     *
+     * @var list<string>
+     */
+    private const ARTICLE_TAGS = ['h1', 'h2', 'h3', 'img'];
 
     /**
      * 中身ごと取り除くタグ。
@@ -35,6 +43,7 @@ class HtmlSanitizer
     private const ALLOWED_ATTRIBUTES = [
         'a' => ['href', 'target', 'rel'],
         'li' => ['data-list'],
+        'img' => ['src', 'alt'],
     ];
 
     /**
@@ -42,7 +51,25 @@ class HtmlSanitizer
      */
     public static function clean(?string $html): ?string
     {
-        if ($html === null || trim(strip_tags($html)) === '') {
+        return self::sanitize($html, self::ALLOWED_TAGS, null);
+    }
+
+    /**
+     * ユーザーが書いた記事の本文を無害化して返す。見出しと、$imageUrlPrefix で始まる画像(本文用にアップロードした画像)も残す。
+     * それ以外の画像は取り除く(外部の画像を読み込ませないため)。
+     */
+    public static function cleanArticle(?string $html, string $imageUrlPrefix): ?string
+    {
+        return self::sanitize($html, [...self::ALLOWED_TAGS, ...self::ARTICLE_TAGS], $imageUrlPrefix);
+    }
+
+    /**
+     * @param  list<string>  $allowedTags
+     * @param  string|null  $imageUrlPrefix  画像を残す場合の src の先頭
+     */
+    private static function sanitize(?string $html, array $allowedTags, ?string $imageUrlPrefix): ?string
+    {
+        if ($html === null || (trim(strip_tags($html)) === '' && ($imageUrlPrefix === null || ! str_contains($html, '<img')))) {
             return null;
         }
 
@@ -59,7 +86,7 @@ class HtmlSanitizer
             return null;
         }
 
-        self::sanitizeChildren($wrapper);
+        self::sanitizeChildren($wrapper, $allowedTags, $imageUrlPrefix);
 
         $cleaned = '';
 
@@ -67,13 +94,16 @@ class HtmlSanitizer
             $cleaned .= $document->saveHTML($child);
         }
 
-        return trim(strip_tags($cleaned)) === '' ? null : $cleaned;
+        return trim(strip_tags($cleaned)) === '' && ! str_contains($cleaned, '<img') ? null : $cleaned;
     }
 
     /**
      * 子孫の要素を、許可したタグ・属性だけになるよう書き換える。
      */
-    private static function sanitizeChildren(DOMNode $parent): void
+    /**
+     * @param  list<string>  $allowedTags
+     */
+    private static function sanitizeChildren(DOMNode $parent, array $allowedTags, ?string $imageUrlPrefix): void
     {
         foreach (iterator_to_array($parent->childNodes) as $node) {
             if ($node instanceof DOMText) {
@@ -95,13 +125,19 @@ class HtmlSanitizer
                 continue;
             }
 
-            self::sanitizeChildren($node);
+            self::sanitizeChildren($node, $allowedTags, $imageUrlPrefix);
 
-            if (! in_array($tag, self::ALLOWED_TAGS, true)) {
+            if (! in_array($tag, $allowedTags, true)) {
                 // タグだけ外して中身を残す
                 while ($node->firstChild !== null) {
                     $parent->insertBefore($node->firstChild, $node);
                 }
+                $parent->removeChild($node);
+
+                continue;
+            }
+
+            if ($tag === 'img' && ! str_starts_with(trim($node->getAttribute('src')), (string) $imageUrlPrefix)) {
                 $parent->removeChild($node);
 
                 continue;
