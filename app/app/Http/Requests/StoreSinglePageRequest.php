@@ -41,7 +41,7 @@ class StoreSinglePageRequest extends FormRequest
             ...$this->pathRules(slugRequired: true, ignore: $this->route('singlePage')),
             'top_page_view' => ['nullable', 'boolean'],
             'link_list_view' => ['nullable', 'boolean'],
-            'header_image' => ['nullable', 'image', 'max:10240'],
+            'header_image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],
 

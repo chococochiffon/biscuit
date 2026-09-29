@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\AuditAction;
 use App\Http\Controllers\Concerns\FiltersPublishableList;
+use App\Http\Controllers\Concerns\ReordersRows;
 use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreSinglePageRequest;
 use App\Http\Requests\UpdateSinglePageRequest;
@@ -13,12 +13,11 @@ use App\Support\SyncedRows;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SinglePageController extends Controller
 {
-    use FiltersPublishableList, SyncsSortableRows;
+    use FiltersPublishableList, ReordersRows, SyncsSortableRows;
 
     /**
      * ドラッグでの並び替えを有効にする並び順(表示順)。
@@ -129,10 +128,7 @@ class SinglePageController extends Controller
      */
     public function destroy(SinglePage $singlePage): RedirectResponse
     {
-        DB::transaction(function () use ($singlePage) {
-            $singlePage->delete();
-            AuditLogger::deleted($singlePage);
-        });
+        AuditLogger::deleteWithLog($singlePage);
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを削除しました。'));
     }
@@ -143,22 +139,7 @@ class SinglePageController extends Controller
      */
     public function reorder(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'order' => ['required', 'array'],
-            'order.*' => ['integer', Rule::exists('single_pages', 'id')],
-            'offset' => ['nullable', 'integer', 'min:0'],
-        ]);
-
-        $offset = (int) ($validated['offset'] ?? 0);
-
-        // 途中で失敗しても並び順が中途半端にならないよう、まとめて保存する
-        DB::transaction(function () use ($validated, $offset) {
-            foreach (array_values($validated['order']) as $index => $id) {
-                SinglePage::query()->whereKey($id)->update(['sort_order' => $offset + $index]);
-            }
-
-            AuditLogger::record(AuditAction::Reordered, 'single_page', metadata: ['order' => array_map('intval', array_values($validated['order'])), 'offset' => $offset]);
-        });
+        $this->saveReorder($request, SinglePage::class, paginated: true);
 
         return redirect()->route('admin.single-pages.index', ['sort' => self::REORDERABLE_SORT])->with('status', __('並び替えを保存しました。'));
     }

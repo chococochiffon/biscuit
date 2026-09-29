@@ -135,6 +135,24 @@ export function initSortableRows(container, rowSelector) {
 }
 
 /**
+ * 一覧の表(tableId)の行(rowSelector)をハンドルのドラッグで並び替えられるようにする(固定ページ一覧・ギャラリー画像一覧)。
+ * 行に置いた隠しinput(order[])の DOM の順が変わり、「並び替えを保存」ボタンで並び替え用フォームに送信される。
+ * 表は並び替えできるとき(並び順が「表示順」かつ検索条件なし)だけ id を持つため、id がなければ何もしない。
+ */
+export function initReorderTable(tableId, rowSelector) {
+    const table = document.getElementById(tableId);
+
+    if (!table) {
+        return;
+    }
+
+    const tbody = table.querySelector('tbody');
+    const { bindRow } = initSortableRows(tbody, rowSelector);
+
+    tbody.querySelectorAll(rowSelector).forEach(bindRow);
+}
+
+/**
  * ドラッグ中の行を落とす位置として、コンテナ内でマウスの位置(y)より下にある最初の行を返す(末尾なら null)。
  * ドラッグ中の行(.dragging)は候補から除く。
  */

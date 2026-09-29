@@ -33,9 +33,7 @@
     <input type="hidden" value="{{ \App\Models\LayoutBlock::CALL_CONTENT_PLACE->value }}" data-role="place-select">
 
     <div class="d-flex gap-2">
-        <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
-            <i class="bi bi-grip-vertical"></i>
-        </span>
+        @include('admin.partials._drag_handle')
 
         <div class="flex-grow-1">
             <div class="row g-2 align-items-end">

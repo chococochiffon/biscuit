@@ -1,9 +1,8 @@
 /**
  * 記事一覧の公開設定(個別・一括)の変更と、投稿先管理モーダル。
  */
-import { t, csrfToken, requestJson } from './utils.js';
+import { t, csrfToken } from './utils.js';
 import { initManagerModal } from './manager-modal.js';
-import { initSortableRows } from './rows.js';
 
 /**
  * 隠しフォームを動的に生成してsubmitする。既存のフォームへネストさせずに
@@ -102,11 +101,8 @@ export function initArticlePathOptionManagerModal() {
     const labelInput = document.getElementById('article-path-option-manager-label');
     const parentPathInput = document.getElementById('article-path-option-manager-parent-path');
     const list = document.getElementById('article-path-option-manager-list');
-    const rowSelector = '[data-role="article-path-option-row"]';
-    const { bindRow } = initSortableRows(list, rowSelector);
-    let options = [];
 
-    const { showError, clearError } = initManagerModal(modal, {
+    initManagerModal(modal, {
         listContainer: list,
         submitButton: document.getElementById('article-path-option-manager-submit'),
         errorBox: document.getElementById('article-path-option-manager-error'),
@@ -134,16 +130,6 @@ export function initArticlePathOptionManagerModal() {
         renderItem(option, { edit, remove }) {
             const row = document.createElement('li');
             row.className = 'list-group-item d-flex align-items-center gap-2';
-            row.dataset.role = 'article-path-option-row';
-            row.dataset.id = String(option.id);
-
-            const handle = document.createElement('span');
-            handle.className = 'single-page-detail-handle';
-            handle.dataset.role = 'drag-handle';
-            handle.title = t('ドラッグして並び替え');
-            handle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
-            row.appendChild(handle);
-
             const name = document.createElement('span');
             name.className = 'flex-grow-1';
             name.setAttribute('role', 'button');
@@ -163,36 +149,10 @@ export function initArticlePathOptionManagerModal() {
             deleteButton.addEventListener('click', remove);
             row.appendChild(deleteButton);
 
-            bindRow(row);
-            row.addEventListener('dragend', saveOrder);
-
             return row;
         },
-        onLoaded(items) {
-            options = items;
+        sortable: {
+            failedMessage: t('投稿先の並び替えの保存に失敗しました。'),
         },
     });
-
-    /**
-     * 一覧の行の並び順を保存する(並びが変わっていなければ何もしない)。
-     */
-    async function saveOrder() {
-        const order = [...list.querySelectorAll(rowSelector)].map((row) => Number(row.dataset.id));
-
-        if (order.every((id, index) => options[index]?.id === id)) {
-            return;
-        }
-
-        clearError();
-
-        const response = await requestJson(list.dataset.reorderUrl, { method: 'PATCH', body: { order } });
-
-        if (!response.ok) {
-            showError(t('投稿先の並び替えの保存に失敗しました。'));
-
-            return;
-        }
-
-        options = order.map((id) => options.find((option) => option.id === id));
-    }
 }

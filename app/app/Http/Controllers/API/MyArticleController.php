@@ -254,14 +254,7 @@ class MyArticleController extends Controller
     )]
     public function uploadContentImage(Request $request): JsonResponse
     {
-        $request->validate([
-            'image' => ['required', 'image', 'max:10240'],
-        ]);
-
-        $path = $request->file('image')->store(Article::CONTENT_IMAGE_DIRECTORY, 'public');
-        AuditLogger::record(AuditAction::Uploaded, 'article_content_image', label: $path);
-
-        return response()->json(['url' => Article::publicImageUrl($path)]);
+        return $this->storeContentImage($request);
     }
 
     #[OA\Get(

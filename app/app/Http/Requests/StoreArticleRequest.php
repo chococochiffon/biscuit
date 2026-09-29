@@ -37,7 +37,7 @@ class StoreArticleRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'thumbnail' => ['nullable', 'image', 'max:10240'],
+            'thumbnail' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             ...$this->pathRules(slugRequired: false, ignore: $this->route('article')),
             'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],

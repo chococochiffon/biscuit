@@ -121,7 +121,7 @@ class StoreCustomPageEntryRequest extends FormRequest
     {
         return [
             'content' => ['required', 'string'],
-            'thumbnail' => ['nullable', 'image', 'max:10240'],
+            'thumbnail' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
         ];
     }
@@ -135,7 +135,7 @@ class StoreCustomPageEntryRequest extends FormRequest
     {
         return [
             'short_sentences' => ['required', 'string', 'max:255'],
-            'header_image' => ['nullable', 'image', 'max:10240'],
+            'header_image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'details' => ['nullable', 'array', 'max:'.config('limits.single_page_details')],
             'details.*.id' => [
                 'nullable', 'integer',

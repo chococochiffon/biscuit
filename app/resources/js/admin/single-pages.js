@@ -1,8 +1,8 @@
 /**
- * 固定ページの詳細の行入力と、固定ページ一覧の並び替え。
+ * 固定ページの詳細の行入力。
  */
 import Quill from 'quill';
-import { initEditableRows, initSortableRows } from './rows.js';
+import { initEditableRows } from './rows.js';
 
 /**
  * 固定ページの詳細(single_page_details)の行入力UI(固定ページの登録・編集フォーム)を初期化する。
@@ -59,22 +59,4 @@ export function initSinglePageDetailRows() {
         });
         updateSortOrders();
     });
-}
-
-/**
- * 固定ページ一覧(single_pages)の並び替えUIを初期化する。
- * ハンドルをドラッグして行を並び替えると、隠しinput(order[])のDOM順が変わり、
- * 「並び替えを保存」ボタンで並び替え用フォーム(single-page-reorder-form)に送信される。
- */
-export function initSinglePageReorder() {
-    const table = document.getElementById('single-page-reorder-rows');
-
-    if (!table) {
-        return;
-    }
-
-    const tbody = table.querySelector('tbody');
-    const { bindRow } = initSortableRows(tbody, '[data-role="single-page-row"]');
-
-    tbody.querySelectorAll('[data-role="single-page-row"]').forEach(bindRow);
 }

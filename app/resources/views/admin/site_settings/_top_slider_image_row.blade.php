@@ -15,9 +15,7 @@
     <input type="hidden" name="top_slider_images[{{ $index }}][sort_order]" value="{{ $sortOrder }}" data-role="sort-order">
 
     <div class="col-auto align-self-stretch d-flex">
-        <span class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
-            <i class="bi bi-grip-vertical"></i>
-        </span>
+        @include('admin.partials._drag_handle')
     </div>
 
     <div

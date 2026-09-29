@@ -9,9 +9,7 @@
 @endphp
 
 <div class="single-page-detail-row d-flex gap-2 mb-3" data-role="detail-row">
-    <div class="single-page-detail-handle" data-role="drag-handle" title="{{ __('ドラッグして並び替え') }}">
-        <i class="bi bi-grip-vertical"></i>
-    </div>
+    @include('admin.partials._drag_handle')
 
     <div class="flex-grow-1 border rounded p-3">
         @if ($id)

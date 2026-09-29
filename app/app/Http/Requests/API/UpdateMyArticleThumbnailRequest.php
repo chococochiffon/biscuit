@@ -26,7 +26,7 @@ class UpdateMyArticleThumbnailRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'thumbnail' => ['required', 'image', 'max:10240'],
+            'thumbnail' => ['required', 'image', 'max:'.config('limits.image_max_kilobytes')],
         ];
     }
 }

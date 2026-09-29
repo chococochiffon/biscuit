@@ -6,13 +6,13 @@ import 'bootstrap/dist/js/bootstrap.bundle.min.js';
 import { initTagSelector, initTagManagerModal } from './admin/tags.js';
 import { initContentEditor } from './admin/content-editor.js';
 import { initCallContentRows, initContentModelRelationManagerModal } from './admin/call-contents.js';
-import { initRepeaterRows } from './admin/rows.js';
-import { initSinglePageDetailRows, initSinglePageReorder } from './admin/single-pages.js';
+import { initRepeaterRows, initReorderTable } from './admin/rows.js';
+import { initSinglePageDetailRows } from './admin/single-pages.js';
 import { initPathPreview, initDateTimePickers } from './admin/forms.js';
 import { initImageDropzones, initImageCroppers } from './admin/images.js';
 import { initArticleApprovalControls, initArticlePathOptionManagerModal } from './admin/articles.js';
 import { initQuestionAnswerForm, initQuestionAnswerFlows } from './admin/question-answers.js';
-import { initGalleryImageReorder, initGalleryCategoryManagerModal } from './admin/gallery-images.js';
+import { initGalleryCategoryManagerModal } from './admin/gallery-images.js';
 import { initLayoutBlocks } from './admin/layouts.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initRepeaterRows();
     initContentModelRelationManagerModal();
     initSinglePageDetailRows();
-    initSinglePageReorder();
+    initReorderTable('single-page-reorder-rows', '[data-role="single-page-row"]');
     initPathPreview();
     initImageDropzones();
     initImageCroppers();
@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initArticlePathOptionManagerModal();
     initQuestionAnswerForm();
     initQuestionAnswerFlows();
-    initGalleryImageReorder();
+    initReorderTable('gallery-image-reorder-rows', '[data-role="gallery-image-row"]');
     initGalleryCategoryManagerModal();
     initLayoutBlocks();
 });
