@@ -17,6 +17,7 @@ use App\Models\CustomPages\CustomPageDetail;
 use App\Models\CustomPages\CustomPageEntry;
 use App\Models\CustomPageType;
 use App\Models\SinglePage;
+use App\Support\Breadcrumbs;
 use App\Support\CallContentResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +37,7 @@ class ResolveController extends Controller
      * 本文は固定ページ、なければ公開済みの記事から探し、どちらも公開期間外のものは該当なしとして扱う。
      * URL の先頭がカスタムページの種類(カスタム名の複数形)なら、カスタムページとして扱う(記事・固定ページはこの先頭を使えない)。
      * 呼び出しコンテンツはいずれも並び順(sort_order)で返す。
+     * breadcrumbs はパンくず(Home から表示中のページまで。各項目は label と path(リンクしない途中の階層は null)。トップは空。Support\Breadcrumbs)。
      */
     #[OA\Get(
         path: '/resolve',
@@ -45,7 +47,7 @@ class ResolveController extends Controller
             new OA\Parameter(name: 'path', in: 'query', required: true, description: '公開側URLのパス(例: /、/company/about、/news/123)', schema: new OA\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 200, description: 'type(top/single_page/article/custom_page_list/custom_page)、data(本文。トップ・カスタムページの一覧はnull)、custom_page_type(カスタムページのみ)、call_contents(トップはトップ、それ以外は本文内の呼び出しコンテンツ。各要素は call_type・call_name・title・subtitle と table_name をキーにした実データ)'),
+            new OA\Response(response: 200, description: 'type(top/single_page/article/custom_page_list/custom_page)、data(本文。トップ・カスタムページの一覧はnull)、custom_page_type(カスタムページのみ)、breadcrumbs(パンくず。各項目は label・path(リンクしない途中の階層は null)。トップは空)、call_contents(トップはトップ、それ以外は本文内の呼び出しコンテンツ。各要素は call_type・call_name・title・subtitle と table_name をキーにした実データ)'),
             new OA\Response(response: 404, description: 'パスに該当するコンテンツがない、公開期間外、または記事が未公開'),
             new OA\Response(response: 422, description: 'path が未指定'),
         ]
@@ -62,6 +64,7 @@ class ResolveController extends Controller
             return response()->json([
                 'type' => 'top',
                 'data' => null,
+                'breadcrumbs' => [],
                 'call_contents' => $this->callContents(CallContentPlace::Top),
             ]);
         }
@@ -77,6 +80,7 @@ class ResolveController extends Controller
         return response()->json([
             'type' => $pageContent instanceof Article ? 'article' : 'single_page',
             'data' => $pageContent instanceof Article ? new ArticleResource($pageContent) : new SinglePageResource($pageContent),
+            'breadcrumbs' => Breadcrumbs::forPage($pageContent->path, $pageContent->title),
             'call_contents' => $this->callContents(CallContentPlace::Inside, $pageContent),
         ]);
     }
@@ -112,6 +116,7 @@ class ResolveController extends Controller
                 'type' => 'custom_page_list',
                 'data' => null,
                 'custom_page_type' => new CustomPageTypeResource($type),
+                'breadcrumbs' => Breadcrumbs::forCustomPageList($type),
                 'call_contents' => [],
             ]);
         }
@@ -137,6 +142,7 @@ class ResolveController extends Controller
             'type' => 'custom_page',
             'data' => $resource,
             'custom_page_type' => new CustomPageTypeResource($type),
+            'breadcrumbs' => Breadcrumbs::forCustomPage($type, $entry),
             'call_contents' => $this->callContents(CallContentPlace::Inside, $entry),
         ]);
     }

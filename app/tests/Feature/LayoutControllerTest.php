@@ -92,8 +92,8 @@ class LayoutControllerTest extends TestCase
 
         $response->assertRedirect(route('admin.layouts.edit'));
         $response->assertSessionHasNoErrors();
-        $this->assertSame(SidebarPosition::Right, Layout::sidebarPositions()[LayoutPageType::Article->value]);
-        $this->assertSame(SidebarPosition::None, Layout::sidebarPositions()[LayoutPageType::Top->value]);
+        $this->assertSame(SidebarPosition::Right, Layout::forPageTypes()[LayoutPageType::Article->value]->sidebar_position);
+        $this->assertSame(SidebarPosition::None, Layout::forPageTypes()[LayoutPageType::Top->value]->sidebar_position);
         $this->assertSame(
             [LayoutBlockType::SiteTitle, LayoutBlockType::NavMenu],
             LayoutBlock::query()->where('region', LayoutRegion::Header)->ordered()->pluck('block_type')->all()
@@ -116,7 +116,7 @@ class LayoutControllerTest extends TestCase
         $this->put(route('admin.layouts.update'), ['layouts' => $this->layoutsInput([LayoutPageType::Top->value => SidebarPosition::Left])]);
 
         $this->assertSame(count(LayoutPageType::cases()), Layout::query()->count());
-        $this->assertSame(SidebarPosition::Left, Layout::sidebarPositions()[LayoutPageType::Top->value]);
+        $this->assertSame(SidebarPosition::Left, Layout::forPageTypes()[LayoutPageType::Top->value]->sidebar_position);
     }
 
     public function test_update_moves_existing_blocks_and_soft_deletes_blocks_not_submitted(): void
@@ -372,5 +372,31 @@ class LayoutControllerTest extends TestCase
         $this->get(route('admin.layouts.edit'))
             ->assertSee('value="入力した項目"', false)
             ->assertSee('name="blocks[0][nav_items][0][url]"', false);
+    }
+
+    public function test_update_saves_whether_to_show_breadcrumbs_for_each_page_type(): void
+    {
+        $this->actingAsAdmin();
+        $layouts = $this->layoutsInput();
+        $layouts[LayoutPageType::Article->value]['show_breadcrumbs'] = '1';
+
+        $this->put(route('admin.layouts.update'), ['layouts' => $layouts])->assertSessionHasNoErrors();
+
+        $saved = Layout::forPageTypes();
+        $this->assertTrue($saved[LayoutPageType::Article->value]->show_breadcrumbs);
+        // チェックを外した(送信されなかった)種類は表示しない
+        $this->assertFalse($saved[LayoutPageType::SinglePage->value]->show_breadcrumbs);
+    }
+
+    public function test_edit_screen_checks_breadcrumbs_except_top_by_default(): void
+    {
+        $this->actingAsAdmin();
+
+        $response = $this->get(route('admin.layouts.edit'));
+
+        $response->assertOk();
+        $html = $response->getContent();
+        $this->assertDoesNotMatchRegularExpression('/name="layouts\\['.LayoutPageType::Top->value.'\\]\\[show_breadcrumbs\\]"[^>]*checked/', $html);
+        $this->assertMatchesRegularExpression('/name="layouts\\['.LayoutPageType::Article->value.'\\]\\[show_breadcrumbs\\]"[^>]*checked/', $html);
     }
 }
