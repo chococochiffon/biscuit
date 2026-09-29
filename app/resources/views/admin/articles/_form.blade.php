@@ -103,6 +103,14 @@
                         @endforeach
                     </select>
                 </div>
+
+                @if ($article->user_id !== null)
+                    <div class="mb-3">
+                        <label for="review_comment" class="form-label">{{ __('差し戻しの理由') }}</label>
+                        <textarea id="review_comment" name="review_comment" rows="3" class="form-control" maxlength="2000">{{ old('review_comment', $article->review_comment) }}</textarea>
+                        <div class="form-text">{{ __('ユーザーの記事を下書きに戻すときに入力すると、マイページに表示されます。ユーザーが承認を申請し直すと消えます。') }}</div>
+                    </div>
+                @endif
             @endisset
 
             <div class="mb-3">

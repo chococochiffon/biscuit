@@ -38,11 +38,7 @@ class TagController extends Controller
     {
         $keyword = trim((string) $request->query('q', ''));
 
-        $tags = Tag::query()
-            ->when($keyword !== '', fn ($query) => $query->where('tag_name', 'like', '%'.$keyword.'%'))
-            ->orderBy('tag_name')
-            ->limit(10)
-            ->get(['id', 'tag_name']);
+        $tags = Tag::query()->suggest($keyword)->get(['id', 'tag_name']);
 
         return response()->json($tags);
     }

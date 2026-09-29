@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 
-#[Fillable(['title', 'content', 'thumbnail', 'parent_path', 'slug', 'user_id', 'approval', 'publication_start_datetime', 'publication_end_datetime'])]
+#[Fillable(['title', 'content', 'thumbnail', 'parent_path', 'slug', 'user_id', 'approval', 'review_comment', 'first_published_at', 'publication_start_datetime', 'publication_end_datetime'])]
 #[Hidden(['unique_path'])]
 class Article extends Model
 {
@@ -30,6 +30,11 @@ class Article extends Model
      * サムネイル画像の保存先ディレクトリ(公開ディスク基準)。
      */
     public const THUMBNAIL_DIRECTORY = 'image/thumbnail';
+
+    /**
+     * 本文のリッチテキストエディタからアップロードした画像の保存先ディレクトリ(公開ディスク基準)。
+     */
+    public const CONTENT_IMAGE_DIRECTORY = 'image/content';
 
     /**
      * サムネイル未指定の場合に使用するデフォルト画像の(publicディスク基準の)パス。
@@ -53,6 +58,7 @@ class Article extends Model
     {
         return [
             'approval' => ArticleApprovalStatus::class,
+            'first_published_at' => 'datetime',
             'publication_start_datetime' => 'datetime',
             'publication_end_datetime' => 'datetime',
         ];
@@ -90,6 +96,14 @@ class Article extends Model
     }
 
     /**
+     * 本文用にアップロードした画像の公開 URL の先頭(ユーザーの記事の本文で、残す画像の判定に使う)。
+     */
+    public static function contentImageUrlPrefix(): string
+    {
+        return rtrim((string) self::publicImageUrl(self::CONTENT_IMAGE_DIRECTORY), '/').'/';
+    }
+
+    /**
      * 公開側に表示する記事(公開ステータスが「公開」かつ公開期間内)に絞り込む。
      * 記事一覧 API・パス解決 API・呼び出しコンテンツで共通の条件。
      */
@@ -110,11 +124,32 @@ class Article extends Model
     }
 
     /**
+     * 公開ステータスを変える(保存はしない)。管理画面の個別・一括の公開設定の変更と記事の編集で共通の処理。
+     * ユーザーの記事を初めて公開するときは、公開開始日時を承認した日時にする(予約公開のため未来の日時にしてあればそのまま)。
+     * 一度公開した記事を編集して再承認したときは、最初に公開した日時を残す。
+     */
+    public function changeApproval(ArticleApprovalStatus $approval): static
+    {
+        $this->approval = $approval;
+
+        if ($approval === ArticleApprovalStatus::Published && $this->first_published_at === null) {
+            $this->first_published_at = now();
+
+            if ($this->user_id !== null && ($this->publication_start_datetime === null || $this->publication_start_datetime->isPast())) {
+                $this->publication_start_datetime = $this->first_published_at;
+            }
+        }
+
+        return $this;
+    }
+
+    /**
      * 記事を投稿したユーザーを取得する(Nullの場合は管理者が登録したこととする)。
+     * 論理削除したユーザーの記事も、投稿者を「管理者」と取り違えないよう取得する。
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     /**

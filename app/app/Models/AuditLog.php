@@ -72,6 +72,7 @@ class AuditLog extends Model
             'administrator' => __('管理者'),
             'article' => __('記事'),
             'article_content_image' => __('記事本文の画像'),
+            'article_path_option' => __('記事の投稿先'),
             'content_model_relation' => __('データ種別紐付け'),
             'custom_page_type' => __('カスタムページの種類'),
             'gallery_category' => __('ギャラリーの分類'),

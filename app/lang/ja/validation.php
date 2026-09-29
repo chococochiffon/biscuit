@@ -208,6 +208,9 @@ return [
         'tags.*' => 'タグ',
         'tag_name' => 'タグ名',
         'article_ids' => '記事',
+        'review_comment' => '差し戻しの理由',
+        'article_path_option_id' => '投稿先',
+        'label' => '表示名',
         'image' => '画像',
 
         // 固定ページ

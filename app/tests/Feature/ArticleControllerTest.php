@@ -616,6 +616,65 @@ class ArticleControllerTest extends TestCase
         $this->assertSame(ArticleApprovalStatus::Draft, $notSelected->fresh()->approval);
     }
 
+    public function test_first_approval_of_user_article_sets_publication_start_to_approval_time(): void
+    {
+        $this->actingAsAdmin();
+        $this->travelTo(now()->setTime(10, 0));
+        $article = Article::factory()->pending()->create(['publication_start_datetime' => now()->subDays(3)]);
+        $this->travelTo(now()->setTime(15, 30));
+
+        $this->patch(route('admin.articles.approval', $article), ['approval' => ArticleApprovalStatus::Published->value])->assertRedirect();
+
+        $article->refresh();
+        $this->assertSame(now()->format('Y-m-d H:i'), $article->publication_start_datetime->format('Y-m-d H:i'));
+        $this->assertSame(now()->format('Y-m-d H:i'), $article->first_published_at->format('Y-m-d H:i'));
+    }
+
+    public function test_reapproval_and_reserved_or_administrator_articles_keep_publication_start(): void
+    {
+        $this->actingAsAdmin();
+        $firstPublishedAt = now()->subMonth()->startOfMinute();
+        $reapproved = Article::factory()->pending()->create(['publication_start_datetime' => $firstPublishedAt, 'first_published_at' => $firstPublishedAt]);
+        $reserved = Article::factory()->pending()->create(['publication_start_datetime' => now()->addWeek()->startOfMinute()]);
+        $byAdministrator = Article::factory()->byAdministrator()->create(['publication_start_datetime' => $firstPublishedAt]);
+
+        $this->patch(route('admin.articles.bulk-approval'), [
+            'article_ids' => [$reapproved->id, $reserved->id, $byAdministrator->id],
+            'approval' => ArticleApprovalStatus::Published->value,
+        ])->assertRedirect();
+
+        $this->assertTrue($reapproved->fresh()->publication_start_datetime->equalTo($firstPublishedAt));
+        $this->assertTrue($reserved->fresh()->publication_start_datetime->isFuture());
+        $this->assertTrue($byAdministrator->fresh()->publication_start_datetime->equalTo($firstPublishedAt));
+    }
+
+    public function test_update_saves_review_comment_for_user_article(): void
+    {
+        $this->actingAsAdmin();
+        $article = Article::factory()->pending()->create();
+
+        $this->put(route('admin.articles.update', $article), [
+            'title' => $article->title,
+            'content' => '<p>本文</p>',
+            'approval' => ArticleApprovalStatus::Draft->value,
+            'review_comment' => '見出しを直してください',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+        ])->assertRedirect(route('admin.articles.index'));
+
+        $this->assertSame('見出しを直してください', $article->fresh()->review_comment);
+        $this->get(route('admin.articles.edit', $article))->assertSee('見出しを直してください');
+    }
+
+    public function test_index_shows_name_of_soft_deleted_author(): void
+    {
+        $this->actingAsAdmin();
+        $user = User::factory()->create(['name' => '退会した人']);
+        Article::factory()->for($user)->create();
+        $user->delete();
+
+        $this->get(route('admin.articles.index'))->assertSee('退会した人');
+    }
+
     public function test_bulk_approval_update_fails_validation_without_article_ids(): void
     {
         $this->actingAsAdmin();

@@ -24,6 +24,9 @@ return [
     // カスタムページの種類の最大件数
     'custom_page_types' => (int) env('LIMIT_CUSTOM_PAGE_TYPES', 5),
 
+    // ユーザーが記事を投稿するときに選ぶ投稿先の最大件数
+    'article_path_options' => (int) env('LIMIT_ARTICLE_PATH_OPTIONS', 10),
+
     // レイアウトのナビメニューの部品 1 件あたりの項目の最大件数
     'layout_nav_items' => (int) env('LIMIT_LAYOUT_NAV_ITEMS', 15),
 

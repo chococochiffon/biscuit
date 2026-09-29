@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Enums\ArticleApprovalStatus;
 use App\Enums\AuditAction;
 use App\Http\Controllers\Concerns\FiltersPublishableList;
+use App\Http\Controllers\Concerns\SavesArticle;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Models\Article;
-use App\Models\Tag;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +20,7 @@ use Illuminate\View\View;
 
 class ArticleController extends Controller
 {
-    use FiltersPublishableList;
+    use FiltersPublishableList, SavesArticle;
 
     /**
      * Display a listing of the resource.
@@ -65,6 +65,7 @@ class ArticleController extends Controller
                 'slug' => $request->validated('slug'),
                 'user_id' => null,
                 'approval' => ArticleApprovalStatus::Published,
+                'first_published_at' => now(),
                 'publication_start_datetime' => $request->validated('publication_start_datetime'),
                 'publication_end_datetime' => $request->validated('publication_end_datetime'),
             ]);
@@ -104,10 +105,11 @@ class ArticleController extends Controller
                 'content' => $request->validated('content'),
                 'parent_path' => $request->validated('parent_path'),
                 'slug' => $request->validated('slug'),
-                'approval' => $request->validated('approval'),
+                'review_comment' => $request->validated('review_comment'),
                 'publication_start_datetime' => $request->validated('publication_start_datetime'),
                 'publication_end_datetime' => $request->validated('publication_end_datetime'),
             ]);
+            $article->changeApproval(ArticleApprovalStatus::from($request->validated('approval')));
 
             if ($request->hasFile('thumbnail')) {
                 $article->thumbnail = $article->storeThumbnail($request->file('thumbnail'));
@@ -147,7 +149,7 @@ class ArticleController extends Controller
 
         DB::transaction(function () use ($article, $validated) {
             $before = AuditLogger::snapshot($article);
-            $article->update(['approval' => $validated['approval']]);
+            $article->changeApproval(ArticleApprovalStatus::from($validated['approval']))->save();
             AuditLogger::updated($article, $before, action: AuditAction::StatusChanged);
         });
 
@@ -171,7 +173,7 @@ class ArticleController extends Controller
 
             foreach ($articles as $article) {
                 $before = AuditLogger::snapshot($article);
-                $article->update(['approval' => $validated['approval']]);
+                $article->changeApproval(ArticleApprovalStatus::from($validated['approval']))->save();
                 AuditLogger::updated($article, $before, metadata: ['bulk_count' => $articles->count()], action: AuditAction::StatusChanged);
             }
         });
@@ -188,37 +190,10 @@ class ArticleController extends Controller
             'image' => ['required', 'image', 'max:10240'],
         ]);
 
-        $path = $request->file('image')->store('image/content', 'public');
+        $path = $request->file('image')->store(Article::CONTENT_IMAGE_DIRECTORY, 'public');
         AuditLogger::record(AuditAction::Uploaded, 'article_content_image', label: $path);
 
         return response()->json(['url' => Article::publicImageUrl($path)]);
-    }
-
-    /**
-     * 監査ログの変更内容に、本体の列と並べて残す記事のタグ(タグ名をカンマ区切りで)。
-     *
-     * @return array{tags: string}
-     */
-    private function auditTags(Article $article): array
-    {
-        return ['tags' => $article->tags->pluck('tag_name')->sort()->implode(', ')];
-    }
-
-    /**
-     * タグ名の配列から未登録のタグを作成しつつ、記事とのタグ関連を同期する。
-     *
-     * @param  array<int, string>  $tagNames
-     */
-    private function syncTags(Article $article, array $tagNames): void
-    {
-        $tagIds = collect($tagNames)
-            ->map(fn ($name) => trim((string) $name))
-            ->filter()
-            ->unique()
-            ->map(fn ($name) => Tag::firstOrCreate(['tag_name' => $name])->id)
-            ->all();
-
-        $article->tags()->sync($tagIds);
     }
 
     /**

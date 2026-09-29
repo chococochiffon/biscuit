@@ -10,7 +10,7 @@ import { initRepeaterRows } from './admin/rows.js';
 import { initSinglePageDetailRows, initSinglePageReorder } from './admin/single-pages.js';
 import { initPathPreview, initDateTimePickers } from './admin/forms.js';
 import { initImageDropzones, initImageCroppers } from './admin/images.js';
-import { initArticleApprovalControls } from './admin/articles.js';
+import { initArticleApprovalControls, initArticlePathOptionManagerModal } from './admin/articles.js';
 import { initQuestionAnswerForm, initQuestionAnswerFlows } from './admin/question-answers.js';
 import { initGalleryImageReorder, initGalleryCategoryManagerModal } from './admin/gallery-images.js';
 import { initLayoutBlocks } from './admin/layouts.js';
@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initImageCroppers();
     initDateTimePickers();
     initArticleApprovalControls();
+    initArticlePathOptionManagerModal();
     initQuestionAnswerForm();
     initQuestionAnswerFlows();
     initGalleryImageReorder();

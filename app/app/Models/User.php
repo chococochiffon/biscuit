@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -51,5 +52,13 @@ class User extends Authenticatable
     public function detail(): HasOne
     {
         return $this->hasOne(UserDetail::class);
+    }
+
+    /**
+     * ユーザーが投稿した記事を取得する(chococo のマイページの記事管理)。
+     */
+    public function articles(): HasMany
+    {
+        return $this->hasMany(Article::class);
     }
 }

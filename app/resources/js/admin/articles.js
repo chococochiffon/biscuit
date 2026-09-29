@@ -1,7 +1,9 @@
 /**
- * 記事一覧の公開設定(個別・一括)の変更。
+ * 記事一覧の公開設定(個別・一括)の変更と、投稿先管理モーダル。
  */
-import { t, csrfToken } from './utils.js';
+import { t, csrfToken, requestJson } from './utils.js';
+import { initManagerModal } from './manager-modal.js';
+import { initSortableRows } from './rows.js';
 
 /**
  * 隠しフォームを動的に生成してsubmitする。既存のフォームへネストさせずに
@@ -84,4 +86,113 @@ export function initArticleApprovalControls() {
             'article_ids[]': articleIds,
         });
     });
+}
+
+/**
+ * 投稿先管理モーダル(article-path-option-manager-modal)を初期化する。
+ * 登録・変更・削除は管理モーダルの共通処理(initManagerModal)で行い、一覧の行をドラッグして離すと、その並び順をすぐに保存する。
+ */
+export function initArticlePathOptionManagerModal() {
+    const modal = document.getElementById('article-path-option-manager-modal');
+
+    if (!modal) {
+        return;
+    }
+
+    const labelInput = document.getElementById('article-path-option-manager-label');
+    const parentPathInput = document.getElementById('article-path-option-manager-parent-path');
+    const list = document.getElementById('article-path-option-manager-list');
+    const rowSelector = '[data-role="article-path-option-row"]';
+    const { bindRow } = initSortableRows(list, rowSelector);
+    let options = [];
+
+    const { showError, clearError } = initManagerModal(modal, {
+        listContainer: list,
+        submitButton: document.getElementById('article-path-option-manager-submit'),
+        errorBox: document.getElementById('article-path-option-manager-error'),
+        focusTarget: labelInput,
+        submitOnEnter: [labelInput, parentPathInput],
+        messages: {
+            deleteFailed: t('投稿先の削除に失敗しました。'),
+            saveFailed: t('投稿先の保存に失敗しました。'),
+        },
+        itemLabel: (option) => option.label,
+        readForm() {
+            const label = labelInput.value.trim();
+            const parentPath = parentPathInput.value.trim();
+
+            return label === '' || parentPath === '' ? null : { label, parent_path: parentPath };
+        },
+        fillForm(option) {
+            labelInput.value = option.label;
+            parentPathInput.value = option.parent_path;
+        },
+        clearForm() {
+            labelInput.value = '';
+            parentPathInput.value = '';
+        },
+        renderItem(option, { edit, remove }) {
+            const row = document.createElement('li');
+            row.className = 'list-group-item d-flex align-items-center gap-2';
+            row.dataset.role = 'article-path-option-row';
+            row.dataset.id = String(option.id);
+
+            const handle = document.createElement('span');
+            handle.className = 'single-page-detail-handle';
+            handle.dataset.role = 'drag-handle';
+            handle.title = t('ドラッグして並び替え');
+            handle.innerHTML = '<i class="bi bi-grip-vertical"></i>';
+            row.appendChild(handle);
+
+            const name = document.createElement('span');
+            name.className = 'flex-grow-1';
+            name.setAttribute('role', 'button');
+            name.textContent = option.label;
+            name.addEventListener('click', edit);
+            row.appendChild(name);
+
+            const path = document.createElement('code');
+            path.textContent = `/${option.parent_path}/`;
+            row.appendChild(path);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.type = 'button';
+            deleteButton.className = 'btn-close';
+            deleteButton.style.fontSize = '0.6rem';
+            deleteButton.setAttribute('aria-label', t('投稿先を削除'));
+            deleteButton.addEventListener('click', remove);
+            row.appendChild(deleteButton);
+
+            bindRow(row);
+            row.addEventListener('dragend', saveOrder);
+
+            return row;
+        },
+        onLoaded(items) {
+            options = items;
+        },
+    });
+
+    /**
+     * 一覧の行の並び順を保存する(並びが変わっていなければ何もしない)。
+     */
+    async function saveOrder() {
+        const order = [...list.querySelectorAll(rowSelector)].map((row) => Number(row.dataset.id));
+
+        if (order.every((id, index) => options[index]?.id === id)) {
+            return;
+        }
+
+        clearError();
+
+        const response = await requestJson(list.dataset.reorderUrl, { method: 'PATCH', body: { order } });
+
+        if (!response.ok) {
+            showError(t('投稿先の並び替えの保存に失敗しました。'));
+
+            return;
+        }
+
+        options = order.map((id) => options.find((option) => option.id === id));
+    }
 }

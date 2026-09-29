@@ -4,11 +4,25 @@
 
 @section('content')
     <div class="mb-4 d-flex align-items-center justify-content-between">
-        <h1 class="h5 mb-0">{{ __('記事一覧') }}</h1>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h5 mb-0">{{ __('記事一覧') }}</h1>
 
-        <a href="{{ route('admin.articles.create') }}" class="btn btn-primary">
-            {{ __('新規登録') }}
-        </a>
+            @if ($pendingArticleCount > 0)
+                <a href="{{ route('admin.articles.index', ['approval' => \App\Enums\ArticleApprovalStatus::Pending->value]) }}" class="badge text-bg-warning text-decoration-none">
+                    {{ __('承認待ち :count 件', ['count' => $pendingArticleCount]) }}
+                </a>
+            @endif
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#article-path-option-manager-modal">
+                {{ __('投稿先管理') }}
+            </button>
+
+            <a href="{{ route('admin.articles.create') }}" class="btn btn-primary">
+                {{ __('新規登録') }}
+            </a>
+        </div>
     </div>
 
     <form method="GET" action="{{ route('admin.articles.index') }}" class="card mb-3 admin-search-card">
@@ -137,4 +151,6 @@
     <div class="mt-3">
         {{ $articles->links() }}
     </div>
+
+    @include('admin.article_path_options._manager_modal')
 @endsection

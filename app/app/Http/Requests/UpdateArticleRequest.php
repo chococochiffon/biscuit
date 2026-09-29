@@ -12,7 +12,7 @@ use Illuminate\Validation\Rules\Enum;
 class UpdateArticleRequest extends StoreArticleRequest
 {
     /**
-     * 更新時は公開設定(approval)も受け付ける。
+     * 更新時は公開設定(approval)と、ユーザーの記事を差し戻すときの理由(review_comment)も受け付ける。
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -20,6 +20,7 @@ class UpdateArticleRequest extends StoreArticleRequest
     {
         return parent::rules() + [
             'approval' => ['required', new Enum(ArticleApprovalStatus::class)],
+            'review_comment' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }
