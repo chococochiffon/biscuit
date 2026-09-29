@@ -8,6 +8,7 @@ use App\Http\Controllers\CustomPageEntryController;
 use App\Http\Controllers\CustomPageTypeController;
 use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
+use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
@@ -106,6 +107,13 @@ Route::middleware('auth:admin')->group(function () {
             ->whereNumber('entry')
             ->names('admin.custom-pages.entries');
     });
+
+    // レイアウト管理は 1 画面で編集・保存する(一覧・登録画面は持たない)
+    Route::get('admin/layouts', [LayoutController::class, 'edit'])
+        ->name('admin.layouts.edit');
+
+    Route::put('admin/layouts', [LayoutController::class, 'update'])
+        ->name('admin.layouts.update');
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)
         ->parameters(['question-answers' => 'questionAnswer'])

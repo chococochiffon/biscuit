@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
         $this->call(GallerySeeder::class);
         $this->call(ContentModelRelationSeeder::class);
         $this->call(CallContentSeeder::class);
+        $this->call(LayoutSeeder::class);
         $this->call(QuestionAnswerSeeder::class);
     }
 }

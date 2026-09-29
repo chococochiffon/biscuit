@@ -2,9 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LayoutBlockType;
+use App\Enums\LayoutPageType;
+use App\Enums\LayoutRegion;
+use App\Enums\SidebarPosition;
 use App\Enums\SocialService;
 use App\Enums\UserDetailNameSetting;
 use App\Models\Article;
+use App\Models\Layout;
+use App\Models\LayoutBlock;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use App\Models\SiteSetting;
@@ -41,6 +47,20 @@ class SaveTransactionTest extends TestCase
         ])->assertServerError();
 
         $this->assertSame('変更前', $siteSetting->fresh()->site_title);
+    }
+
+    public function test_layout_update_is_rolled_back_when_syncing_blocks_fails(): void
+    {
+        LayoutBlock::creating(fn () => throw new RuntimeException('保存に失敗'));
+
+        $this->put(route('admin.layouts.update'), [
+            'layouts' => collect(LayoutPageType::cases())
+                ->mapWithKeys(fn (LayoutPageType $pageType) => [$pageType->value => ['sidebar_position' => SidebarPosition::Right->value]])
+                ->all(),
+            'blocks' => [['region' => LayoutRegion::Header->value, 'block_type' => LayoutBlockType::SiteTitle->value]],
+        ])->assertServerError();
+
+        $this->assertSame(0, Layout::query()->count());
     }
 
     public function test_user_store_is_rolled_back_when_saving_skills_fails(): void

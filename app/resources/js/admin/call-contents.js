@@ -22,22 +22,28 @@ export function initCallContentRows() {
         rowSelector: '[data-role="call-content-row"]',
         addButton: document.getElementById('call-content-add'),
         template: document.getElementById('call-content-row-template'),
-        onBindRow(row) {
-            const placeSelect = row.querySelector('[data-role="place-select"]');
-            const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
-            const callTypeError = row.querySelector('[data-role="call-type-error"]');
-            const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
-            const relationError = row.querySelector('[data-role="content-model-relation-error"]');
-
-            placeSelect.addEventListener('change', () => applyPlaceConstraints(row, constraints));
-            callTypeSelect.addEventListener('change', () => {
-                setFieldError(callTypeSelect, callTypeError, null);
-                applyCallTypeConstraints(row, constraints);
-            });
-            relationSelect.addEventListener('change', () => setFieldError(relationSelect, relationError, null));
-            applyPlaceConstraints(row, constraints);
-        },
+        onBindRow: (row) => bindCallContentFields(row, constraints),
     });
+}
+
+/**
+ * 呼び出しコンテンツの入力欄(表示箇所・呼び出し方・データ種別・表示件数)を持つ行に、選択肢の絞り込みを登録する。
+ * 表示箇所(data-role="place-select")は選択欄のほか、固定の値を持つ隠しinput(レイアウトの部品)でもよい。
+ */
+export function bindCallContentFields(row, constraints) {
+    const placeSelect = row.querySelector('[data-role="place-select"]');
+    const callTypeSelect = row.querySelector('[data-role="call-type-select"]');
+    const callTypeError = row.querySelector('[data-role="call-type-error"]');
+    const relationSelect = row.querySelector('[data-role="content-model-relation-select"]');
+    const relationError = row.querySelector('[data-role="content-model-relation-error"]');
+
+    placeSelect.addEventListener('change', () => applyPlaceConstraints(row, constraints));
+    callTypeSelect.addEventListener('change', () => {
+        setFieldError(callTypeSelect, callTypeError, null);
+        applyCallTypeConstraints(row, constraints);
+    });
+    relationSelect.addEventListener('change', () => setFieldError(relationSelect, relationError, null));
+    applyPlaceConstraints(row, constraints);
 }
 
 /**

@@ -96,24 +96,6 @@ export function initSortableRows(container, rowSelector) {
         });
     }
 
-    function getRowAfterElement(y) {
-        const rows = [...container.querySelectorAll(`${rowSelector}:not(.dragging)`)];
-
-        return rows.reduce(
-            (closest, row) => {
-                const box = row.getBoundingClientRect();
-                const offset = y - box.top - box.height / 2;
-
-                if (offset < 0 && offset > closest.offset) {
-                    return { offset, element: row };
-                }
-
-                return closest;
-            },
-            { offset: Number.NEGATIVE_INFINITY, element: null }
-        ).element;
-    }
-
     function bindRow(row) {
         row.querySelector('[data-role="drag-handle"]').addEventListener('mousedown', () => {
             row.draggable = true;
@@ -139,7 +121,7 @@ export function initSortableRows(container, rowSelector) {
 
         event.preventDefault();
 
-        const afterElement = getRowAfterElement(event.clientY);
+        const afterElement = getRowAfterElement(container, rowSelector, event.clientY);
 
         if (afterElement == null) {
             container.appendChild(draggingRow);
@@ -149,4 +131,26 @@ export function initSortableRows(container, rowSelector) {
     });
 
     return { bindRow, updateSortOrders };
+}
+
+/**
+ * ドラッグ中の行を落とす位置として、コンテナ内でマウスの位置(y)より下にある最初の行を返す(末尾なら null)。
+ * ドラッグ中の行(.dragging)は候補から除く。
+ */
+export function getRowAfterElement(container, rowSelector, y) {
+    const rows = [...container.querySelectorAll(`${rowSelector}:not(.dragging)`)];
+
+    return rows.reduce(
+        (closest, row) => {
+            const box = row.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset, element: row };
+            }
+
+            return closest;
+        },
+        { offset: Number.NEGATIVE_INFINITY, element: null }
+    ).element;
 }

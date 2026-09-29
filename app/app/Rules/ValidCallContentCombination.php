@@ -8,11 +8,15 @@ use App\Models\ContentModelRelation;
 use Closure;
 use Illuminate\Contracts\Validation\DataAwareRule;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Str;
 
 /**
- * call_contentsの1行が、表示箇所(place) → 呼び出し方(call_type) → データ種別(モデル名) → 表示件数 の順に
+ * 呼び出しコンテンツの1行(call_contents.*・レイアウトの部品 blocks.* など)が、
+ * 表示箇所(place) → 呼び出し方(call_type) → データ種別(モデル名) → 表示件数 の順に
  * 許可された組み合わせになっているかを検証する。
  * $checkで対象フィールド(call_type/content_model_relation_id/view_count)を切り替える。
+ * 表示箇所を行で選ばない場合(レイアウトの部品)は $fixedPlace で表示箇所を指定する。
  */
 class ValidCallContentCombination implements DataAwareRule, ValidationRule
 {
@@ -21,7 +25,10 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
      */
     private array $data = [];
 
-    public function __construct(private readonly string $check) {}
+    public function __construct(
+        private readonly string $check,
+        private readonly ?CallContentPlace $fixedPlace = null,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $data
@@ -35,16 +42,15 @@ class ValidCallContentCombination implements DataAwareRule, ValidationRule
 
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        // $attributeは "call_contents.{index}.{field}" の形式。
-        $index = explode('.', $attribute)[1];
-        $row = $this->data['call_contents'][$index] ?? [];
+        // $attributeは "call_contents.{index}.{field}" の形式で、最後のフィールド名を除いた部分が行を指す。
+        $row = Arr::get($this->data, Str::beforeLast($attribute, '.'), []);
         $callType = CallType::tryFrom((int) ($row['call_type'] ?? 0));
 
         if (! $callType) {
             return;
         }
 
-        $place = CallContentPlace::tryFrom((int) ($row['place'] ?? 0));
+        $place = $this->fixedPlace ?? CallContentPlace::tryFrom((int) ($row['place'] ?? 0));
 
         match ($this->check) {
             'call_type' => $this->checkCallType($callType, $place, $fail),
