@@ -79,7 +79,7 @@
                 <div
                     id="tag-selector"
                     class="position-relative mt-2"
-                    data-search-url="{{ route('admin.tags.search') }}"
+                    data-search-url="{{ route('admin.json.tags.search') }}"
                     data-initial-tags="{{ ($article->tags ?? collect())->pluck('tag_name')->toJson() }}"
                 >
                     <div id="selected-tags" class="d-flex flex-wrap gap-2 mb-2"></div>

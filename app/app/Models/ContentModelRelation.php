@@ -52,4 +52,16 @@ class ContentModelRelation extends Model
 
         return $type->hasDetails() ? CallType::CUSTOM_SINGLE_PAGE : CallType::CUSTOM_ARTICLE;
     }
+
+    /**
+     * 使用中で削除できない場合の理由(呼び出しコンテンツ・レイアウトの部品で使っている)。削除できる場合は null。
+     */
+    public function inUseMessage(): ?string
+    {
+        return match (true) {
+            CallContent::query()->where('content_model_relation_id', $this->id)->exists() => __('このデータ種別の紐付けはcall_contentsで使用されているため削除できません。'),
+            LayoutBlock::query()->where('content_model_relation_id', $this->id)->exists() => __('このデータ種別の紐付けはレイアウトの部品で使用されているため削除できません。'),
+            default => null,
+        };
+    }
 }

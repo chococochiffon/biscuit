@@ -45,7 +45,7 @@
                 <div
                     id="content-model-relation-manager-list"
                     class="list-group"
-                    data-index-url="{{ route('admin.content-model-relations.index') }}"
+                    data-index-url="{{ route('admin.json.content-model-relations.index') }}"
                 ></div>
             </div>
             <div class="modal-footer">
