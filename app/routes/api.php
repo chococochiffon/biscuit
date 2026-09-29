@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\API\ArticleController;
+use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\CallContentController;
 use App\Http\Controllers\API\CustomPageController;
 use App\Http\Controllers\API\CustomPageTypeController;
 use App\Http\Controllers\API\GalleryCategoryController;
 use App\Http\Controllers\API\GalleryImageController;
 use App\Http\Controllers\API\LayoutController;
+use App\Http\Controllers\API\MeController;
 use App\Http\Controllers\API\QuestionAnswerController;
 use App\Http\Controllers\API\ResolveController;
 use App\Http\Controllers\API\SiteSettingController;
@@ -31,3 +33,17 @@ Route::get('resolve', ResolveController::class)->name('api.resolve');
 Route::get('custom-page-types', [CustomPageTypeController::class, 'index'])->name('api.custom-page-types.index');
 
 Route::get('custom-pages/{customPageType:name}', [CustomPageController::class, 'index'])->name('api.custom-pages.index');
+
+// chococo のマイページ(ログインが必要。Authorization: Bearer で API トークンを送る)
+Route::post('auth/login', [AuthController::class, 'login'])
+    ->middleware('throttle:user-login')
+    ->name('api.auth.login');
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
+
+    Route::get('me', [MeController::class, 'show'])->name('api.me.show');
+    Route::put('me/profile', [MeController::class, 'updateProfile'])->name('api.me.profile.update');
+    Route::post('me/profile/image', [MeController::class, 'updateImage'])->name('api.me.profile.image');
+    Route::put('me/password', [MeController::class, 'updatePassword'])->name('api.me.password.update');
+});

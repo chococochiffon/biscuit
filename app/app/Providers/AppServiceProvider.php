@@ -35,6 +35,13 @@ class AppServiceProvider extends ServiceProvider
             ));
         });
 
+        // chococo のマイページのログイン(API トークンの発行)も、管理画面と同じくメールアドレスと接続元ごとに制限する
+        RateLimiter::for('user-login', function (Request $request) {
+            return Limit::perMinute(5)->by(Str::transliterate(
+                Str::lower($request->string('email')).'|'.$request->ip()
+            ));
+        });
+
         Paginator::useBootstrapFive();
 
         // カスタムページ管理(種類の管理と種類ごとのページ)はスーパー管理者だけが使える

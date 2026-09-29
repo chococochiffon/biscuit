@@ -11,13 +11,14 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token', 'unique_email'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
 
     /**
      * Get the attributes that should be cast.
@@ -30,6 +31,18 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * 有効期限内の API トークン(chococo のマイページのログイン)をすべて無効にする。$except のトークンは残す。
+     * トークンは削除せず、有効期限を切らして無効にする(物理削除しない方針のため)。
+     */
+    public function expireTokens(?int $except = null): void
+    {
+        $this->tokens()
+            ->when($except !== null, fn ($query) => $query->whereKeyNot($except))
+            ->where(fn ($query) => $query->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->update(['expires_at' => now()]);
     }
 
     /**
