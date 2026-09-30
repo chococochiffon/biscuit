@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Enums\ContentStatus;
 use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
 use App\Models\Concerns\HasPublicImages;
@@ -111,6 +112,18 @@ class Article extends Model
     protected function published(Builder $query): void
     {
         $query->where('approval', ArticleApprovalStatus::Published)->withinPublicationPeriod();
+    }
+
+    /**
+     * 現在の状態。公開ステータスが「公開」でなければ下書き・未承認、「公開」なら公開期間から決める。
+     */
+    public function contentStatus(): ContentStatus
+    {
+        return match ($this->approval) {
+            ArticleApprovalStatus::Draft => ContentStatus::Draft,
+            ArticleApprovalStatus::Pending => ContentStatus::Pending,
+            ArticleApprovalStatus::Published => $this->publicationPeriodStatus(),
+        };
     }
 
     /**

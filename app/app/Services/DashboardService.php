@@ -273,13 +273,13 @@ class DashboardService
      */
     private function contentRow(Article|SinglePage $content, string $type, Collection $updaters): array
     {
-        [$status, $color] = $this->status($content);
+        $status = $content instanceof Article ? $content->contentStatus() : $content->publicationPeriodStatus();
 
         return [
             'type' => $this->typeLabel($type),
             'title' => $content->title,
-            'status' => $status,
-            'status_color' => $color,
+            'status' => $status->label(),
+            'status_color' => $status->badgeColor(),
             'updated_by' => $updaters->get("{$type}:{$content->id}"),
             'updated_at' => $content->updated_at,
             'edit_url' => $this->editUrl($content),
@@ -313,30 +313,6 @@ class DashboardService
                 'title' => $content->title,
                 'edit_url' => $this->editUrl($content),
             ]);
-    }
-
-    /**
-     * 現在の状態の表示名とバッジの色。記事の「公開」は、公開期間によって公開中・予約公開・公開終了に分ける。
-     *
-     * @return array{0: string, 1: string}
-     */
-    private function status(Article|SinglePage $content): array
-    {
-        if ($content instanceof Article && $content->approval !== ArticleApprovalStatus::Published) {
-            return $content->approval === ArticleApprovalStatus::Pending
-                ? [$content->approval->label(), 'warning']
-                : [$content->approval->label(), 'secondary'];
-        }
-
-        $start = $content->publication_start_datetime;
-        $end = $content->publication_end_datetime;
-
-        return match (true) {
-            $start === null => [__('非公開'), 'secondary'],
-            $start->isFuture() => [__('予約公開'), 'info'],
-            $end !== null && $end->lte(now()) => [__('公開終了'), 'secondary'],
-            default => [__('公開中'), 'success'],
-        };
     }
 
     private function typeLabel(string $type): string
