@@ -20,6 +20,7 @@ enum AuditAction: string
     case PasswordReset = 'password_reset';
     case Invited = 'invited';
     case InvitationAccepted = 'invitation_accepted';
+    case LoginCodeSent = 'login_code_sent';
 
     /**
      * 表示用のラベルを取得する(現在の言語設定に応じて翻訳される)。
@@ -40,6 +41,7 @@ enum AuditAction: string
             self::PasswordReset => __('パスワード再設定'),
             self::Invited => __('招待'),
             self::InvitationAccepted => __('招待の受諾'),
+            self::LoginCodeSent => __('確認コードの送信'),
         };
     }
 
@@ -52,7 +54,7 @@ enum AuditAction: string
             self::Created, self::Login, self::Invited => 'success',
             self::Updated, self::StatusChanged, self::Reordered, self::Uploaded, self::PasswordReset, self::InvitationAccepted => 'primary',
             self::Deleted, self::LoginFailed => 'danger',
-            self::Logout, self::PasswordResetRequested => 'secondary',
+            self::Logout, self::PasswordResetRequested, self::LoginCodeSent => 'secondary',
         };
     }
 }

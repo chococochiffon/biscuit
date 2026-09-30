@@ -106,6 +106,14 @@ return [
     /*
     | 管理者からユーザーへの招待のリンクの有効期限(分)。既定は 24 時間。
     */
+    /*
+    | 二段階認証の確認コード(ログインのときにメールで送る 6 桁のコード)の有効期限(分)と、間違えてよい回数。
+    */
+    'login_codes' => [
+        'expire' => (int) env('LOGIN_CODE_EXPIRE_MINUTES', 10),
+        'max_attempts' => 5,
+    ],
+
     'invitations' => [
         'expire' => (int) env('INVITATION_EXPIRE_MINUTES', 1440),
     ],

@@ -406,5 +406,18 @@
     "プロフィールを登録する": "Register profile",
     "このリンクの有効期限は :hours 時間です。期限が切れた場合は、管理者に招待の再送を依頼してください。": "This link expires in :hours hours. If it expires, ask the administrator to resend the invitation.",
     "お心当たりがない場合は、このメールを破棄してください。": "If you did not expect this email, please discard it.",
-    "招待のリンクが無効か、有効期限が切れています。管理者に招待の再送を依頼してください。": "The invitation link is invalid or has expired. Please ask the administrator to resend the invitation."
+    "招待のリンクが無効か、有効期限が切れています。管理者に招待の再送を依頼してください。": "The invitation link is invalid or has expired. Please ask the administrator to resend the invitation.",
+    "確認コードの送信": "Login code sent",
+    "確認コードが違うか、有効期限が切れています。": "The code is incorrect or has expired.",
+    "もう一度ログインからやり直してください。": "Please start again from the login screen.",
+    "確認コードの入力": "Enter login code",
+    "確認コード": "Login code",
+    ":email に確認コードを送りました。メールに書かれた 6 桁のコードを入力してください。": "We sent a login code to :email. Enter the 6-digit code from the email.",
+    "コードを送り直す": "Resend code",
+    "ログイン画面へ戻る": "Back to login",
+    "確認コードを送り直しました。": "The login code was resent.",
+    "【:site】ログインの確認コード": "[:site] Your login code",
+    "ログインの確認コードをお送りします。ログイン画面に次のコードを入力してください。": "Here is your login code. Enter the following code on the login screen.",
+    "このコードの有効期限は :minutes 分です。": "This code expires in :minutes minutes.",
+    "お心当たりがない場合は、このメールを破棄してください。パスワードが他人に知られている可能性があるため、パスワードの変更をおすすめします。": "If you did not try to log in, please discard this email. Your password may be known to someone else, so we recommend changing it."
 }

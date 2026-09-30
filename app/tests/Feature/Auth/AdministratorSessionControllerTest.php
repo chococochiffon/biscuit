@@ -3,8 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\Administrator;
+use App\Notifications\LoginCodeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class AdministratorSessionControllerTest extends TestCase
@@ -28,34 +30,104 @@ class AdministratorSessionControllerTest extends TestCase
         $response->assertRedirect(route('admin.dashboard'));
     }
 
-    public function test_administrators_can_authenticate_using_the_login_screen(): void
+    /**
+     * メールアドレスとパスワードでログインし(1 段目)、メールで送られた確認コードを返す。
+     */
+    private function loginWithPassword(Administrator $administrator): string
     {
-        $administrator = Administrator::factory()->create([
-            'password' => Hash::make('password'),
-        ]);
+        Notification::fake();
 
-        $response = $this->post(route('admin.login.store'), [
+        $this->post(route('admin.login.store'), [
             'email' => $administrator->email,
             'password' => 'password',
-        ]);
+        ])->assertRedirect(route('admin.login.verify'));
 
-        $this->assertAuthenticatedAs($administrator, 'admin');
-        $response->assertRedirect(route('admin.dashboard'));
+        return $this->sentCode($administrator);
     }
 
-    public function test_login_updates_last_login_at(): void
+    private function sentCode(Administrator $administrator): string
+    {
+        $code = '';
+        Notification::assertSentTo($administrator, LoginCodeNotification::class, function (LoginCodeNotification $notification) use (&$code) {
+            $code = $notification->code;
+
+            return true;
+        });
+
+        return $code;
+    }
+
+    public function test_administrators_can_authenticate_with_password_and_login_code(): void
     {
         $administrator = Administrator::factory()->create([
             'password' => Hash::make('password'),
             'last_login_at' => null,
         ]);
 
-        $this->post(route('admin.login.store'), [
-            'email' => $administrator->email,
-            'password' => 'password',
-        ]);
+        $code = $this->loginWithPassword($administrator);
 
+        // パスワードだけではまだログインしない
+        $this->assertGuest('admin');
+        $this->assertMatchesRegularExpression('/^\d{6}$/', $code);
+        $this->get(route('admin.login.verify'))->assertOk()->assertSee($administrator->email);
+
+        $this->post(route('admin.login.verify.store'), ['code' => $code])
+            ->assertRedirect(route('admin.dashboard'));
+
+        $this->assertAuthenticatedAs($administrator, 'admin');
         $this->assertNotNull($administrator->fresh()->last_login_at);
+    }
+
+    public function test_verify_screen_requires_password_first(): void
+    {
+        $this->get(route('admin.login.verify'))->assertRedirect(route('admin.login'));
+        $this->post(route('admin.login.verify.store'), ['code' => '123456'])->assertSessionHasErrors('code');
+        $this->assertGuest('admin');
+    }
+
+    public function test_wrong_code_does_not_log_in_and_code_is_locked_after_too_many_attempts(): void
+    {
+        $administrator = Administrator::factory()->create(['password' => Hash::make('password')]);
+        $code = $this->loginWithPassword($administrator);
+        $wrong = $code === '000000' ? '111111' : '000000';
+
+        for ($i = 0; $i < (int) config('auth.login_codes.max_attempts'); $i++) {
+            $this->post(route('admin.login.verify.store'), ['code' => $wrong])->assertSessionHasErrors('code');
+        }
+
+        // 間違えすぎたコードは、正しくても使えない
+        $this->post(route('admin.login.verify.store'), ['code' => $code])->assertSessionHasErrors('code');
+        $this->assertGuest('admin');
+    }
+
+    public function test_expired_code_cannot_be_used(): void
+    {
+        $administrator = Administrator::factory()->create(['password' => Hash::make('password')]);
+        $code = $this->loginWithPassword($administrator);
+
+        $this->travel((int) config('auth.login_codes.expire') + 1)->minutes();
+
+        $this->post(route('admin.login.verify.store'), ['code' => $code])->assertSessionHasErrors('code');
+        $this->assertGuest('admin');
+    }
+
+    public function test_resend_sends_a_new_code_and_the_old_code_stops_working(): void
+    {
+        $administrator = Administrator::factory()->create(['password' => Hash::make('password')]);
+        $oldCode = $this->loginWithPassword($administrator);
+        Notification::fake();
+
+        $this->post(route('admin.login.resend'))
+            ->assertRedirect(route('admin.login.verify'))
+            ->assertSessionHas('status');
+        $newCode = $this->sentCode($administrator);
+
+        if ($oldCode !== $newCode) {
+            $this->post(route('admin.login.verify.store'), ['code' => $oldCode])->assertSessionHasErrors('code');
+        }
+
+        $this->post(route('admin.login.verify.store'), ['code' => $newCode])->assertRedirect(route('admin.dashboard'));
+        $this->assertAuthenticatedAs($administrator, 'admin');
     }
 
     public function test_administrators_can_not_authenticate_with_invalid_password(): void
@@ -128,5 +200,14 @@ class AdministratorSessionControllerTest extends TestCase
 
         $response->assertStatus(429);
         $this->assertGuest('admin');
+    }
+
+    public function test_code_entry_is_throttled(): void
+    {
+        for ($i = 0; $i < 10; $i++) {
+            $this->post(route('admin.login.verify.store'), ['code' => '000000']);
+        }
+
+        $this->post(route('admin.login.verify.store'), ['code' => '000000'])->assertStatus(429);
     }
 }

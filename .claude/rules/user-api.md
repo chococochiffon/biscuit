@@ -1,6 +1,9 @@
 ---
 paths:
   - app/app/Http/Controllers/API/AuthController.php
+  - app/app/Models/LoginCode.php
+  - app/app/Notifications/LoginCodeNotification.php
+  - app/resources/views/mail/login-code.blade.php
   - app/app/Http/Controllers/API/MeController.php
   - app/app/Http/Controllers/API/MyArticleController.php
   - app/app/Http/Controllers/API/MyGalleryImageController.php
@@ -42,7 +45,8 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 ## 認証（Laravel Sanctum の API トークン）
 
 - 本番の chococo と biscuit は完全に別ドメインのため、Cookie・セッションによる SPA 認証は使わず、API トークンだけで認証する（`config/sanctum.php` の `stateful`・`guard` は空）。
-- `POST /api/auth/login`（`API\AuthController`。回数制限 `throttle:user-login`）でトークンを発行し、`token`・`expires_at`・`user` を返す。有効期限は `SANCTUM_TOKEN_EXPIRATION`（分、既定 30 日）。
+- ログインは二段階認証（メールの確認コード）。`POST /api/auth/login`（`API\AuthController`。回数制限 `throttle:user-login`）はメールアドレスとパスワードを確かめて 6 桁の確認コードをメールで送り（`LoginCode::issue()`・`LoginCodeNotification`）、`two_factor`・`challenge` を返す。`POST /api/auth/login/verify`（`challenge`・`code`）でコードを確かめると API トークンを発行し、`token`・`expires_at`・`user` を返す（`AuthController::tokenResponse()`）。`POST /api/auth/login/resend`（`challenge`）でコードを送り直すと新しいチャレンジを返し、古いコードは使えなくなる。コードの入力・再送は `throttle:login-code`（接続元ごと）。トークンの有効期限は `SANCTUM_TOKEN_EXPIRATION`（分、既定 30 日）。
+- 確認コード（`login_codes`、`LoginCode`）は管理画面のログインと共通。コード（bcrypt）とチャレンジ（SHA-256）はハッシュで持ち、有効期限は `LOGIN_CODE_EXPIRE_MINUTES`（既定 10 分）、`config('auth.login_codes.max_attempts')`（5 回）間違えると使えなくなる。使った・送り直した・期限切れのコードは削除しない。管理画面はチャレンジをセッションに持ち（`/admin/login` → `/admin/login/verify` の 2 画面、`Auth\AdministratorSessionController`）、chococo はサーバーの HttpOnly の Cookie（`chococo_login_challenge`）に持つ。監査ログは確認コードの送信を `login_code_sent`、コードの間違いをログイン失敗（metadata `reason: login_code`）で残す。招待の受諾はメールのリンクで本人確認が済むため、コードなしでログインさせる。
 - ログインが必要な API は `auth:sanctum` のグループに置き、`Authorization: Bearer {token}` で呼ぶ（未ログイン・無効・期限切れは 401）。論理削除したユーザーはログインできず、発行済みのトークンも使えない。
 - トークンは削除しない（物理削除しない方針のため）。ログアウト・パスワード変更（ほかの端末のトークン）は `expires_at` を過去にして無効にする（`User::expireTokens()`）。`sanctum:prune-expired` は使わない。そのため `personal_access_tokens` は `deleted_at` を持たない。
 
@@ -102,4 +106,4 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 
 ## chococo 側（BFF）
 
-chococo のサーバー（Nitro の `server/`）がトークンを HttpOnly の Cookie（`chococo_token`）に入れて持ち、ブラウザには返さない。`/api/auth/login`・`/api/auth/logout` と、`/api/me/**` を biscuit へ中継する（`server/utils/biscuit.ts` の `proxyToBiscuit()`）。変更系のリクエストは Origin が公開側サイトの URL と一致するかを確かめる。ヘッダーのマイページへのリンクはログイン中のときだけ出す（`useMe().ensureMe()` でログイン状態を一度だけ確かめる。Cookie がなければ chococo のサーバーが biscuit へ問い合わせずに 401 を返す）。biscuit から見た接続元は chococo のサーバーになるため、監査ログの IP アドレス・ログインの回数制限はその IP で扱われる。
+chococo のサーバー（Nitro の `server/`）がトークンを HttpOnly の Cookie（`chococo_token`）に入れて持ち、ブラウザには返さない。`/api/auth/login`・`/api/auth/login-verify`・`/api/auth/login-resend`（確認コード。チャレンジは Cookie `chococo_login_challenge` に持つ）・`/api/auth/logout` と、`/api/me/**` を biscuit へ中継する（`server/utils/biscuit.ts` の `proxyToBiscuit()`）。変更系のリクエストは Origin が公開側サイトの URL と一致するかを確かめる。ヘッダーのマイページへのリンクはログイン中のときだけ出す（`useMe().ensureMe()` でログイン状態を一度だけ確かめる。Cookie がなければ chococo のサーバーが biscuit へ問い合わせずに 401 を返す）。biscuit から見た接続元は chococo のサーバーになるため、監査ログの IP アドレス・ログインの回数制限はその IP で扱われる。

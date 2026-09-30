@@ -6,6 +6,7 @@ use App\Enums\AuditAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\API\LoginRequest;
 use App\Http\Resources\MeResource;
+use App\Models\LoginCode;
 use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 /**
- * chococo のマイページのログイン・ログアウト。ログインすると API トークン(Laravel Sanctum)を発行する。
+ * chococo のマイページのログイン・ログアウト。ログインは二段階で、メールアドレスとパスワードが正しければ確認コードをメールで送って
+ * チャレンジを返し(login)、チャレンジとコードを確かめると API トークン(Laravel Sanctum)を発行する(verifyCode)。
  * chococo は別ドメインのため Cookie のセッションは使わず、chococo のサーバーがトークンを持って /api/me/* を呼ぶ。
  * ログインできるのは管理画面で登録したユーザーだけ(登録の API は持たない)。
  */
@@ -29,14 +31,14 @@ class AuthController extends Controller
 
     #[OA\Post(
         path: '/auth/login',
-        summary: 'ユーザーとしてログインし、API トークンを発行する',
+        summary: 'メールアドレスとパスワードを確かめ、ログインの確認コードをメールで送る(二段階認証の 1 段目)',
         tags: ['Me'],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['email', 'password'], properties: [
             new OA\Property(property: 'email', type: 'string', format: 'email'),
             new OA\Property(property: 'password', type: 'string'),
         ])),
         responses: [
-            new OA\Response(response: 200, description: 'token(API トークン。Authorization: Bearer で送る)・expires_at(有効期限)・user(ログインしたユーザー。GET /me と同じ形)'),
+            new OA\Response(response: 200, description: 'two_factor(true)・challenge(確認コードの入力で送るチャレンジ)'),
             new OA\Response(response: 422, description: 'メールアドレスかパスワードが違う'),
             new OA\Response(response: 429, description: 'ログインの試行回数が多すぎる'),
         ]
@@ -52,11 +54,75 @@ class AuthController extends Controller
             throw ValidationException::withMessages(['email' => trans('auth.failed')]);
         }
 
+        $challenge = DB::transaction(function () use ($user) {
+            $challenge = LoginCode::issue($user);
+            AuditLogger::record(AuditAction::LoginCodeSent, $user, actor: $user);
+
+            return $challenge;
+        });
+
+        return response()->json(['two_factor' => true, 'challenge' => $challenge]);
+    }
+
+    #[OA\Post(
+        path: '/auth/login/verify',
+        summary: 'ログインの確認コードを確かめ、API トークンを発行する(二段階認証の 2 段目)',
+        tags: ['Me'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['challenge', 'code'], properties: [
+            new OA\Property(property: 'challenge', type: 'string'),
+            new OA\Property(property: 'code', type: 'string'),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'token(API トークン。Authorization: Bearer で送る)・expires_at(有効期限)・user(ログインしたユーザー。GET /me と同じ形)'),
+            new OA\Response(response: 422, description: '確認コードが違う・有効期限切れ・間違えすぎ'),
+            new OA\Response(response: 429, description: '試行回数が多すぎる'),
+        ]
+    )]
+    public function verifyCode(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'challenge' => ['required', 'string'],
+            'code' => ['required', 'string'],
+        ]);
+
+        $user = LoginCode::verify(User::class, $validated['challenge'], $validated['code']);
+
+        if (! $user instanceof User || ! $user->active_flag) {
+            AuditLogger::record(AuditAction::LoginFailed, 'user', metadata: ['reason' => 'login_code']);
+
+            throw ValidationException::withMessages(['code' => __('確認コードが違うか、有効期限が切れています。')]);
+        }
+
         return DB::transaction(function () use ($user) {
             AuditLogger::record(AuditAction::Login, $user, actor: $user);
 
             return self::tokenResponse($user);
         });
+    }
+
+    #[OA\Post(
+        path: '/auth/login/resend',
+        summary: 'ログインの確認コードを送り直し、新しいチャレンジを返す(それまでのコードは使えなくなる)',
+        tags: ['Me'],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(required: ['challenge'], properties: [
+            new OA\Property(property: 'challenge', type: 'string'),
+        ])),
+        responses: [
+            new OA\Response(response: 200, description: 'challenge(新しいチャレンジ)'),
+            new OA\Response(response: 422, description: 'チャレンジが使えない(ログインからやり直す)'),
+            new OA\Response(response: 429, description: '試行回数が多すぎる'),
+        ]
+    )]
+    public function resendCode(Request $request): JsonResponse
+    {
+        $validated = $request->validate(['challenge' => ['required', 'string']]);
+
+        $challenge = LoginCode::resend(User::class, $validated['challenge'])
+            ?? throw ValidationException::withMessages(['challenge' => __('もう一度ログインからやり直してください。')]);
+
+        AuditLogger::record(AuditAction::LoginCodeSent, 'user', metadata: ['resent' => true]);
+
+        return response()->json(['challenge' => $challenge]);
     }
 
     /**
