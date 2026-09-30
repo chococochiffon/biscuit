@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Enums\ContentStatus;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -82,5 +83,21 @@ trait HasPublicationPeriod
     protected function newest(Builder $query): void
     {
         $query->orderByDesc('publication_start_datetime')->orderByDesc('id');
+    }
+
+    /**
+     * 公開期間から見た現在の状態(公開中・予約公開・公開終了・非公開(公開開始日時の未設定))。
+     */
+    public function publicationPeriodStatus(): ContentStatus
+    {
+        $start = $this->publication_start_datetime;
+        $end = $this->publication_end_datetime;
+
+        return match (true) {
+            $start === null => ContentStatus::Unscheduled,
+            $start->isFuture() => ContentStatus::Scheduled,
+            $end !== null && $end->lte(now()) => ContentStatus::Ended,
+            default => ContentStatus::Published,
+        };
     }
 }

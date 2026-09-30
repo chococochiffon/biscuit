@@ -12,6 +12,7 @@ use App\Http\Controllers\API\InvitationController;
 use App\Http\Controllers\API\LayoutController;
 use App\Http\Controllers\API\MeController;
 use App\Http\Controllers\API\MyArticleController;
+use App\Http\Controllers\API\MyDashboardController;
 use App\Http\Controllers\API\MyGalleryImageController;
 use App\Http\Controllers\API\MyPageViewController;
 use App\Http\Controllers\API\PageViewController;
@@ -85,6 +86,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // 自分の記事のアクセス(マイページのダッシュボード)
     Route::get('me/page-views', [MyPageViewController::class, 'show'])->name('api.me.page-views.show');
+
+    // 自分の記事・ギャラリーの状況・最近の操作・アカウント・画像(マイページのダッシュボード)
+    Route::get('me/dashboard', [MyDashboardController::class, 'show'])->name('api.me.dashboard.show');
 
     Route::get('me/article-paths', [MyArticleController::class, 'pathOptions'])->name('api.me.article-paths.index');
     Route::get('me/tags', [MyArticleController::class, 'searchTags'])->name('api.me.tags.search');
