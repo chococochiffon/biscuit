@@ -37,19 +37,8 @@ class MyDashboardService
      */
     public function contentCounts(): array
     {
-        $articleTotal = $this->articles()->count();
-        $articlePublished = $this->articles()->published()->count();
-        $articleScheduled = $this->scheduledArticles()->count();
-
         return [
-            'articles' => [
-                'total' => $articleTotal,
-                'published' => $articlePublished,
-                'scheduled' => $articleScheduled,
-                'draft' => $this->articles()->where('approval', ArticleApprovalStatus::Draft)->count(),
-                'pending' => $this->articles()->where('approval', ArticleApprovalStatus::Pending)->count(),
-                'unpublished' => $articleTotal - $articlePublished - $articleScheduled,
-            ],
+            'articles' => DashboardService::countArticles(fn () => $this->articles()),
             'gallery_images' => [
                 'total' => $this->galleryImages()->count(),
                 'published' => $this->galleryImages()->where('approval', ArticleApprovalStatus::Published)->count(),
@@ -97,27 +86,21 @@ class MyDashboardService
      */
     public function scheduledContents(): array
     {
-        $endOfToday = now()->endOfDay();
-
-        $articles = $this->scheduledArticles()
-            ->where('publication_start_datetime', '<=', now()->addDays(DashboardService::UPCOMING_DAYS)->endOfDay())
+        $articles = $this->articles()
+            ->scheduled()
+            ->where('publication_start_datetime', '<=', DashboardService::scheduledUntil())
             ->orderBy('publication_start_datetime')
             ->orderBy('id')
             ->get();
 
-        $rows = fn (Collection $articles) => $articles
-            ->take(DashboardService::SCHEDULED_LIMIT)
-            ->map(fn (Article $article) => [
+        return array_map(
+            fn (Collection $articles) => $articles->map(fn (Article $article) => [
                 'id' => $article->id,
                 'title' => $article->title,
                 'publish_at' => $article->publication_start_datetime->toIso8601String(),
-            ])
-            ->values();
-
-        return [
-            'today' => $rows($articles->filter(fn (Article $article) => $article->publication_start_datetime->lte($endOfToday))),
-            'this_week' => $rows($articles->filter(fn (Article $article) => $article->publication_start_datetime->gt($endOfToday))),
-        ];
+            ]),
+            DashboardService::splitScheduled($articles),
+        );
     }
 
     /**
@@ -133,14 +116,6 @@ class MyDashboardService
             ->where('approval', ArticleApprovalStatus::Draft)
             ->whereNotNull('review_comment')
             ->where('review_comment', '!=', '');
-
-        $noThumbnail = $this->articles()
-            ->where('approval', ArticleApprovalStatus::Published)
-            ->notEnded()
-            ->where(fn (Builder $query) => $query
-                ->whereNull('thumbnail')
-                ->orWhere('thumbnail', '')
-                ->orWhere('thumbnail', Article::DEFAULT_THUMBNAIL_PATH));
 
         $pending = fn (Builder|HasMany $query) => $query->where('approval', ArticleApprovalStatus::Pending);
 
@@ -166,7 +141,7 @@ class MyDashboardService
                     'links' => $row['links'],
                 ])->values(),
             ],
-            $warning('no_thumbnail', $noThumbnail),
+            $warning('no_thumbnail', $this->articles()->missingThumbnail()),
             $warning('pending', $pending($this->articles()), $pending($this->galleryImages())),
         ];
 
@@ -260,16 +235,6 @@ class MyDashboardService
     private function galleryImages(): HasMany
     {
         return $this->user->galleryImages();
-    }
-
-    /**
-     * 予約公開の記事(公開ステータスが「公開」で、公開開始日時が未来)。
-     *
-     * @return HasMany<Article, User>
-     */
-    private function scheduledArticles(): HasMany
-    {
-        return $this->articles()->where('approval', ArticleApprovalStatus::Published)->upcoming();
     }
 
     /**

@@ -12,13 +12,15 @@ use App\Models\GalleryImage;
 use App\Models\SinglePage;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 
 /**
  * 管理画面のダッシュボードに出す、コンテンツの状況・最近編集したコンテンツ・予約公開・コンテンツの注意事項・最近の操作をまとめる。
- * 対象は記事と固定ページ(日時はどれも現在時刻を基準にする)。
+ * 対象は記事と固定ページ(日時はどれも現在時刻を基準にする)。記事の件数の数え方と予約公開の分け方は、マイページ(MyDashboardService)と共通。
  */
 class DashboardService
 {
@@ -57,29 +59,40 @@ class DashboardService
      */
     public function contentCounts(): array
     {
-        $articleTotal = Article::query()->count();
-        $articlePublished = Article::query()->published()->count();
-        $articleScheduled = $this->scheduledArticles()->count();
-
         $pageTotal = SinglePage::query()->count();
         $pagePublished = SinglePage::query()->published()->count();
         $pageScheduled = SinglePage::query()->upcoming()->count();
 
         return [
-            'article' => [
-                'total' => $articleTotal,
-                'published' => $articlePublished,
-                'scheduled' => $articleScheduled,
-                'draft' => Article::query()->where('approval', ArticleApprovalStatus::Draft)->count(),
-                'pending' => Article::query()->where('approval', ArticleApprovalStatus::Pending)->count(),
-                'unpublished' => $articleTotal - $articlePublished - $articleScheduled,
-            ],
+            'article' => self::countArticles(fn () => Article::query()),
             'single_page' => [
                 'total' => $pageTotal,
                 'published' => $pagePublished,
                 'scheduled' => $pageScheduled,
                 'unpublished' => $pageTotal - $pagePublished - $pageScheduled,
             ],
+        ];
+    }
+
+    /**
+     * 記事の件数を状態ごとに数える(管理画面は全体、マイページは自分の記事)。非公開は公開中と予約公開以外のすべて。
+     *
+     * @param  Closure(): (Builder<Article>|HasMany<Article, User>)  $articles  数える対象の記事のクエリ(呼ぶたびに新しいクエリを返す)
+     * @return array{total: int, published: int, scheduled: int, draft: int, pending: int, unpublished: int}
+     */
+    public static function countArticles(Closure $articles): array
+    {
+        $total = $articles()->count();
+        $published = $articles()->published()->count();
+        $scheduled = $articles()->scheduled()->count();
+
+        return [
+            'total' => $total,
+            'published' => $published,
+            'scheduled' => $scheduled,
+            'draft' => $articles()->where('approval', ArticleApprovalStatus::Draft)->count(),
+            'pending' => $articles()->where('approval', ArticleApprovalStatus::Pending)->count(),
+            'unpublished' => $total - $published - $scheduled,
         ];
     }
 
@@ -98,8 +111,8 @@ class DashboardService
             'single_page' => $pages->modelKeys(),
         ]);
 
-        return $articles->map(fn (Article $article) => $this->contentRow($article, 'article', $updaters))
-            ->concat($pages->map(fn (SinglePage $page) => $this->contentRow($page, 'single_page', $updaters)))
+        return $articles->map(fn (Article $article) => $this->contentRow($article, $updaters))
+            ->concat($pages->map(fn (SinglePage $page) => $this->contentRow($page, $updaters)))
             ->sortByDesc(fn (array $row) => $row['updated_at']?->getTimestamp() ?? 0)
             ->take(self::RECENT_LIMIT)
             ->values();
@@ -112,23 +125,43 @@ class DashboardService
      */
     public function scheduledContents(): array
     {
-        $endOfToday = now()->endOfDay();
-        $endOfWeek = now()->addDays(self::UPCOMING_DAYS)->endOfDay();
+        $until = self::scheduledUntil();
 
-        $all = $this->scheduledArticles()
-            ->where('publication_start_datetime', '<=', $endOfWeek)
-            ->get()
-            ->map(fn (Article $article) => $this->scheduledRow($article, 'article'))
-            ->concat(SinglePage::query()->upcoming()
-                ->where('publication_start_datetime', '<=', $endOfWeek)
-                ->get()
-                ->map(fn (SinglePage $page) => $this->scheduledRow($page, 'single_page')))
-            ->sortBy(fn (array $row) => $row['publish_at']->getTimestamp())
+        $contents = Article::query()->scheduled()->where('publication_start_datetime', '<=', $until)->get()
+            ->concat(SinglePage::query()->upcoming()->where('publication_start_datetime', '<=', $until)->get())
+            ->sortBy(fn (Article|SinglePage $content) => $content->publication_start_datetime->getTimestamp())
             ->values();
 
+        return array_map(
+            fn (Collection $contents) => $contents->map(fn (Article|SinglePage $content) => $this->scheduledRow($content)),
+            self::splitScheduled($contents),
+        );
+    }
+
+    /**
+     * 「今週公開予定」の終わり(明日から UPCOMING_DAYS 日目の終わり)。
+     */
+    public static function scheduledUntil(): CarbonInterface
+    {
+        return now()->addDays(self::UPCOMING_DAYS)->endOfDay();
+    }
+
+    /**
+     * 公開開始日時の早い順に並べた予約公開のコンテンツを、今日公開するものと今週公開予定のものに分け、それぞれ SCHEDULED_LIMIT 件にする。
+     *
+     * @template TContent of Model
+     *
+     * @param  Collection<int, TContent>  $contents
+     * @return array{today: Collection<int, TContent>, this_week: Collection<int, TContent>}
+     */
+    public static function splitScheduled(Collection $contents): array
+    {
+        $endOfToday = now()->endOfDay();
+        [$today, $thisWeek] = $contents->partition(fn (Model $content) => $content->publication_start_datetime->lte($endOfToday));
+
         return [
-            'today' => $all->filter(fn (array $row) => $row['publish_at']->lte($endOfToday))->take(self::SCHEDULED_LIMIT)->values(),
-            'this_week' => $all->filter(fn (array $row) => $row['publish_at']->gt($endOfToday))->take(self::SCHEDULED_LIMIT)->values(),
+            'today' => $today->take(self::SCHEDULED_LIMIT)->values(),
+            'this_week' => $thisWeek->take(self::SCHEDULED_LIMIT)->values(),
         ];
     }
 
@@ -140,13 +173,7 @@ class DashboardService
      */
     public function contentWarnings(): array
     {
-        $noThumbnail = Article::query()
-            ->where('approval', ArticleApprovalStatus::Published)
-            ->notEnded()
-            ->where(fn (Builder $query) => $query
-                ->whereNull('thumbnail')
-                ->orWhere('thumbnail', '')
-                ->orWhere('thumbnail', Article::DEFAULT_THUMBNAIL_PATH));
+        $noThumbnail = Article::query()->missingThumbnail();
 
         $noShortSentences = SinglePage::query()
             ->notEnded()
@@ -166,13 +193,13 @@ class DashboardService
                 'label' => __('公開中・予約公開なのにアイキャッチ(サムネイル)未設定の記事'),
                 'count' => $noThumbnail->count(),
                 'url' => null,
-                'items' => $this->warningItems($noThumbnail, 'article'),
+                'items' => $this->warningItems($noThumbnail),
             ],
             [
                 'label' => __('公開中・予約公開なのに短文(概要)が未入力の固定ページ'),
                 'count' => $noShortSentences->count(),
                 'url' => null,
-                'items' => $this->warningItems($noShortSentences, 'single_page'),
+                'items' => $this->warningItems($noShortSentences),
             ],
             [
                 'label' => __('承認待ちの記事'),
@@ -238,16 +265,6 @@ class DashboardService
     }
 
     /**
-     * 予約公開の記事(公開ステータスが「公開」で、公開開始日時が未来)のクエリ。
-     *
-     * @return Builder<Article>
-     */
-    private function scheduledArticles(): Builder
-    {
-        return Article::query()->where('approval', ArticleApprovalStatus::Published)->upcoming();
-    }
-
-    /**
      * 対象ごとに、操作ログの最新の記録の操作者名を返す(キーは「対象の種類:id」)。
      *
      * @param  array<string, list<int>>  $idsByType
@@ -283,12 +300,13 @@ class DashboardService
      * @param  Collection<string, string|null>  $updaters
      * @return array{type: string, title: string, status: string, status_color: string, updated_by: string|null, updated_at: CarbonInterface|null, edit_url: string}
      */
-    private function contentRow(Article|SinglePage $content, string $type, Collection $updaters): array
+    private function contentRow(Article|SinglePage $content, Collection $updaters): array
     {
+        $type = $this->subjectType($content);
         $status = $content instanceof Article ? $content->contentStatus() : $content->publicationPeriodStatus();
 
         return [
-            'type' => $this->typeLabel($type),
+            'type' => AuditLog::labelForSubjectType($type),
             'title' => $content->title,
             'status' => $status->label(),
             'status_color' => $status->badgeColor(),
@@ -303,10 +321,10 @@ class DashboardService
      *
      * @return array{type: string, title: string, publish_at: CarbonInterface, edit_url: string}
      */
-    private function scheduledRow(Article|SinglePage $content, string $type): array
+    private function scheduledRow(Article|SinglePage $content): array
     {
         return [
-            'type' => $this->typeLabel($type),
+            'type' => AuditLog::labelForSubjectType($this->subjectType($content)),
             'title' => $content->title,
             'publish_at' => $content->publication_start_datetime,
             'edit_url' => $this->editUrl($content),
@@ -316,9 +334,10 @@ class DashboardService
     /**
      * コンテンツの注意事項に並べる、編集へのリンク(更新日時の新しい順に WARNING_ITEM_LIMIT 件)。
      *
+     * @param  Builder<Article>|Builder<SinglePage>  $query
      * @return Collection<int, array{title: string, edit_url: string}>
      */
-    private function warningItems(Builder $query, string $type): Collection
+    private function warningItems(Builder $query): Collection
     {
         return (clone $query)->latest('updated_at')->latest('id')->limit(self::WARNING_ITEM_LIMIT)->get()
             ->map(fn (Article|SinglePage $content) => [
@@ -327,12 +346,15 @@ class DashboardService
             ]);
     }
 
-    private function typeLabel(string $type): string
+    /**
+     * 操作ログと同じ対象の種類(article・single_page)。
+     */
+    private function subjectType(Article|SinglePage $content): string
     {
-        return AuditLog::labelForSubjectType($type);
+        return $content instanceof Article ? 'article' : 'single_page';
     }
 
-    private function editUrl(Model $content): string
+    private function editUrl(Article|SinglePage $content): string
     {
         return $content instanceof Article
             ? route('admin.articles.edit', $content)

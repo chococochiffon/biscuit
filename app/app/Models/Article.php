@@ -7,6 +7,7 @@ use App\Enums\ContentStatus;
 use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
 use App\Models\Concerns\HasPublicImages;
+use Carbon\CarbonInterface;
 use Database\Factories\ArticleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -112,6 +113,30 @@ class Article extends Model
     protected function published(Builder $query): void
     {
         $query->where('approval', ArticleApprovalStatus::Published)->withinPublicationPeriod();
+    }
+
+    /**
+     * 予約公開の記事(公開ステータスが「公開」で、公開開始日時が指定日時(省略時は現在)より後)に絞り込む。
+     */
+    #[Scope]
+    protected function scheduled(Builder $query, ?CarbonInterface $at = null): void
+    {
+        $query->where('approval', ArticleApprovalStatus::Published)->upcoming($at);
+    }
+
+    /**
+     * 公開中・予約公開(公開ステータスが「公開」で、公開終了を迎えていない)なのに、サムネイルが未設定(デフォルト画像のまま)の記事に絞り込む。
+     * ダッシュボードのコンテンツチェックで使う。
+     */
+    #[Scope]
+    protected function missingThumbnail(Builder $query): void
+    {
+        $query->where('approval', ArticleApprovalStatus::Published)
+            ->notEnded()
+            ->where(fn (Builder $query) => $query
+                ->whereNull('thumbnail')
+                ->orWhere('thumbnail', '')
+                ->orWhere('thumbnail', self::DEFAULT_THUMBNAIL_PATH));
     }
 
     /**
