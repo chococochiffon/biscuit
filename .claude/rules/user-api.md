@@ -56,7 +56,7 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 - `PUT /api/me/profile`: アカウント名（`name`）・メールアドレス・ユーザー詳細・スキル。検証は管理画面のユーザー編集と同じ `StoreUserRequest` を継承した `UpdateMyProfileRequest`（対象はログイン中のユーザー。`targetUser()`）で、保存は管理画面と共通のトレイト `Http\Controllers\Concerns\SavesUserProfile`。
 - `POST /api/me/profile/image`: アイコン画像（multipart。`crop[x]` などの切り抜き範囲は任意で、未指定なら中央で切り抜く）。
 - `PUT /api/me/password`: 今のパスワード（`current_password:sanctum`）が必要。変更すると使っているトークン以外を無効にする。
-- `GET /api/me/dashboard`（`API\MyDashboardController`・`Services\MyDashboardService`）: マイページのダッシュボード。管理画面のダッシュボードの項目をログイン中のユーザー本人の分に絞って返す（記事・ギャラリーの状態ごとの件数、最近編集した記事・画像（`status` は `Enums\ContentStatus` の値）、今日と 7 日以内の予約公開の記事、注意事項（差し戻し `returned`・サムネイル未設定 `no_thumbnail`・承認待ち `pending`）、自分の最近の操作（ログイン・ログアウト・確認コードの送信は除く。IP アドレスは返さない）、アカウント（承認を飛ばす権限・投稿者ページ・最近のログイン）、自分がアップロードした画像の件数・容量（記事本文の画像は投稿者を持たないため数えない））。サイト全体やほかのユーザーの数字は返さない。アクセスは `GET /api/me/page-views`（`page-views.md`）。chococo は `pages/mypage/index.vue` で両方を取得して表示する。
+- `GET /api/me/dashboard`（`API\MyDashboardController`・`Services\MyDashboardService`）: マイページのダッシュボード。管理画面のダッシュボードの項目をログイン中のユーザー本人の分に絞って返す（記事・ギャラリーの状態ごとの件数、最近編集した記事・画像（`status` は `Enums\ContentStatus` の値）、今日と 7 日以内の予約公開の記事、注意事項（差し戻し `returned`・本文にリンク切れのある記事 `broken_links`（`BrokenLinkService`。items に切れているリンク `links`）・サムネイル未設定 `no_thumbnail`・承認待ち `pending`）、自分の最近の操作（ログイン・ログアウト・確認コードの送信は除く。IP アドレスは返さない）、アカウント（承認を飛ばす権限・投稿者ページ・最近のログイン）、自分がアップロードした画像の件数・容量（記事本文の画像は投稿者を持たないため数えない））。サイト全体やほかのユーザーの数字は返さない。アクセスは `GET /api/me/page-views`（`page-views.md`）。chococo は `pages/mypage/index.vue` で両方を取得して表示する。
 - 操作は監査ログに操作者 `user` として残す（`AuditLogger` は admin ガードにいなければ sanctum ガードのユーザーを操作者にする）。ログイン失敗は対象の種類 `user` で、入力されたメールアドレスだけを残す。
 
 ## 記事の投稿と承認の申請（`API\MyArticleController`）

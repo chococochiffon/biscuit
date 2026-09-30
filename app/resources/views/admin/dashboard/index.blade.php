@@ -161,11 +161,26 @@
                                         <span>{{ $warning['label'] }}</span>
                                     @endif
                                     <span class="badge rounded-pill text-bg-warning">{{ __(':count件', ['count' => number_format($warning['count'])]) }}</span>
+                                    @isset($warning['calculated_at'])
+                                        <span class="small text-muted">{{ __(':datetime 時点', ['datetime' => $warning['calculated_at']]) }}</span>
+                                    @endisset
                                 </div>
                                 @if ($warning['items']->isNotEmpty())
                                     <ul class="small mb-0 mt-1 ps-4">
                                         @foreach ($warning['items'] as $item)
-                                            <li><a href="{{ $item['edit_url'] }}">{{ $item['title'] }}</a></li>
+                                            <li>
+                                                @isset($item['type'])
+                                                    <span class="text-muted">{{ $item['type'] }}</span>
+                                                @endisset
+                                                <a href="{{ $item['edit_url'] }}">{{ $item['title'] }}</a>
+                                                @isset($item['links'])
+                                                    <div class="text-muted text-break">
+                                                        @foreach ($item['links'] as $link)
+                                                            <code>{{ $link }}</code>@unless ($loop->last), @endunless
+                                                        @endforeach
+                                                    </div>
+                                                @endisset
+                                            </li>
                                         @endforeach
                                         @if ($warning['count'] > $warning['items']->count())
                                             <li class="list-unstyled text-muted">{{ __('ほか :count件', ['count' => number_format($warning['count'] - $warning['items']->count())]) }}</li>

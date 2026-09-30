@@ -136,6 +136,21 @@ class DashboardControllerTest extends TestCase
         $response->assertSee(route('admin.single-pages.edit', $noSummary));
     }
 
+    public function test_dashboard_shows_contents_with_broken_links(): void
+    {
+        $this->actingAsAdmin();
+        $article = Article::factory()->create(['title' => 'リンク切れの記事', 'content' => '<a href="/missing-page">x</a>']);
+
+        $response = $this->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('warnings', fn (array $warnings) => $warnings[0]['label'] === 'リンク切れのあるコンテンツ'
+            && $warnings[0]['count'] === 1
+            && $warnings[0]['items'][0]['links'] === ['/missing-page']);
+        $response->assertSee(route('admin.articles.edit', $article));
+        $response->assertSee('/missing-page');
+    }
+
     public function test_dashboard_shows_no_warnings_when_contents_are_fine(): void
     {
         $this->actingAsAdmin();
@@ -257,11 +272,12 @@ class DashboardControllerTest extends TestCase
         $this->travelTo('2026-10-15 12:00:00');
         $directory = $this->useLogDirectory();
         File::put($directory.'/laravel.log', implode("\n", [
-            '[2026-10-13 12:00:00] local.ERROR: 古いエラー',
-            '[2026-10-15 09:00:00] local.INFO: 情報',
-            '[2026-10-15 10:00:00] local.ERROR: 新しいエラー {"exception":"..."}',
+            '[2026-10-13 12:00:00] testing.ERROR: 古いエラー',
+            '[2026-10-15 09:00:00] testing.INFO: 情報',
+            '[2026-10-15 10:00:00] testing.ERROR: 新しいエラー {"exception":"..."}',
             '#0 stack trace',
-            '[2026-10-15 11:00:00] local.CRITICAL: 最後のエラー',
+            '[2026-10-15 11:00:00] testing.CRITICAL: 最後のエラー',
+            '[2026-10-15 11:30:00] local.ERROR: ほかの環境のエラー',
         ]));
         touch($directory.'/laravel.log', now()->getTimestamp());
 
