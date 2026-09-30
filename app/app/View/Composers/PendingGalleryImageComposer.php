@@ -13,6 +13,6 @@ class PendingGalleryImageComposer
      */
     public function compose(View $view): void
     {
-        $view->with('pendingGalleryImageCount', GalleryImage::query()->where('approval', ArticleApprovalStatus::Pending)->count());
+        $view->with('pendingGalleryImageCount', GalleryImage::query()->withApproval(ArticleApprovalStatus::Pending)->count());
     }
 }

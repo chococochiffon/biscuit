@@ -90,8 +90,8 @@ class DashboardService
             'total' => $total,
             'published' => $published,
             'scheduled' => $scheduled,
-            'draft' => $articles()->where('approval', ArticleApprovalStatus::Draft)->count(),
-            'pending' => $articles()->where('approval', ArticleApprovalStatus::Pending)->count(),
+            'draft' => $articles()->withApproval(ArticleApprovalStatus::Draft)->count(),
+            'pending' => $articles()->withApproval(ArticleApprovalStatus::Pending)->count(),
             'unpublished' => $total - $published - $scheduled,
         ];
     }
@@ -203,13 +203,13 @@ class DashboardService
             ],
             [
                 'label' => __('承認待ちの記事'),
-                'count' => Article::query()->where('approval', ArticleApprovalStatus::Pending)->count(),
+                'count' => Article::query()->withApproval(ArticleApprovalStatus::Pending)->count(),
                 'url' => route('admin.articles.index', ['approval' => ArticleApprovalStatus::Pending->value]),
                 'items' => collect(),
             ],
             [
                 'label' => __('承認待ちのギャラリー画像'),
-                'count' => GalleryImage::query()->where('approval', ArticleApprovalStatus::Pending)->count(),
+                'count' => GalleryImage::query()->withApproval(ArticleApprovalStatus::Pending)->count(),
                 'url' => route('admin.gallery-images.index', ['approval' => ArticleApprovalStatus::Pending->value]),
                 'items' => collect(),
             ],

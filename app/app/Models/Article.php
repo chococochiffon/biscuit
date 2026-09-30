@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ArticleApprovalStatus;
 use App\Enums\ContentStatus;
+use App\Models\Concerns\HasApproval;
 use App\Models\Concerns\HasPath;
 use App\Models\Concerns\HasPublicationPeriod;
 use App\Models\Concerns\HasPublicImages;
@@ -26,7 +27,7 @@ use Illuminate\Http\UploadedFile;
 class Article extends Model
 {
     /** @use HasFactory<ArticleFactory> */
-    use HasFactory, HasPath, HasPublicationPeriod, HasPublicImages, SoftDeletes;
+    use HasApproval, HasFactory, HasPath, HasPublicationPeriod, HasPublicImages, SoftDeletes;
 
     /**
      * サムネイル画像の保存先ディレクトリ(公開ディスク基準)。
@@ -112,7 +113,7 @@ class Article extends Model
     #[Scope]
     protected function published(Builder $query): void
     {
-        $query->where('approval', ArticleApprovalStatus::Published)->withinPublicationPeriod();
+        $query->withApproval(ArticleApprovalStatus::Published)->withinPublicationPeriod();
     }
 
     /**
@@ -121,7 +122,7 @@ class Article extends Model
     #[Scope]
     protected function scheduled(Builder $query, ?CarbonInterface $at = null): void
     {
-        $query->where('approval', ArticleApprovalStatus::Published)->upcoming($at);
+        $query->withApproval(ArticleApprovalStatus::Published)->upcoming($at);
     }
 
     /**
@@ -131,7 +132,7 @@ class Article extends Model
     #[Scope]
     protected function missingThumbnail(Builder $query): void
     {
-        $query->where('approval', ArticleApprovalStatus::Published)
+        $query->withApproval(ArticleApprovalStatus::Published)
             ->notEnded()
             ->where(fn (Builder $query) => $query
                 ->whereNull('thumbnail')

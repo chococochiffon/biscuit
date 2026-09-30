@@ -63,7 +63,7 @@ class BrokenLinkService
      * @param  Builder<Article>|HasMany<Article, User>  $articles
      * @return Collection<int, array{article: Article, links: list<string>}>
      */
-    public function inArticles($articles): Collection
+    public function inArticles(Builder|HasMany $articles): Collection
     {
         return $articles->latest('updated_at')->latest('id')->get()
             ->map(fn (Article $article) => ['article' => $article, 'links' => $this->brokenLinksIn($article->content)])

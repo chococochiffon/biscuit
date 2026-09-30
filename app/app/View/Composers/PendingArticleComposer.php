@@ -13,6 +13,6 @@ class PendingArticleComposer
      */
     public function compose(View $view): void
     {
-        $view->with('pendingArticleCount', Article::query()->where('approval', ArticleApprovalStatus::Pending)->count());
+        $view->with('pendingArticleCount', Article::query()->withApproval(ArticleApprovalStatus::Pending)->count());
     }
 }
