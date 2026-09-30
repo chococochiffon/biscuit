@@ -376,5 +376,11 @@
     "お心当たりがない場合は、このメールを破棄してください。パスワードは変わりません。": "If you did not request this, please ignore this email. Your password will not change.",
     "ボタンを押せない場合は、次の URL をブラウザに貼り付けて開いてください。": "If the button does not work, paste the following URL into your browser.",
     "ご登録のメールアドレスであれば、パスワード再設定のメールを送りました。メールのリンクから新しいパスワードを設定してください。": "If the email address is registered, we have sent a password reset email. Please set a new password from the link in the email.",
-    "ダッシュボード": "Dashboard"
+    "ダッシュボード": "Dashboard",
+    "アカウント名": "Account name",
+    "記事とギャラリーを承認なしで公開する": "Publish articles and gallery images without approval",
+    "チェックすると、このユーザーがマイページから投稿した記事とギャラリーの画像は、管理者の承認を待たずに公開されます。": "When checked, articles and gallery images this user posts from My Page are published without waiting for an administrator's approval.",
+    "記事とギャラリーの承認": "Approval of articles and gallery",
+    "承認なしで公開する": "Publish without approval",
+    "承認が必要": "Approval required"
 }

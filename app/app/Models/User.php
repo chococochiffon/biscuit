@@ -15,7 +15,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password'])]
+#[Fillable(['name', 'email', 'password', 'skip_approval'])]
 #[Hidden(['password', 'remember_token', 'unique_email'])]
 class User extends Authenticatable
 {
@@ -28,6 +28,15 @@ class User extends Authenticatable
     public const AUTHOR_PATH_PREFIX = 'authors';
 
     /**
+     * 作成直後(DB から読み直す前)も既定値を持たせる。
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'skip_approval' => false,
+    ];
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
@@ -37,6 +46,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'skip_approval' => 'boolean',
         ];
     }
 

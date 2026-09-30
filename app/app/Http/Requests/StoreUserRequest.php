@@ -44,6 +44,8 @@ class StoreUserRequest extends FormRequest
                 Rule::unique('users', 'email')->ignore($this->targetUser())->withoutTrashed(),
             ],
             'password' => ['required', 'string', Password::default(), 'confirmed'],
+            // 記事とギャラリーの画像を承認なしで公開できるか(管理画面だけで設定する。マイページでは変えられない)
+            'skip_approval' => ['nullable', 'boolean'],
 
             'user_detail' => ['required', 'array'],
             'user_detail.first_name' => ['required', 'string', 'max:255'],
@@ -69,6 +71,18 @@ class StoreUserRequest extends FormRequest
             'user_detail.skills.*.name' => ['required', 'string', 'max:255'],
             'user_detail.skills.*.level' => ['required', 'integer', 'min:'.UserSkill::MIN_LEVEL, 'max:'.UserSkill::MAX_LEVEL],
             'user_detail.skills.*.sort_order' => ['nullable', 'integer', 'min:0'],
+        ];
+    }
+
+    /**
+     * ユーザーの name は「アカウント名」と呼ぶ(共通の項目名 lang/ja/validation.php の「名前」を上書きする)。
+     *
+     * @return array<string, string>
+     */
+    public function attributes(): array
+    {
+        return [
+            'name' => __('アカウント名'),
         ];
     }
 }

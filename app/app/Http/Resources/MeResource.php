@@ -24,6 +24,8 @@ class MeResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'email' => $this->email,
+            // 記事を承認なしで公開できるか(マイページのボタンの文言などの出し分けに使う)
+            'skip_approval' => $this->skip_approval,
             'detail' => $detail === null ? null : [
                 'first_name' => $detail->first_name,
                 'family_name' => $detail->family_name,

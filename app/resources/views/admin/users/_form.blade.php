@@ -1,10 +1,10 @@
 @include('admin.partials._form_errors')
 
-{{-- 左: アカウント(名前・メールアドレス・パスワード) / 右: ユーザー詳細 --}}
+{{-- 左: アカウント(アカウント名・メールアドレス・パスワード・承認を飛ばす権限) / 右: ユーザー詳細 --}}
 <div class="row g-4 mb-3">
     <div class="col-lg-6">
         <div class="mb-3">
-            <label for="name" class="form-label">{{ __('名前') }}</label>
+            <label for="name" class="form-label">{{ __('アカウント名') }}</label>
             <input
                 id="name"
                 type="text"
@@ -54,6 +54,20 @@
                 @unless(isset($user)) required @endunless
                 class="form-control"
             >
+        </div>
+
+        {{-- 既定は承認が必要(チェックなし) --}}
+        <div class="mb-3 form-check">
+            <input
+                id="skip_approval"
+                type="checkbox"
+                name="skip_approval"
+                value="1"
+                class="form-check-input"
+                @checked(old('skip_approval', $user->skip_approval ?? false))
+            >
+            <label for="skip_approval" class="form-check-label">{{ __('記事とギャラリーを承認なしで公開する') }}</label>
+            <div class="form-text">{{ __('チェックすると、このユーザーがマイページから投稿した記事とギャラリーの画像は、管理者の承認を待たずに公開されます。') }}</div>
         </div>
     </div>
 

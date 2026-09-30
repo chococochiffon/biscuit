@@ -10,7 +10,7 @@ use Illuminate\Support\Arr;
 /**
  * マイページのプロフィール(名前・メールアドレス・ユーザー詳細・スキル)の更新。
  * 管理画面のユーザー編集と同じルールで、対象はログイン中のユーザー。
- * パスワード(PUT /me/password)とアイコン画像(POST /me/profile/image)は別の API で変更する。
+ * パスワード(PUT /me/password)とアイコン画像(POST /me/profile/image)は別の API で変更する。承認を飛ばす権限(skip_approval)は管理者だけが変えられる。
  */
 class UpdateMyProfileRequest extends StoreUserRequest
 {
@@ -26,6 +26,7 @@ class UpdateMyProfileRequest extends StoreUserRequest
     {
         return Arr::except(parent::rules(), [
             'password',
+            'skip_approval',
             'user_detail.user_image',
             'user_detail.user_image_crop',
             'user_detail.user_image_crop.x',

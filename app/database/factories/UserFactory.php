@@ -34,6 +34,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * 記事(とギャラリーの画像)を管理者の承認なしで公開できるユーザーにする。
+     */
+    public function skipsApproval(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'skip_approval' => true,
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static
