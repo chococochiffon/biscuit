@@ -14,6 +14,7 @@ import { initArticleApprovalControls, initArticlePathOptionManagerModal } from '
 import { initQuestionAnswerForm, initQuestionAnswerFlows } from './admin/question-answers.js';
 import { initGalleryCategoryManagerModal } from './admin/gallery-images.js';
 import { initLayoutBlocks } from './admin/layouts.js';
+import { initPageViewCharts } from './admin/page-views.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
@@ -35,4 +36,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initReorderTable('gallery-image-reorder-rows', '[data-role="gallery-image-row"]');
     initGalleryCategoryManagerModal();
     initLayoutBlocks();
+    initPageViewCharts();
 });

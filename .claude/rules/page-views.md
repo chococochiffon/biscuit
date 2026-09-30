@@ -4,12 +4,16 @@ paths:
   - app/app/Services/PageView*.php
   - app/app/Support/PublicPage*.php
   - app/app/Http/Controllers/PageViewController.php
+  - app/app/Http/Controllers/DashboardController.php
   - app/app/Http/Controllers/API/PageViewController.php
+  - app/app/Http/Controllers/API/MyPageViewController.php
+  - app/tests/Feature/API/MyPageViewControllerTest.php
   - app/app/Http/Requests/API/RecordPageViewRequest.php
   - app/config/page_views.php
   - app/database/migrations/*_create_page_views_table.php
   - app/database/factories/PageViewFactory.php
   - app/resources/views/admin/page_views/**
+  - app/resources/js/admin/page-views.js
   - app/tests/Feature/PageView*Test.php
   - app/tests/Feature/API/PageViewControllerTest.php
 ---
@@ -45,5 +49,12 @@ paths:
 
 ## 管理画面（`PageViewController`）
 
+- 今日・昨日・今月・累計の PV/UU のカードはパーシャル `admin.page_views._summary`（`PageViewStatsService::summary()` を `$summary` で渡す）で、ダッシュボード（`DashboardController`）にも表示する。
 - ログインしている管理者なら誰でも見られる（IP アドレスなどは表示しない）。閲覧だけで、記録は変更しない。
-- 人気コンテンツの期間は GET パラメータ `period`（`today`・`7days`・`30days`（既定）・`month`・`custom`）。`custom` は `from`・`to`（日付。片方だけでもよく、逆なら入れ替える）。不正な値はリダイレクトせずに無視して既定にする。日別の推移はいつも直近 30 日（`PageViewController::DAILY_DAYS`）。
+- 人気コンテンツの期間は GET パラメータ `period`（`today`・`7days`・`30days`（既定）・`month`・`custom`）。`custom` は `from`・`to`（日付。片方だけでもよく、逆なら入れ替える）。不正な値はリダイレクトせずに無視して既定にする。日別の推移はいつも直近 30 日（`PageViewController::DAILY_DAYS`）。推移は PV・UU の折れ線グラフ（`resources/js/admin/page-views.js` の `initPageViewCharts()` が `data-daily` から SVG を描く。縦線とツールチップはポインター・キーボードの ←→ で動かす。系列の色は CSS 変数 `--chart-series-1`・`--chart-series-2`）で、同じ値を折りたたみの表（「表で見る」）でも見られる。
+
+## マイページのダッシュボード（`API\MyPageViewController`）
+
+- `GET /api/me/page-views`（`auth:sanctum`）は、ログイン中のユーザーの記事（論理削除したものを除く）の PV だけを集計して返す（`PageViewStatsService::forUserArticles()` で絞り込んだインスタンスを使う）。サイト全体の数字はユーザーに見せない。
+- 返す値は `summary`（今日・昨日・今月・累計の PV/UU）、`daily`（直近 30 日）、`ranking`（直近 30 日の PV の多い順に 10 件。`article_id`・`title`・`path`・PV・UU）。
+- chococo は `pages/mypage/index.vue` で BFF の `/api/me/**` の中継を通して取得し、推移は `components/mypage/PageViewChart.vue`（管理画面の `page-views.js` と同じ見た目の SVG の折れ線グラフ。「表で見る」付き）で表示する。
