@@ -52,6 +52,29 @@ trait HasPublicationPeriod
     }
 
     /**
+     * 公開開始日時が指定日時(省略時は現在)より後のもの(予約公開)に絞り込む。
+     */
+    #[Scope]
+    protected function upcoming(Builder $query, ?CarbonInterface $at = null): void
+    {
+        $query->where('publication_start_datetime', '>', $at ?? now());
+    }
+
+    /**
+     * 公開期間内か、これから公開されるもの(公開開始日時が設定済みで、公開終了を迎えていない)に絞り込む。
+     */
+    #[Scope]
+    protected function notEnded(Builder $query, ?CarbonInterface $at = null): void
+    {
+        $at ??= now();
+
+        $query->whereNotNull('publication_start_datetime')
+            ->where(fn (Builder $query) => $query
+                ->whereNull('publication_end_datetime')
+                ->orWhere('publication_end_datetime', '>', $at));
+    }
+
+    /**
      * 公開開始日時の新しい順(同じ日時なら id の大きい順)に並べる。
      * 記事一覧 API・呼び出しコンテンツ・カスタムページ(記事型)で、公開側に新着順で出すときの共通の並び順。
      */
