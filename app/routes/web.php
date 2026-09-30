@@ -34,6 +34,15 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('login', [AdministratorSessionController::class, 'store'])
             ->middleware('throttle:admin-login')
             ->name('login.store');
+
+        // 二段階認証: メールで送った確認コードの入力と再送
+        Route::get('login/verify', [AdministratorSessionController::class, 'verifyForm'])->name('login.verify');
+        Route::post('login/verify', [AdministratorSessionController::class, 'verify'])
+            ->middleware('throttle:login-code')
+            ->name('login.verify.store');
+        Route::post('login/resend', [AdministratorSessionController::class, 'resend'])
+            ->middleware('throttle:login-code')
+            ->name('login.resend');
     });
 
     Route::post('logout', [AdministratorSessionController::class, 'destroy'])

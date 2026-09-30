@@ -45,6 +45,12 @@ Route::get('custom-pages/{customPageType:name}', [CustomPageController::class, '
 Route::post('auth/login', [AuthController::class, 'login'])
     ->middleware('throttle:user-login')
     ->name('api.auth.login');
+Route::post('auth/login/verify', [AuthController::class, 'verifyCode'])
+    ->middleware('throttle:login-code')
+    ->name('api.auth.login.verify');
+Route::post('auth/login/resend', [AuthController::class, 'resendCode'])
+    ->middleware('throttle:login-code')
+    ->name('api.auth.login.resend');
 
 // パスワード再設定(ログイン前。メールのリンクは chococo の /reset-password を開く)
 Route::post('auth/forgot-password', [PasswordResetController::class, 'forgot'])

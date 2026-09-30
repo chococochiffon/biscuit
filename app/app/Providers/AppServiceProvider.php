@@ -55,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
             ));
         });
 
+        // 二段階認証の確認コードの入力・再送(管理画面と chococo のマイページ)は、総当たりされないよう接続元ごとに制限する
+        RateLimiter::for('login-code', function (Request $request) {
+            return Limit::perMinute(10)->by((string) $request->ip());
+        });
+
         // 招待の受諾(リンクの確認・登録)は、トークンを総当たりされないよう接続元ごとに制限する
         RateLimiter::for('user-invitation', function (Request $request) {
             return Limit::perMinute(10)->by((string) $request->ip());

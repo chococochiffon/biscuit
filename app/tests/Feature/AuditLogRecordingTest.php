@@ -21,11 +21,13 @@ use App\Models\SiteSetting;
 use App\Models\SocialLink;
 use App\Models\Tag;
 use App\Models\User;
+use App\Notifications\LoginCodeNotification;
 use App\Support\AuditLogger;
 use App\Support\CustomPages\CustomPageSchema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use LogicException;
 use RuntimeException;
@@ -248,7 +250,17 @@ class AuditLogRecordingTest extends TestCase
         $this->assertSame(['email' => $administrator->email], $failed->metadata);
         $this->assertStringNotContainsString('wrong-password', json_encode($failed->toArray()));
 
+        Notification::fake();
         $this->post(route('admin.login.store'), ['email' => $administrator->email, 'password' => 'password']);
+        $this->assertSame([AuditAction::LoginCodeSent, $administrator->id], [$this->latestLog()->action, $this->latestLog()->actor_id]);
+
+        $code = '';
+        Notification::assertSentTo($administrator, LoginCodeNotification::class, function (LoginCodeNotification $notification) use (&$code) {
+            $code = $notification->code;
+
+            return true;
+        });
+        $this->post(route('admin.login.verify.store'), ['code' => $code]);
         $login = $this->latestLog();
         $this->assertSame([AuditAction::Login, $administrator->id, '管理者B'], [$login->action, $login->actor_id, $login->actor_name]);
 

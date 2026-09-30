@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\Administrator;
+use Illuminate\Auth\Events\Failed;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
@@ -31,14 +33,22 @@ class AdministratorLoginRequest extends FormRequest
     }
 
     /**
-     * 管理者としての認証を試みる。
+     * メールアドレスとパスワードを確かめ、正しければ管理者を返す(まだログインはさせない。確認コードの入力のあとでログインする)。
+     * 間違っていれば、ログイン失敗のイベント(監査ログのリスナーが記録する)を出して入力エラーにする。
      */
-    public function authenticate(): void
+    public function validateCredentials(): Administrator
     {
-        if (! Auth::guard('admin')->attempt($this->only('email', 'password'))) {
+        $guard = Auth::guard('admin');
+        $credentials = $this->only('email', 'password');
+
+        if (! $guard->validate($credentials)) {
+            event(new Failed('admin', $guard->getLastAttempted(), $credentials));
+
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
             ]);
         }
+
+        return $guard->getLastAttempted();
     }
 }
