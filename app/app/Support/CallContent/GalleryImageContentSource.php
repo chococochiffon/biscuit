@@ -11,12 +11,12 @@ use Illuminate\Database\Eloquent\Collection;
 class GalleryImageContentSource
 {
     /**
-     * タイルリスト表示用に、ギャラリー画像を並び順(sort_order、同順なら id)で指定件数取得する。
+     * タイルリスト表示用に、公開中のギャラリー画像を並び順(sort_order、同順なら id)で指定件数取得する。
      *
      * @return Collection<int, GalleryImage>
      */
     public function getTileList(int $count): Collection
     {
-        return GalleryImage::query()->with('category')->ordered()->take($count)->get();
+        return GalleryImage::query()->published()->with('category')->ordered()->take($count)->get();
     }
 }

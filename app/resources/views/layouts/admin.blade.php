@@ -45,6 +45,9 @@
                     <li class="nav-item">
                         <a href="{{ route('admin.gallery-images.index') }}" class="nav-link">
                             <i class="bi bi-images"></i>{{ __('ギャラリー一覧') }}
+                            @if ($pendingGalleryImageCount > 0)
+                                <span class="badge rounded-pill text-bg-warning ms-1" title="{{ __('承認待ちのギャラリー画像') }}">{{ $pendingGalleryImageCount }}</span>
+                            @endif
                         </a>
                     </li>
                     <li class="nav-item">

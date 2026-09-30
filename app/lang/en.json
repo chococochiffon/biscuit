@@ -382,5 +382,8 @@
     "チェックすると、このユーザーがマイページから投稿した記事とギャラリーの画像は、管理者の承認を待たずに公開されます。": "When checked, articles and gallery images this user posts from My Page are published without waiting for an administrator's approval.",
     "記事とギャラリーの承認": "Approval of articles and gallery",
     "承認なしで公開する": "Publish without approval",
-    "承認が必要": "Approval required"
+    "承認が必要": "Approval required",
+    "承認待ちのギャラリー画像": "Gallery images awaiting approval",
+    "投稿者: :name": "Posted by: :name",
+    "ユーザーの画像を下書きに戻すときに入力すると、マイページに表示されます。ユーザーが承認を申請し直すと消えます。": "If you enter this when returning a user's image to draft, it is shown on their My Page. It is cleared when the user requests approval again."
 }

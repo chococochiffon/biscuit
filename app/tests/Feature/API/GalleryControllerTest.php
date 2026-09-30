@@ -17,6 +17,9 @@ class GalleryControllerTest extends TestCase
         $second = GalleryImage::factory()->create(['name' => '2番目', 'sort_order' => 1]);
         $first = GalleryImage::factory()->for($category, 'category')->create(['name' => '1番目', 'comment' => 'コメント', 'sort_order' => 0]);
         GalleryImage::factory()->create()->delete();
+        // ユーザーが投稿した承認前(下書き・承認待ち)の画像は出さない
+        GalleryImage::factory()->byUser()->create(['sort_order' => 0]);
+        GalleryImage::factory()->byUser()->pending()->create(['sort_order' => 0]);
 
         $response = $this->getJson(route('gallery-images.index'));
 
@@ -27,6 +30,15 @@ class GalleryControllerTest extends TestCase
         $response->assertJsonPath('data.0.image_url', $first->image_url);
         $response->assertJsonPath('data.0.category', ['id' => $category->id, 'name' => '風景']);
         $response->assertJsonPath('data.1.category', null);
+    }
+
+    public function test_published_images_posted_by_users_are_returned(): void
+    {
+        $image = GalleryImage::factory()->byUser()->published()->create();
+
+        $this->getJson(route('gallery-images.index'))
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $image->id);
     }
 
     public function test_gallery_categories_are_returned_in_sort_order(): void

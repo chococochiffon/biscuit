@@ -59,3 +59,25 @@
         class="form-control"
     >
 </div>
+
+@isset($galleryImage)
+    <div class="mb-3">
+        <label for="approval" class="form-label">{{ __('公開ステータス') }}</label>
+        <select id="approval" name="approval" required class="form-select form-select-auto">
+            @foreach (\App\Enums\ArticleApprovalStatus::cases() as $status)
+                <option value="{{ $status->value }}" @selected(old('approval', $galleryImage->approval->value) === $status->value)>
+                    {{ $status->label() }}
+                </option>
+            @endforeach
+        </select>
+        <div class="form-text">{{ __('投稿者: :name', ['name' => $galleryImage->user_name]) }}</div>
+    </div>
+
+    @if ($galleryImage->user_id !== null)
+        <div class="mb-3">
+            <label for="review_comment" class="form-label">{{ __('差し戻しの理由') }}</label>
+            <textarea id="review_comment" name="review_comment" rows="3" class="form-control" maxlength="2000">{{ old('review_comment', $galleryImage->review_comment) }}</textarea>
+            <div class="form-text">{{ __('ユーザーの画像を下書きに戻すときに入力すると、マイページに表示されます。ユーザーが承認を申請し直すと消えます。') }}</div>
+        </div>
+    @endif
+@endisset

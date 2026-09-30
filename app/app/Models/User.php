@@ -79,6 +79,14 @@ class User extends Authenticatable
     }
 
     /**
+     * ユーザーがマイページから投稿したギャラリーの画像を取得する。
+     */
+    public function galleryImages(): HasMany
+    {
+        return $this->hasMany(GalleryImage::class);
+    }
+
+    /**
      * パスワード再設定のメールを、公開側(chococo)の再設定ページへのリンクで送る。
      *
      * @param  string  $token

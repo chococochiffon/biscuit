@@ -3,6 +3,10 @@ paths:
   - app/app/Http/Controllers/API/AuthController.php
   - app/app/Http/Controllers/API/MeController.php
   - app/app/Http/Controllers/API/MyArticleController.php
+  - app/app/Http/Controllers/API/MyGalleryImageController.php
+  - app/app/Http/Controllers/Concerns/HandlesUserApproval.php
+  - app/app/Http/Resources/MyGalleryImageResource.php
+  - app/tests/Feature/API/MyGalleryImageControllerTest.php
   - app/app/Http/Controllers/API/AuthorController.php
   - app/app/Http/Controllers/API/PasswordResetController.php
   - app/app/Notifications/ResetPasswordNotification.php
@@ -26,7 +30,7 @@ paths:
 
 # ユーザーの API（chococo のマイページ）
 
-chococo のマイページ（ログイン・プロフィール・アイコン画像・パスワードの変更と、記事の投稿・承認の申請）のための API。ログインできるのは管理画面で登録したユーザーだけで、登録の API は持たない。
+chococo のマイページ（ログイン・プロフィール・アイコン画像・パスワードの変更と、記事・ギャラリーの画像の投稿・承認の申請）のための API。ログインできるのは管理画面で登録したユーザーだけで、登録の API は持たない。
 
 ## 認証（Laravel Sanctum の API トークン）
 
@@ -48,12 +52,19 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 - `/api/me/articles/**` に置く（chococo の BFF の `/api/me/**` の中継をそのまま使える）。記事は `AppServiceProvider` の `myArticle` のバインド（`Route::bind`）でログイン中のユーザーの記事だけを取り出し、ほかのユーザーの記事は 404 にする。
 - 公開ステータスは API から直接変えさせない。作成は必ず下書き（`draft`）で、`POST /me/articles/{id}/submit`（下書き → 承認待ち。差し戻しの理由 `review_comment` を消す）・`withdraw`（承認待ち → 下書き）で変える。公開（`published`）にできるのは管理者だけ。
 - 公開中の記事を更新（本文・サムネイル画像の `POST /me/articles/{id}/thumbnail`）すると承認待ちに戻り、承認されるまで公開側に出ない。削除（論理削除）は公開中でもできる。
-- 承認を飛ばす権限（`users.skip_approval`。既定は false で承認が必要）は管理画面のユーザー登録・編集でだけ設定する（マイページのプロフィール更新 `UpdateMyProfileRequest` からは外している）。権限のあるユーザーは、`submit` で承認待ちを経ずにそのまま公開になり（`Article::changeApproval()` で管理者の承認と同じく公開開始日時も決まる）、公開中の記事を更新しても公開中のまま。`GET /api/me` の `skip_approval` で chococo がボタンの文言などを出し分ける。ギャラリーの画像にも同じ権限を使う予定（課題③）。
+- 承認を飛ばす権限（`users.skip_approval`。既定は false で承認が必要）は管理画面のユーザー登録・編集でだけ設定する（マイページのプロフィール更新 `UpdateMyProfileRequest` からは外している）。権限のあるユーザーは、`submit` で承認待ちを経ずにそのまま公開になり（`Article::changeApproval()` で管理者の承認と同じく公開開始日時も決まる）、公開中の記事を更新しても公開中のまま。`GET /api/me` の `skip_approval` で chococo がボタンの文言などを出し分ける。ギャラリーの画像にも同じ権限を使う。申請・取り下げ・公開中の変更で承認待ちに戻す処理は、記事とギャラリーで共通のトレイト `Http\Controllers\Concerns\HandlesUserApproval`（`approvalOnSubmit()`・`backToPendingIfPublished()`・`ensureApproval()`）にまとめている。
 - URL の親パスは入力させず、管理者が記事一覧の「投稿先管理」モーダル（`ArticlePathOption`、`admin.article-path-options.*`、上限 `limits.article_path_options`）で登録した投稿先から選ぶ（`GET /me/article-paths`、`article_path_option_id`）。記事には投稿先の `parent_path` の文字列を保存するため、投稿先を変更・削除しても既存の記事の URL は変わらない。更新で投稿先を送らなければ今の親パスのまま。スラッグはユーザーが入力する（任意、未入力なら記事番号）。
 - 公開期間は入力させない。管理者が初めて公開にしたとき（`Article::changeApproval()`、`first_published_at` が空のとき）に公開開始日時を承認した日時にする（未来の日時にしてあれば予約公開としてそのまま）。再承認では最初に公開した日時を残す。
 - 本文は保存前に `HtmlSanitizer::cleanArticle()` で無害化する（見出しと、本文用にアップロードした画像 `Article::contentImageUrlPrefix()` 以外の画像は取り除く）。本文の画像は `POST /me/articles/content-images`、タグの候補は `GET /me/tags?q=`（`Tag::suggest()`）。画像のアップロードは `throttle:user-uploads`（ユーザーごと）。
 - 保存処理（タグの同期・監査ログのタグ）は管理画面の `ArticleController` と共通のトレイト `Http\Controllers\Concerns\SavesArticle`。
 - 管理画面では承認待ちの件数をサイドメニューと記事一覧に出し（`View\Composers\PendingArticleComposer`）、ユーザーの記事の編集画面で差し戻しの理由を入力できる。
+
+## ギャラリーの画像の投稿と承認の申請（`API\MyGalleryImageController`）
+
+- `/api/me/gallery-images/**` に置き、流れは記事と同じ（下書きで作成 → `submit` で承認待ち → 管理者が公開。`withdraw` で下書きに戻す。公開中の画像を変更すると承認待ちに戻る）。画像は `myGalleryImage` のバインドでログイン中のユーザーのものだけを取り出す。
+- `gallery_images` は投稿したユーザー `user_id`（null なら管理者の投稿）・公開ステータス `approval`（記事と同じ `ArticleApprovalStatus`。既定値は `published`）・差し戻しの理由 `review_comment` を持つ。管理画面からの登録は承認なしで公開にする。公開側（`GET /api/gallery-images`・呼び出しコンテンツ）は `GalleryImage::published()` で公開中だけを出す。
+- 登録（`POST /me/gallery-images`、multipart の `image`・`name`・`gallery_category_id`・`comment`）は並び順を末尾にする。項目の更新は `PUT`、画像ファイルの変更は `POST /me/gallery-images/{id}/image`。登録と画像の変更は `throttle:user-uploads`。分類の選択肢は公開側の `GET /api/gallery-categories` を使う。
+- 管理画面のギャラリー一覧はステータス・投稿者の列とステータスの絞り込みを持ち、承認待ちの件数をサイドメニューと一覧に出す（`View\Composers\PendingGalleryImageComposer`）。編集画面で公開ステータスを変え、ユーザーの画像には差し戻しの理由を入力できる。
 
 ## パスワード再設定（`API\PasswordResetController`）
 
