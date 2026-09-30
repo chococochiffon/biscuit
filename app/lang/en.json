@@ -375,5 +375,6 @@
     "このリンクの有効期限は :minutes 分です。": "This link will expire in :minutes minutes.",
     "お心当たりがない場合は、このメールを破棄してください。パスワードは変わりません。": "If you did not request this, please ignore this email. Your password will not change.",
     "ボタンを押せない場合は、次の URL をブラウザに貼り付けて開いてください。": "If the button does not work, paste the following URL into your browser.",
-    "ご登録のメールアドレスであれば、パスワード再設定のメールを送りました。メールのリンクから新しいパスワードを設定してください。": "If the email address is registered, we have sent a password reset email. Please set a new password from the link in the email."
+    "ご登録のメールアドレスであれば、パスワード再設定のメールを送りました。メールのリンクから新しいパスワードを設定してください。": "If the email address is registered, we have sent a password reset email. Please set a new password from the link in the email.",
+    "ダッシュボード": "Dashboard"
 }

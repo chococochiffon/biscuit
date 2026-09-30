@@ -17,13 +17,18 @@
     <body class="bg-light">
         <div id="admin-wrapper" class="d-flex">
             <aside class="admin-sidebar flex-shrink-0">
-                <a href="{{ route('admin.index') }}" class="admin-sidebar-brand">
+                <a href="{{ route('admin.dashboard') }}" class="admin-sidebar-brand">
                     {{ __('システム管理') }}
                 </a>
 
                 <hr class="admin-sidebar-divider">
 
                 <ul class="nav flex-column admin-sidebar-nav">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.dashboard') }}" class="nav-link">
+                            <i class="bi bi-speedometer2"></i>{{ __('ダッシュボード') }}
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a href="{{ route('admin.articles.index') }}" class="nav-link">
                             <i class="bi bi-file-earmark-text"></i>{{ __('記事一覧') }}

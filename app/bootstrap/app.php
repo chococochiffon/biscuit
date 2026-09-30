@@ -20,9 +20,8 @@ return Application::configure(basePath: dirname(__DIR__))
             fn (Request $request) => $request->is('admin*') ? route('admin.login') : null,
         );
 
-        $middleware->redirectUsersTo(
-            fn (Request $request) => $request->is('admin*') ? route('admin.articles.index') : '/',
-        );
+        // ログイン済みでログイン画面(guest:admin)を開いたときはダッシュボードへ(トップ / は 404 のため使わない)
+        $middleware->redirectUsersTo(fn () => route('admin.dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

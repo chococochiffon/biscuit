@@ -9,6 +9,7 @@ use App\Http\Controllers\ContentModelRelationController;
 use App\Http\Controllers\ContentModelRelationJsonController;
 use App\Http\Controllers\CustomPageEntryController;
 use App\Http\Controllers\CustomPageTypeController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
@@ -21,9 +22,8 @@ use App\Http\Controllers\TagJsonController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-// biscuit は管理画面と API だけを提供する(公開側サイトは chococo)ため、トップは管理画面へ転送する
-// (未ログインなら管理画面の入口からログイン画面へ送られる)
-Route::redirect('/', '/admin');
+// biscuit は管理画面と API だけを提供する(公開側サイトは chococo)。トップ(/)は管理画面の場所を知らせないよう、
+// ルートを定義せず 404 にする(/index など存在しない URL と同じ)
 
 Route::get('locale/{locale}', LocaleController::class)->name('locale.update');
 
@@ -43,6 +43,10 @@ Route::prefix('admin')->name('admin.')->group(function () {
 // 管理画面(ログインが必要なルート)。独自ルート(articles/bulk-approval・single-pages/reorder・gallery-images/reorder・gallery-categories/reorder など)は
 // 対応する Route::resource より前に置き、/admin/{administrator} が他の /admin/* を飲み込む管理者の resource は最後に置く
 Route::middleware('auth:admin')->group(function () {
+    // ダッシュボード(ログイン後の既定の画面)
+    Route::get('admin/dashboard', DashboardController::class)
+        ->name('admin.dashboard');
+
     // 管理モーダル・タグ選択が Ajax で使う JSON(画面用のコントローラーとは分ける)
     Route::get('admin/json/tags/search', [TagJsonController::class, 'search'])
         ->name('admin.json.tags.search');
