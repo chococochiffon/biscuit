@@ -250,6 +250,28 @@ class MyArticleControllerTest extends TestCase
         $this->assertSame(2, AuditLog::query()->where('subject_id', $article->id)->where('action', AuditAction::StatusChanged)->count());
     }
 
+    public function test_users_allowed_to_skip_approval_publish_on_submit_and_keep_published_articles_published(): void
+    {
+        $user = User::factory()->skipsApproval()->create();
+        $draft = Article::factory()->for($user)->create(['review_comment' => '直してください']);
+        $published = Article::factory()->for($user)->published()->create();
+        $this->actingAsUserWithToken($user);
+
+        $this->postJson(route('api.me.articles.submit', $draft))
+            ->assertOk()
+            ->assertJsonPath('data.approval', 'published')
+            ->assertJsonPath('data.review_comment', null);
+
+        // 管理者が初めて公開したときと同じく、公開開始日時が決まる
+        $draft->refresh();
+        $this->assertNotNull($draft->first_published_at);
+        $this->assertEquals($draft->first_published_at, $draft->publication_start_datetime);
+
+        $this->putJson(route('api.me.articles.update', $published), $this->articleInput(['slug' => 'a']))
+            ->assertOk()
+            ->assertJsonPath('data.approval', 'published');
+    }
+
     public function test_submit_and_withdraw_reject_wrong_status(): void
     {
         $published = Article::factory()->for($this->user)->published()->create();

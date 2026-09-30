@@ -102,6 +102,47 @@ class UserControllerTest extends TestCase
         $this->assertSame('1990-01-01', $detail->birthday->format('Y-m-d'));
         $this->assertTrue($detail->view_flag);
         $this->assertSame(UserDetailNameSetting::FullName, $detail->name_settings);
+        // 承認を飛ばす権限は、指定しなければ承認が必要
+        $this->assertFalse($user->skip_approval);
+    }
+
+    public function test_store_and_update_set_permission_to_skip_approval(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->post(route('admin.users.store'), [
+            'name' => '検証太郎',
+            'email' => 'skip@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'skip_approval' => '1',
+            'user_detail' => $this->validUserDetailPayload(),
+        ])->assertRedirect(route('admin.users.index'));
+
+        $user = User::where('email', 'skip@example.com')->firstOrFail();
+        $this->assertTrue($user->skip_approval);
+
+        // チェックを外して送る(項目が送られない)と、承認が必要に戻る
+        $this->put(route('admin.users.update', $user), [
+            'name' => '検証太郎',
+            'email' => 'skip@example.com',
+            'user_detail' => $this->validUserDetailPayload(),
+        ])->assertRedirect(route('admin.users.index'));
+
+        $this->assertFalse($user->fresh()->skip_approval);
+    }
+
+    public function test_form_and_validation_call_name_account_name(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee('アカウント名')
+            ->assertSee('記事とギャラリーを承認なしで公開する');
+
+        $this->post(route('admin.users.store'), [])
+            ->assertSessionHasErrors(['name' => 'アカウント名を入力してください。']);
     }
 
     public function test_store_creates_skills_in_row_order(): void

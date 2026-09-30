@@ -47,6 +47,7 @@ class UserController extends Controller
                 'name' => $request->validated('name'),
                 'email' => $request->validated('email'),
                 'password' => $request->validated('password'),
+                'skip_approval' => $request->boolean('skip_approval'),
             ]);
 
             $detail = $user->detail()->create($this->userDetailAttributes($request));
@@ -92,6 +93,7 @@ class UserController extends Controller
             $data = [
                 'name' => $request->validated('name'),
                 'email' => $request->validated('email'),
+                'skip_approval' => $request->boolean('skip_approval'),
             ];
 
             if ($password = $request->validated('password')) {

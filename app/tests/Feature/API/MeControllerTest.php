@@ -71,6 +71,7 @@ class MeControllerTest extends TestCase
             ->assertJsonPath('data.name', '山田')
             ->assertJsonPath('data.detail.nick_name', 'やまちゃん')
             ->assertJsonPath('data.detail.skills.0.name', 'Laravel')
+            ->assertJsonPath('data.skip_approval', false)
             ->assertJsonMissingPath('data.password');
     }
 
@@ -90,6 +91,17 @@ class MeControllerTest extends TestCase
         $this->assertSame(['山田', '山田太郎'], $log->changes['name']);
         $this->assertSame(['やまちゃん', 'たろう'], $log->changes['detail.nick_name']);
         $this->assertSame(['created' => 1, 'updated' => 0, 'deleted' => 0], $log->metadata['skills']);
+    }
+
+    public function test_update_profile_cannot_change_permission_to_skip_approval(): void
+    {
+        $this->actingAsUserWithToken();
+
+        $this->putJson(route('api.me.profile.update'), $this->profileInput(['skip_approval' => true]))
+            ->assertOk()
+            ->assertJsonPath('data.skip_approval', false);
+
+        $this->assertFalse($this->user->fresh()->skip_approval);
     }
 
     public function test_update_profile_cannot_take_another_users_email_or_skills(): void

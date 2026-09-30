@@ -10,9 +10,11 @@
 
     <div class="card mx-auto" style="max-width: 32rem;">
         <dl class="row mb-0 p-3 detail-list">
-            <x-admin.detail-row :label="__('名前')">{{ $user->name }}</x-admin.detail-row>
+            <x-admin.detail-row :label="__('アカウント名')">{{ $user->name }}</x-admin.detail-row>
 
             <x-admin.detail-row :label="__('メールアドレス')">{{ $user->email }}</x-admin.detail-row>
+
+            <x-admin.detail-row :label="__('記事とギャラリーの承認')">{{ $user->skip_approval ? __('承認なしで公開する') : __('承認が必要') }}</x-admin.detail-row>
 
             @if ($user->detail)
                 <x-admin.detail-row :label="__('氏名')">{{ $user->detail->family_name }} {{ $user->detail->first_name }}</x-admin.detail-row>

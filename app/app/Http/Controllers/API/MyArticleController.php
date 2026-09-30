@@ -28,7 +28,8 @@ use OpenApi\Attributes as OA;
 /**
  * chococo のマイページ: ログイン中のユーザーが投稿した記事の管理と承認の申請。
  * 公開ステータスは直接変えさせず、下書きで作り、申請(submit)・取り下げ(withdraw)で承認待ちにする/下書きに戻す。
- * 公開中の記事を編集すると承認待ちに戻り、管理者が承認するまで公開側に出ない。
+ * 公開中の記事を編集すると承認待ちに戻り、管理者が承認するまで公開側に出ない。承認を飛ばす権限(users.skip_approval)のあるユーザーは、
+ * 申請するとそのまま公開になり、公開中の記事を編集しても公開中のまま。
  * 記事は AppServiceProvider の myArticle のバインドで、ログイン中のユーザーの記事だけを取り出す(ほかのユーザーの記事は 404)。
  */
 class MyArticleController extends Controller
@@ -117,7 +118,7 @@ class MyArticleController extends Controller
 
     #[OA\Put(
         path: '/me/articles/{id}',
-        summary: '自分の記事を更新する(投稿先は選び直すときだけ送る。公開中の記事は承認待ちに戻る)',
+        summary: '自分の記事を更新する(投稿先は選び直すときだけ送る。公開中の記事は承認待ちに戻る。承認を飛ばす権限のあるユーザーは公開中のまま)',
         security: [['bearer' => []]],
         tags: ['MyArticles'],
         responses: [
@@ -138,7 +139,7 @@ class MyArticleController extends Controller
                 'parent_path' => $request->parentPath(),
                 'slug' => $request->validated('slug'),
             ]);
-            $this->backToPendingIfPublished($myArticle);
+            $this->backToPendingIfPublished($myArticle, $this->user($request));
             $myArticle->save();
 
             $this->syncTags($myArticle, $request->validated('tags', []));
@@ -151,7 +152,7 @@ class MyArticleController extends Controller
 
     #[OA\Post(
         path: '/me/articles/{id}/thumbnail',
-        summary: 'サムネイル画像を変更する(multipart/form-data の thumbnail。公開中の記事は承認待ちに戻る)',
+        summary: 'サムネイル画像を変更する(multipart/form-data の thumbnail。公開中の記事は承認待ちに戻る。承認を飛ばす権限のあるユーザーは公開中のまま)',
         security: [['bearer' => []]],
         tags: ['MyArticles'],
         responses: [
@@ -167,7 +168,7 @@ class MyArticleController extends Controller
             $before = AuditLogger::snapshot($myArticle);
 
             $myArticle->thumbnail = $myArticle->storeThumbnail($request->file('thumbnail'));
-            $this->backToPendingIfPublished($myArticle);
+            $this->backToPendingIfPublished($myArticle, $this->user($request));
             $myArticle->save();
 
             AuditLogger::updated($myArticle, $before);
@@ -178,25 +179,27 @@ class MyArticleController extends Controller
 
     #[OA\Post(
         path: '/me/articles/{id}/submit',
-        summary: '下書きの記事の承認を申請する(承認待ちにする。差し戻しの理由は消える)',
+        summary: '下書きの記事の承認を申請する(承認待ちにする。承認を飛ばす権限のあるユーザーはそのまま公開する。差し戻しの理由は消える)',
         security: [['bearer' => []]],
         tags: ['MyArticles'],
         responses: [
-            new OA\Response(response: 200, description: '申請後の記事'),
+            new OA\Response(response: 200, description: '申請(公開)後の記事'),
             new OA\Response(response: 401, description: 'ログインしていない'),
             new OA\Response(response: 404, description: '記事がない'),
             new OA\Response(response: 422, description: '下書きではない'),
         ]
     )]
-    public function submit(Article $myArticle): MyArticleResource
+    public function submit(Request $request, Article $myArticle): MyArticleResource
     {
         $this->ensureApproval($myArticle, ArticleApprovalStatus::Draft, __('承認を申請できるのは下書きの記事だけです。'));
 
+        // 承認を飛ばす権限のあるユーザーは、管理者が承認したときと同じくそのまま公開する(初めてなら公開開始日時も決まる)。
         // 前回の差し戻しの理由は、申請し直したら対応済みとみなして消す
-        AuditLogger::updateWithLog($myArticle, fn () => $myArticle->update([
-            'approval' => ArticleApprovalStatus::Pending,
-            'review_comment' => null,
-        ]), action: AuditAction::StatusChanged);
+        $approval = $this->user($request)->skip_approval ? ArticleApprovalStatus::Published : ArticleApprovalStatus::Pending;
+
+        AuditLogger::updateWithLog($myArticle, function () use ($myArticle, $approval) {
+            $myArticle->changeApproval($approval)->fill(['review_comment' => null])->save();
+        }, action: AuditAction::StatusChanged);
 
         return new MyArticleResource($myArticle->fresh()->load('tags'));
     }
@@ -297,10 +300,11 @@ class MyArticleController extends Controller
 
     /**
      * 公開中の記事を変更したときは、管理者が承認し直すまで公開側に出さないよう承認待ちに戻す(保存はしない)。
+     * 承認を飛ばす権限のあるユーザーの記事は公開中のままにする。
      */
-    private function backToPendingIfPublished(Article $article): void
+    private function backToPendingIfPublished(Article $article, User $user): void
     {
-        if ($article->approval === ArticleApprovalStatus::Published) {
+        if ($article->approval === ArticleApprovalStatus::Published && ! $user->skip_approval) {
             $article->approval = ArticleApprovalStatus::Pending;
         }
     }
