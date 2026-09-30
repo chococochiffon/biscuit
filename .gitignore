@@ -1,4 +1,7 @@
-/.claude/settings.local.json
+# Claude Code の設定・ルール・スキル(どの階層の .claude も git で管理しない)
+.claude/
+# Claude Code が読み込む説明書(どの階層の CLAUDE.md も git で管理しない)
+CLAUDE.md
 /.idea
 /docker/db/data
 /frontend/
