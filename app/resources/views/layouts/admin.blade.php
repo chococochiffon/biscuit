@@ -30,11 +30,6 @@
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a href="{{ route('admin.page-views.index') }}" class="nav-link">
-                            <i class="bi bi-graph-up"></i>{{ __('アクセス解析') }}
-                        </a>
-                    </li>
-                    <li class="nav-item">
                         <a href="{{ route('admin.articles.index') }}" class="nav-link">
                             <i class="bi bi-file-earmark-text"></i>{{ __('記事一覧') }}
                             @if ($pendingArticleCount > 0)
@@ -60,6 +55,11 @@
                             <i class="bi bi-question-circle"></i>{{ __('Q&A一覧') }}
                         </a>
                     </li>
+                </ul>
+
+                <hr class="admin-sidebar-divider">
+
+                <ul class="nav flex-column admin-sidebar-nav">
                     <li class="nav-item">
                         <a href="{{ route('admin.users.index') }}" class="nav-link">
                             <i class="bi bi-people"></i>{{ __('ユーザー一覧') }}
@@ -70,6 +70,11 @@
                             <i class="bi bi-person-badge"></i>{{ __('管理者一覧') }}
                         </a>
                     </li>
+                </ul>
+
+                <hr class="admin-sidebar-divider">
+
+                <ul class="nav flex-column admin-sidebar-nav">
                     <li class="nav-item">
                         <a
                             href="{{ $currentSiteSetting ? route('admin.site-settings.show', $currentSiteSetting) : route('admin.site-settings.create') }}"
@@ -85,8 +90,6 @@
 
                 {{-- カスタムページ管理: 種類の管理と、登録した種類ごとのページ一覧(スーパー管理者のみ) --}}
                 @can('manage-custom-pages')
-                <hr class="admin-sidebar-divider">
-
                 <div class="admin-sidebar-heading">{{ __('カスタムページ管理') }}</div>
                 <ul class="nav flex-column admin-sidebar-nav">
                     <li class="nav-item">
@@ -103,6 +106,16 @@
                     @endforeach
                 </ul>
                 @endcan
+
+                <hr class="admin-sidebar-divider">
+
+                <ul class="nav flex-column admin-sidebar-nav">
+                    <li class="nav-item">
+                        <a href="{{ route('admin.page-views.index') }}" class="nav-link">
+                            <i class="bi bi-graph-up"></i>{{ __('アクセス解析') }}
+                        </a>
+                    </li>
+                </ul>
 
                 {{-- 操作ログ(監査ログ。スーパー管理者のみ) --}}
                 @can('view-audit-logs')

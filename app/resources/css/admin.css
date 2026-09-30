@@ -63,6 +63,11 @@
     letter-spacing: 0.05rem;
 }
 
+/* 区切り線を挟まずにメニューの直後へ置いた見出し(カスタムページ管理)は、上に余白を空ける */
+.admin-sidebar-nav + .admin-sidebar-heading {
+    margin-top: 1rem;
+}
+
 .admin-sidebar-nav .nav-link {
     display: flex;
     align-items: center;
