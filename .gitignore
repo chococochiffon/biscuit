@@ -2,6 +2,9 @@
 .claude/
 # Claude Code が読み込む説明書(どの階層の CLAUDE.md も git で管理しない)
 CLAUDE.md
+# AI エージェント向けの説明書と MCP サーバーの設定(Laravel Boost が生成する。どの階層のものも git で管理しない)
+AGENTS.md
+.mcp.json
 /.idea
 /docker/db/data
 /frontend/
