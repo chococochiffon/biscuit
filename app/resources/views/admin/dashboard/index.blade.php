@@ -6,6 +6,23 @@
     <div class="mx-auto" style="max-width: 80rem;">
         <h1 class="h5 mb-4">{{ __('ダッシュボード') }}</h1>
 
+        {{-- システムの警告(問題があるときだけ目立たせる。スーパー管理者だけ) --}}
+        @if ($systemStatus && $systemStatus['warnings'] !== [])
+            <div class="mb-4" data-system-warnings>
+                @foreach ($systemStatus['warnings'] as $systemWarning)
+                    <div class="alert alert-{{ $systemWarning['level'] }} d-flex align-items-start gap-2 py-2 mb-2" role="alert">
+                        <i class="bi bi-exclamation-octagon-fill mt-1"></i>
+                        <div>{{ $systemWarning['message'] }}</div>
+                    </div>
+                @endforeach
+                @if ($systemStatus['errors']['last_message'])
+                    <div class="small text-muted">
+                        {{ __('最後のエラー') }}({{ $systemStatus['errors']['last_at']->format('m/d H:i') }}): <code>{{ $systemStatus['errors']['last_message'] }}</code>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         {{-- コンテンツの状況(記事・固定ページの状態ごとの件数) --}}
         <div class="row g-3 mb-4">
             @foreach ([
@@ -191,11 +208,120 @@
             </ul>
         </div>
 
+        <div class="row g-3 mb-4">
+            {{-- ユーザー状況 --}}
+            <div class="col-lg-6">
+                <div class="card h-100" data-user-status>
+                    <div class="card-header bg-transparent fw-semibold">{{ __('ユーザー状況') }}</div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-4 mb-3">
+                            <a href="{{ route('admin.users.index') }}" class="text-decoration-none text-reset">
+                                <div class="small text-muted">{{ __('ユーザー') }}</div>
+                                <div class="fs-4 fw-semibold">{{ number_format($userStatus['users']['total']) }}</div>
+                            </a>
+                            <dl class="d-flex flex-wrap gap-4 mb-0">
+                                @foreach ([
+                                    'active' => __('有効'),
+                                    'invited' => __('招待中'),
+                                    'skip_approval' => __('承認なしで公開'),
+                                ] as $key => $label)
+                                    <div data-count="{{ $key }}">
+                                        <dt class="small text-muted fw-normal">{{ $label }}</dt>
+                                        <dd class="fs-5 mb-0">{{ number_format($userStatus['users'][$key]) }}</dd>
+                                    </div>
+                                @endforeach
+                            </dl>
+                        </div>
+                        <div class="small mb-3">
+                            <a href="{{ route('admin.index') }}" class="text-muted">{{ __('管理者') }}</a>:
+                            @foreach ($userStatus['administrators'] as $role => $administratorCount)
+                                <span class="ms-2" data-role-count="{{ $role }}">{{ $administratorCount['label'] }} {{ number_format($administratorCount['count']) }}</span>
+                            @endforeach
+                        </div>
+                        <div class="small text-muted mb-1">{{ __('最近ログインしたユーザー') }}</div>
+                        @forelse ($userStatus['recent_logins'] as $login)
+                            <div class="d-flex align-items-center gap-2 py-1 small">
+                                <span class="text-muted text-nowrap">{{ $login->created_at?->format('m/d H:i') }}</span>
+                                <span>{{ $login->actor_name ?? '—' }}</span>
+                                <span class="badge text-bg-light border">{{ $login->actor_type === 'administrator' ? __('管理者') : __('ユーザー') }}</span>
+                            </div>
+                        @empty
+                            <div class="small text-muted">{{ __('ログインの記録はまだありません。') }}</div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+            {{-- メディア状況 --}}
+            <div class="col-lg-6">
+                <div class="card h-100" data-media-status>
+                    <div class="card-header bg-transparent fw-semibold d-flex align-items-center justify-content-between">
+                        <span>{{ __('メディア状況') }}</span>
+                        <span class="small fw-normal text-muted">{{ __(':datetime 時点', ['datetime' => $media['calculated_at']]) }}</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-4 mb-3">
+                            <div>
+                                <div class="small text-muted">{{ __('画像') }}</div>
+                                <div class="fs-4 fw-semibold">{{ number_format($media['total_count']) }}</div>
+                            </div>
+                            <div>
+                                <div class="small text-muted">{{ __('使用容量') }}</div>
+                                <div class="fs-4 fw-semibold">{{ \App\Support\FileSize::format($media['total_bytes'], 1) }}</div>
+                            </div>
+                            <div data-unused>
+                                <div class="small text-muted">{{ __('未使用') }}</div>
+                                <div @class(['fs-4 fw-semibold', 'text-warning-emphasis' => $media['unused_count'] > 0])>
+                                    {{ number_format($media['unused_count']) }}
+                                    <span class="fs-6 fw-normal text-muted">({{ \App\Support\FileSize::format($media['unused_bytes'], 1) }})</span>
+                                </div>
+                            </div>
+                        </div>
+                        <table class="table table-sm small mb-3">
+                            <tbody>
+                                @foreach ($media['directories'] as $directory)
+                                    <tr>
+                                        <td class="text-muted">{{ $directory['label'] }}</td>
+                                        <td class="text-end">{{ __(':count件', ['count' => number_format($directory['count'])]) }}</td>
+                                        <td class="text-end text-nowrap">{{ \App\Support\FileSize::format($directory['bytes'], 1) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                        @if ($media['unused_items'] !== [])
+                            <div class="small text-muted mb-1">{{ __('どこからも使われていない画像(新しい順)') }}</div>
+                            <ul class="small mb-0 ps-3">
+                                @foreach ($media['unused_items'] as $path)
+                                    <li class="text-break"><code>{{ $path }}</code></li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="mb-3 d-flex align-items-center justify-content-between">
             <h2 class="h6 mb-0">{{ __('アクセス') }}</h2>
             <a href="{{ route('admin.page-views.index') }}" class="link-primary">{{ __('アクセス解析を見る') }}</a>
         </div>
 
         @include('admin.page_views._summary')
+
+        {{-- システム情報(正常時は小さく。スーパー管理者だけ) --}}
+        @if ($systemStatus)
+            @php($systemInfo = $systemStatus['info'])
+            <div class="small text-muted d-flex flex-wrap gap-3 border-top pt-3" data-system-info>
+                <span>Biscuit {{ $systemInfo['biscuit_version'] }}</span>
+                <span>Laravel {{ $systemInfo['laravel_version'] }}</span>
+                <span>PHP {{ $systemInfo['php_version'] }}</span>
+                <span>{{ __('環境') }}: {{ $systemInfo['environment'] }}@if ($systemInfo['debug']) (debug)@endif</span>
+                @if ($systemInfo['disk_free'] !== null && $systemInfo['disk_total'])
+                    <span>{{ __('ディスクの空き') }}: {{ \App\Support\FileSize::format($systemInfo['disk_free'], 1) }} / {{ \App\Support\FileSize::format($systemInfo['disk_total'], 1) }}</span>
+                @endif
+                <span>{{ __('ログ') }}: {{ \App\Support\FileSize::format($systemInfo['log_bytes'], 1) }}</span>
+                <span>{{ __('直近 :hours 時間のエラー', ['hours' => config('biscuit.error_log_hours')]) }}: {{ number_format($systemStatus['errors']['count']) }}</span>
+            </div>
+        @endif
     </div>
 @endsection
