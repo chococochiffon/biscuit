@@ -20,6 +20,7 @@ use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TagJsonController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserInvitationController;
 use Illuminate\Support\Facades\Route;
 
 // biscuit は管理画面と API だけを提供する(公開側サイトは chococo)。トップ(/)は管理画面の場所を知らせないよう、
@@ -92,6 +93,16 @@ Route::middleware('auth:admin')->group(function () {
     Route::resource('admin/content-model-relations', ContentModelRelationController::class)
         ->parameters(['content-model-relations' => 'contentModelRelation'])
         ->names('admin.content-model-relations');
+
+    // ユーザーの招待(メールアドレスを入れて招待のメールを送る)と、まだ招待を受けていないユーザーへの再送
+    Route::get('admin/users/invite', [UserInvitationController::class, 'create'])
+        ->name('admin.users.invite');
+
+    Route::post('admin/users/invite', [UserInvitationController::class, 'store'])
+        ->name('admin.users.invite.store');
+
+    Route::post('admin/users/{user}/invitation', [UserInvitationController::class, 'resend'])
+        ->name('admin.users.invitation.resend');
 
     Route::resource('admin/users', UserController::class)
         ->names('admin.users');

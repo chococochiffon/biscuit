@@ -58,6 +58,16 @@ class AuthControllerTest extends TestCase
         $this->assertSame(0, PersonalAccessToken::query()->count());
     }
 
+    public function test_invited_users_cannot_login_until_they_accept_the_invitation(): void
+    {
+        User::factory()->invited()->create(['email' => 'invited@example.com', 'password' => Hash::make('password')]);
+
+        $this->postJson(route('api.auth.login'), ['email' => 'invited@example.com', 'password' => 'password'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('email');
+        $this->assertSame(0, PersonalAccessToken::query()->count());
+    }
+
     public function test_deleted_users_cannot_login_or_use_their_tokens(): void
     {
         $user = $this->createUser();

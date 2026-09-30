@@ -103,6 +103,13 @@ return [
     |
     */
 
+    /*
+    | 管理者からユーザーへの招待のリンクの有効期限(分)。既定は 24 時間。
+    */
+    'invitations' => [
+        'expire' => (int) env('INVITATION_EXPIRE_MINUTES', 1440),
+    ],
+
     'passwords' => [
         'users' => [
             'provider' => 'users',

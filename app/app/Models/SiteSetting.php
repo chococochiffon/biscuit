@@ -46,6 +46,15 @@ class SiteSetting extends Model
     }
 
     /**
+     * 公開側(chococo)のサイトの URL(サイト設定の「フロントの URL」。未登録なら config('app.front_url'))。末尾の / は除く。
+     * メールのリンク(パスワード再設定・招待)に使う。
+     */
+    public static function frontUrl(): string
+    {
+        return rtrim(self::current()?->front_url ?: config('app.front_url'), '/');
+    }
+
+    /**
      * サイトアイコンを保存し、公開ディスク基準の保存パスを返す。
      */
     public function storeSiteIcon(UploadedFile $file): string

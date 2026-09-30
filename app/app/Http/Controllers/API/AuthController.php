@@ -45,18 +45,26 @@ class AuthController extends Controller
     {
         $user = User::query()->where('email', $request->validated('email'))->first();
 
-        if ($user === null || ! Hash::check($request->validated('password'), $user->password)) {
+        // 招待されてまだプロフィールとパスワードを登録していない(無効な)ユーザーも、登録がないときと同じ応答にする
+        if ($user === null || ! $user->active_flag || ! Hash::check($request->validated('password'), $user->password)) {
             AuditLogger::record(AuditAction::LoginFailed, 'user', metadata: ['email' => $request->validated('email')]);
 
             throw ValidationException::withMessages(['email' => trans('auth.failed')]);
         }
 
-        $token = DB::transaction(function () use ($user) {
-            $token = $user->createToken(self::TOKEN_NAME, expiresAt: now()->addMinutes((int) config('sanctum.expiration')));
+        return DB::transaction(function () use ($user) {
             AuditLogger::record(AuditAction::Login, $user, actor: $user);
 
-            return $token;
+            return self::tokenResponse($user);
         });
+    }
+
+    /**
+     * API トークンを発行し、ログインの応答(token・expires_at・user)を返す。招待の受諾(InvitationController)でも使う。
+     */
+    public static function tokenResponse(User $user): JsonResponse
+    {
+        $token = $user->createToken(self::TOKEN_NAME, expiresAt: now()->addMinutes((int) config('sanctum.expiration')));
 
         return response()->json([
             'token' => $token->plainTextToken,
