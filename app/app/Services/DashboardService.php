@@ -47,6 +47,8 @@ class DashboardService
      */
     public const RECENT_LOGIN_LIMIT = 5;
 
+    public function __construct(private readonly BrokenLinkService $brokenLinks) {}
+
     /**
      * 記事と固定ページの件数を状態ごとに数える。
      * 非公開は、公開中と予約公開以外のすべて(記事は下書き・未承認・公開終了・公開開始日時の未設定、固定ページは公開終了)。
@@ -131,9 +133,10 @@ class DashboardService
     }
 
     /**
-     * コンテンツの注意事項(公開中・予約公開なのにアイキャッチ未設定の記事、短文が未入力の固定ページ、承認待ちの記事・ギャラリー画像)のうち、該当するものがあるものだけを返す。
+     * コンテンツの注意事項(リンク切れのあるコンテンツ、公開中・予約公開なのにアイキャッチ未設定の記事、短文が未入力の固定ページ、承認待ちの記事・ギャラリー画像)のうち、
+     * 該当するものがあるものだけを返す。リンク切れの items には種類(type)と切れているリンク(links)も入れる。
      *
-     * @return list<array{label: string, count: int, url: string|null, items: Collection<int, array{title: string, edit_url: string}>}>
+     * @return list<array{label: string, count: int, url: string|null, items: Collection<int, array{title: string, edit_url: string, type?: string, links?: list<string>}>, calculated_at?: string}>
      */
     public function contentWarnings(): array
     {
@@ -149,7 +152,16 @@ class DashboardService
             ->notEnded()
             ->where(fn (Builder $query) => $query->whereNull('short_sentences')->orWhere('short_sentences', ''));
 
+        $brokenLinks = $this->brokenLinks->all();
+
         $warnings = [
+            [
+                'label' => __('リンク切れのあるコンテンツ'),
+                'count' => count($brokenLinks['items']),
+                'url' => null,
+                'items' => collect($brokenLinks['items'])->take(self::WARNING_ITEM_LIMIT),
+                'calculated_at' => $brokenLinks['calculated_at'],
+            ],
             [
                 'label' => __('公開中・予約公開なのにアイキャッチ(サムネイル)未設定の記事'),
                 'count' => $noThumbnail->count(),

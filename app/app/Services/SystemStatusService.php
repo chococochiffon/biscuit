@@ -55,13 +55,14 @@ class SystemStatusService
 
     /**
      * 直近 config('biscuit.error_log_hours') 時間にログへ出たエラー(ERROR 以上)の件数と、最後のエラーの日時・メッセージ。
+     * 数えるのは今の環境(APP_ENV)の行だけ(同じログファイルにテストなどほかの環境の行が入っていても数えない)。
      *
      * @return array{count: int, last_at: CarbonImmutable|null, last_message: string|null}
      */
     public function recentErrors(): array
     {
         $since = CarbonImmutable::now()->subHours((int) config('biscuit.error_log_hours'));
-        $pattern = '/^\[(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})[^\]]*\] [\w-]+\.('.implode('|', self::ERROR_LEVELS).'): (.*)$/m';
+        $pattern = '/^\[(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2})[^\]]*\] '.preg_quote(app()->environment(), '/').'\.('.implode('|', self::ERROR_LEVELS).'): (.*)$/m';
         $count = 0;
         $lastAt = null;
         $lastMessage = null;

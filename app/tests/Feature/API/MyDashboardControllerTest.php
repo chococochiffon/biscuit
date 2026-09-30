@@ -119,6 +119,22 @@ class MyDashboardControllerTest extends TestCase
         $this->assertSame(1, $warnings['pending']['count']);
     }
 
+    public function test_returns_own_articles_with_broken_links(): void
+    {
+        $article = Article::factory()->for($this->user)->create(['title' => 'リンク切れ', 'content' => '<p><a href="/missing">x</a></p>']);
+        Article::factory()->for($this->user)->create(['content' => '<a href="https://example.com">外部</a>']);
+        Article::factory()->create(['content' => '<a href="/missing">ほかの人</a>']);
+        $this->actingAsUserWithToken();
+
+        $this->getJson(route('api.me.dashboard.show'))
+            ->assertOk()
+            ->assertJsonPath('data.warnings', [[
+                'key' => 'broken_links',
+                'count' => 1,
+                'items' => [['type' => 'article', 'id' => $article->id, 'title' => 'リンク切れ', 'links' => ['/missing']]],
+            ]]);
+    }
+
     public function test_returns_no_warnings_when_nothing_needs_attention(): void
     {
         $this->actingAsUserWithToken();

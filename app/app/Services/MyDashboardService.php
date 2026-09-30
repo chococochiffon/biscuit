@@ -25,7 +25,10 @@ class MyDashboardService
      */
     public const RECENT_LOGIN_LIMIT = 3;
 
-    public function __construct(private readonly User $user) {}
+    public function __construct(
+        private readonly User $user,
+        private readonly BrokenLinkService $brokenLinks,
+    ) {}
 
     /**
      * 記事とギャラリーの画像の件数を状態ごとに数える。非公開は公開中と予約公開以外のすべて(下書き・承認待ち・公開終了など)。
@@ -119,9 +122,10 @@ class MyDashboardService
 
     /**
      * コンテンツの注意事項のうち、該当するものがあるものだけを返す。
-     * returned は管理者に差し戻された(差し戻しの理由がある下書きの)記事・画像、no_thumbnail は公開中・予約公開なのにサムネイル未設定の記事、pending は承認待ちの記事・画像。
+     * returned は管理者に差し戻された(差し戻しの理由がある下書きの)記事・画像、broken_links は本文にリンク切れのある記事(items に切れているリンク links も入れる)、
+     * no_thumbnail は公開中・予約公開なのにサムネイル未設定の記事、pending は承認待ちの記事・画像。
      *
-     * @return list<array{key: string, count: int, items: Collection<int, array{type: string, id: int, title: string}>}>
+     * @return list<array{key: string, count: int, items: Collection<int, array{type: string, id: int, title: string, links?: list<string>}>}>
      */
     public function contentWarnings(): array
     {
@@ -140,23 +144,33 @@ class MyDashboardService
 
         $pending = fn (Builder|HasMany $query) => $query->where('approval', ArticleApprovalStatus::Pending);
 
-        $warnings = [
-            ['key' => 'returned', 'articles' => $returned($this->articles()), 'gallery_images' => $returned($this->galleryImages())],
-            ['key' => 'no_thumbnail', 'articles' => $noThumbnail, 'gallery_images' => null],
-            ['key' => 'pending', 'articles' => $pending($this->articles()), 'gallery_images' => $pending($this->galleryImages())],
+        $warning = fn (string $key, Builder|HasMany $articles, Builder|HasMany|null $galleryImages = null) => [
+            'key' => $key,
+            'count' => $articles->count() + ($galleryImages?->count() ?? 0),
+            'items' => $this->warningItems($articles, 'article')
+                ->concat($galleryImages ? $this->warningItems($galleryImages, 'gallery_image') : [])
+                ->values(),
         ];
 
-        return collect($warnings)
-            ->map(fn (array $warning) => [
-                'key' => $warning['key'],
-                'count' => $warning['articles']->count() + ($warning['gallery_images']?->count() ?? 0),
-                'items' => $this->warningItems($warning['articles'], 'article')
-                    ->concat($warning['gallery_images'] ? $this->warningItems($warning['gallery_images'], 'gallery_image') : [])
-                    ->values(),
-            ])
-            ->filter(fn (array $warning) => $warning['count'] > 0)
-            ->values()
-            ->all();
+        $brokenLinks = $this->brokenLinks->inArticles($this->articles());
+
+        $warnings = [
+            $warning('returned', $returned($this->articles()), $returned($this->galleryImages())),
+            [
+                'key' => 'broken_links',
+                'count' => $brokenLinks->count(),
+                'items' => $brokenLinks->take(DashboardService::WARNING_ITEM_LIMIT)->map(fn (array $row) => [
+                    'type' => 'article',
+                    'id' => $row['article']->id,
+                    'title' => $row['article']->title,
+                    'links' => $row['links'],
+                ])->values(),
+            ],
+            $warning('no_thumbnail', $noThumbnail),
+            $warning('pending', $pending($this->articles()), $pending($this->galleryImages())),
+        ];
+
+        return array_values(array_filter($warnings, fn (array $warning) => $warning['count'] > 0));
     }
 
     /**
