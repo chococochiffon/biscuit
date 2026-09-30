@@ -509,3 +509,104 @@ main > form {
 .detail-list > dd:last-of-type {
     margin-bottom: 0;
 }
+
+/* アクセス解析の日別の推移のグラフ(resources/js/admin/page-views.js が SVG を描く)。系列の色は検証済みの 2 色 */
+.page-view-chart,
+.page-view-chart-legend {
+    --chart-series-1: #2a78d6;
+    --chart-series-2: #eb6834;
+}
+
+.page-view-chart {
+    min-height: 260px;
+}
+
+/* 凡例・ツールチップの系列の印(折れ線に合わせた短い線) */
+.page-view-chart-key {
+    display: inline-block;
+    width: 14px;
+    height: 2px;
+    border-radius: 1px;
+}
+
+.page-view-chart-key-1 {
+    background: var(--chart-series-1);
+}
+
+.page-view-chart-key-2 {
+    background: var(--chart-series-2);
+}
+
+.page-view-chart-svg {
+    display: block;
+    outline: none;
+    touch-action: pan-y;
+}
+
+.page-view-chart-svg:focus-visible {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.page-view-chart-svg .chart-grid {
+    stroke: #eef0f2;
+    stroke-width: 1;
+}
+
+.page-view-chart-svg .chart-axis {
+    stroke: #ced4da;
+    stroke-width: 1;
+}
+
+.page-view-chart-svg .chart-tick {
+    fill: var(--bs-secondary-color);
+    font-size: 11px;
+}
+
+.page-view-chart-svg .chart-end-label {
+    fill: var(--bs-body-color);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.page-view-chart-svg .chart-line {
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+
+.page-view-chart-svg .chart-crosshair {
+    stroke: #adb5bd;
+    stroke-width: 1;
+}
+
+/* 重なった点の見分けがつくよう、背景色の縁取りを付ける */
+.page-view-chart-svg .chart-marker {
+    stroke: #fff;
+    stroke-width: 2;
+}
+
+.page-view-chart-tooltip {
+    position: absolute;
+    z-index: 1;
+    min-width: 7rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    background: #fff;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.08);
+    font-size: 0.8125rem;
+    pointer-events: none;
+}
+
+.page-view-chart-tooltip-title {
+    margin-bottom: 0.25rem;
+    color: var(--bs-secondary-color);
+}
+
+.page-view-chart-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}

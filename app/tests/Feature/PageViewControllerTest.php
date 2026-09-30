@@ -39,7 +39,8 @@ class PageViewControllerTest extends TestCase
         $response->assertViewHas('summary', fn (array $summary) => $summary['today']['views'] === 3 && $summary['yesterday']['views'] === 1 && $summary['total']['views'] === 4);
         $response->assertViewHas('daily', fn ($daily) => $daily->count() === 30 && $daily->last()['date'] === '2026-10-15' && $daily->last()['views'] === 3);
         $response->assertViewHas('period', '30days');
-        $response->assertSeeInOrder(['人気コンテンツ', 'Laravel入門', '/news/laravel']);
+        $response->assertSee('data-role="page-view-chart"', false);
+        $response->assertSeeInOrder(['直近30日のアクセス推移', '表で見る', '人気コンテンツ', 'Laravel入門', '/news/laravel']);
     }
 
     public function test_ranking_period_can_be_selected(): void

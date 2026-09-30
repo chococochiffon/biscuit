@@ -7,6 +7,7 @@ use App\Models\CustomPages\CustomPageEntry;
 use App\Models\CustomPageType;
 use App\Models\PageView;
 use App\Models\SinglePage;
+use App\Models\User;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Carbon\CarbonPeriod;
@@ -18,9 +19,26 @@ use Illuminate\Support\Str;
  * PV(page_views)を集計する(管理画面のアクセス解析)。
  * PV は表示された回数、UU は期間内にアクセスした訪問者(visitor_id)の数。期間はどれも両端を含む。
  * 今は page_views から直接数える。記録が増えて重くなったら、日別の集計テーブルを読むようにここだけを変える。
+ * forUserArticles() で絞り込んだインスタンスは、どの集計もそのユーザーの記事の PV だけを数える(マイページ)。
  */
 class PageViewStatsService
 {
+    /**
+     * 集計の対象のユーザー(null ならサイト全体)。
+     */
+    private ?User $articleAuthor = null;
+
+    /**
+     * 集計の対象を、ユーザーの記事(論理削除したものを除く)の PV だけに絞り込んだインスタンスを返す。
+     */
+    public function forUserArticles(User $user): static
+    {
+        $stats = clone $this;
+        $stats->articleAuthor = $user;
+
+        return $stats;
+    }
+
     /**
      * 期間内の PV(期間を省略すると累計)。
      */
@@ -135,6 +153,9 @@ class PageViewStatsService
     private function query(?CarbonInterface $from, ?CarbonInterface $to): Builder
     {
         return PageView::query()
+            ->when($this->articleAuthor !== null, fn (Builder $query) => $query
+                ->where('content_type', 'article')
+                ->whereIn('content_id', $this->articleAuthor->articles()->select('id')))
             ->when($from !== null && $to !== null, fn (Builder $query) => $query->viewedBetween($from, $to))
             ->when($from !== null && $to === null, fn (Builder $query) => $query->where('viewed_at', '>=', $from))
             ->when($from === null && $to !== null, fn (Builder $query) => $query->where('viewed_at', '<=', $to));

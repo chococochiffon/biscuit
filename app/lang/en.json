@@ -433,5 +433,8 @@
     "この期間のアクセスはありません。": "No page views in this period.",
     "直近30日のアクセス推移": "Page views in the last 30 days",
     "カスタムページの一覧(:name)": "Custom page list (:name)",
-    ":label 一覧": ":label list"
+    ":label 一覧": ":label list",
+    "アクセス": "Traffic",
+    "アクセス解析を見る": "View analytics",
+    "表で見る": "View as table"
 }
