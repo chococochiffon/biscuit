@@ -55,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
             ));
         });
 
+        // 招待の受諾(リンクの確認・登録)は、トークンを総当たりされないよう接続元ごとに制限する
+        RateLimiter::for('user-invitation', function (Request $request) {
+            return Limit::perMinute(10)->by((string) $request->ip());
+        });
+
         // chococo のマイページからの画像のアップロード(記事の本文・サムネイル、ギャラリーの画像)は、ユーザーごとに回数を制限する
         RateLimiter::for('user-uploads', function (Request $request) {
             return Limit::perMinute(30)->by((string) $request->user()?->getAuthIdentifier());

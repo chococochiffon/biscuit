@@ -22,7 +22,7 @@ class UserController extends Controller
     public function index(): View
     {
         $users = User::query()
-            ->with('detail')
+            ->with(['detail', 'latestInvitation'])
             ->orderBy('name')
             ->paginate(config('limits.admin_per_page'));
 
@@ -48,6 +48,8 @@ class UserController extends Controller
                 'email' => $request->validated('email'),
                 'password' => $request->validated('password'),
                 'skip_approval' => $request->boolean('skip_approval'),
+                // 管理画面でパスワードまで登録したユーザーは、すぐにログインできる
+                'active_flag' => true,
             ]);
 
             $detail = $user->detail()->create($this->userDetailAttributes($request));

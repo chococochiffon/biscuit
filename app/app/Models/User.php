@@ -13,9 +13,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'skip_approval'])]
+#[Fillable(['name', 'email', 'password', 'skip_approval', 'active_flag'])]
 #[Hidden(['password', 'remember_token', 'unique_email'])]
 class User extends Authenticatable
 {
@@ -34,6 +35,7 @@ class User extends Authenticatable
      */
     protected $attributes = [
         'skip_approval' => false,
+        'active_flag' => false,
     ];
 
     /**
@@ -47,6 +49,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'skip_approval' => 'boolean',
+            'active_flag' => 'boolean',
         ];
     }
 
@@ -76,6 +79,30 @@ class User extends Authenticatable
     public function articles(): HasMany
     {
         return $this->hasMany(Article::class);
+    }
+
+    /**
+     * 招待のメールアドレスから、アカウント名の初期値(@ の前)を作る。
+     */
+    public static function accountNameFromEmail(string $email): string
+    {
+        return Str::before($email, '@');
+    }
+
+    /**
+     * 管理者からの招待(再送するたびに増える)。
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(UserInvitation::class);
+    }
+
+    /**
+     * いちばん新しい招待(管理画面のユーザー一覧で、招待中か期限切れかを出す)。
+     */
+    public function latestInvitation(): HasOne
+    {
+        return $this->hasOne(UserInvitation::class)->latestOfMany();
     }
 
     /**

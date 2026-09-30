@@ -35,7 +35,7 @@ class ResetPasswordNotification extends Notification
             ->subject(__('【:site】パスワード再設定のご案内', ['site' => $siteTitle]))
             ->markdown('mail.reset-password', [
                 'siteTitle' => $siteTitle,
-                'siteUrl' => self::frontUrl(),
+                'siteUrl' => SiteSetting::frontUrl(),
                 'resetUrl' => $this->resetUrl($notifiable),
                 'expireMinutes' => config('auth.passwords.users.expire'),
             ]);
@@ -46,17 +46,9 @@ class ResetPasswordNotification extends Notification
      */
     public function resetUrl(User $notifiable): string
     {
-        return self::frontUrl().'/reset-password?'.http_build_query([
+        return SiteSetting::frontUrl().'/reset-password?'.http_build_query([
             'token' => $this->token,
             'email' => $notifiable->getEmailForPasswordReset(),
         ]);
-    }
-
-    /**
-     * 公開側のサイトの URL(サイト設定の「フロントの URL」。未登録なら config('app.front_url'))。
-     */
-    private static function frontUrl(): string
-    {
-        return rtrim(SiteSetting::current()?->front_url ?: config('app.front_url'), '/');
     }
 }

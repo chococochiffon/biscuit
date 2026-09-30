@@ -35,8 +35,12 @@ class PasswordResetController extends Controller
     )]
     public function forgot(ForgotPasswordRequest $request): JsonResponse
     {
-        // 登録の有無を知られないよう、送れなかったとき(登録がない・直前に送ったばかり)も同じ応答にする
-        Password::broker('users')->sendResetLink(['email' => $request->validated('email')]);
+        // 登録の有無を知られないよう、送れなかったとき(登録がない・直前に送ったばかり)も同じ応答にする。
+        // 招待されてまだ登録していない(無効な)ユーザーには送らない(招待のリンクから登録してもらう)
+        if (User::query()->where('email', $request->validated('email'))->where('active_flag', true)->exists()) {
+            Password::broker('users')->sendResetLink(['email' => $request->validated('email')]);
+        }
+
         AuditLogger::record(AuditAction::PasswordResetRequested, 'user', metadata: ['email' => $request->validated('email')]);
 
         return response()->json([

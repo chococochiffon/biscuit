@@ -8,6 +8,7 @@ use App\Http\Controllers\API\CustomPageController;
 use App\Http\Controllers\API\CustomPageTypeController;
 use App\Http\Controllers\API\GalleryCategoryController;
 use App\Http\Controllers\API\GalleryImageController;
+use App\Http\Controllers\API\InvitationController;
 use App\Http\Controllers\API\LayoutController;
 use App\Http\Controllers\API\MeController;
 use App\Http\Controllers\API\MyArticleController;
@@ -52,6 +53,14 @@ Route::post('auth/forgot-password', [PasswordResetController::class, 'forgot'])
 Route::post('auth/reset-password', [PasswordResetController::class, 'reset'])
     ->middleware('throttle:user-password-reset')
     ->name('api.auth.reset-password');
+
+// 管理者からの招待の受諾(ログイン前。リンクの確認と、プロフィール・パスワードの登録)
+Route::get('auth/invitation', [InvitationController::class, 'show'])
+    ->middleware('throttle:user-invitation')
+    ->name('api.auth.invitation.show');
+Route::post('auth/invitation', [InvitationController::class, 'accept'])
+    ->middleware('throttle:user-invitation')
+    ->name('api.auth.invitation.accept');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');

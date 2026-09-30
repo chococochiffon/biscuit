@@ -63,15 +63,19 @@ class PasswordResetControllerTest extends TestCase
         Notification::fake();
         $deleted = User::factory()->create(['email' => 'deleted@example.com']);
         $deleted->delete();
+        // 招待されてまだ登録していないユーザーにも送らない
+        $invited = User::factory()->invited()->create(['email' => 'invited@example.com']);
 
         $known = $this->postJson(route('api.auth.forgot-password'), ['email' => 'user@example.com'])->assertOk()->json('message');
         $this->postJson(route('api.auth.forgot-password'), ['email' => 'nobody@example.com'])->assertOk()->assertJsonPath('message', $known);
         $this->postJson(route('api.auth.forgot-password'), ['email' => 'deleted@example.com'])->assertOk()->assertJsonPath('message', $known);
+        $this->postJson(route('api.auth.forgot-password'), ['email' => 'invited@example.com'])->assertOk()->assertJsonPath('message', $known);
         // 直前に送ったばかり(再送の間隔内)でも同じ応答
         $this->postJson(route('api.auth.forgot-password'), ['email' => 'user@example.com'])->assertOk()->assertJsonPath('message', $known);
 
         Notification::assertSentTimes(ResetPasswordNotification::class, 1);
         Notification::assertNothingSentTo($deleted);
+        Notification::assertNothingSentTo($invited);
     }
 
     public function test_forgot_is_rate_limited(): void

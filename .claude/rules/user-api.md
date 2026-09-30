@@ -9,6 +9,13 @@ paths:
   - app/tests/Feature/API/MyGalleryImageControllerTest.php
   - app/app/Http/Controllers/API/AuthorController.php
   - app/app/Http/Controllers/API/PasswordResetController.php
+  - app/app/Http/Controllers/API/InvitationController.php
+  - app/app/Http/Controllers/UserInvitationController.php
+  - app/app/Models/UserInvitation.php
+  - app/app/Notifications/UserInvitationNotification.php
+  - app/resources/views/mail/invitation.blade.php
+  - app/tests/Feature/API/InvitationControllerTest.php
+  - app/tests/Feature/UserInvitationControllerTest.php
   - app/app/Notifications/ResetPasswordNotification.php
   - app/resources/views/mail/reset-password.blade.php
   - app/tests/Feature/API/PasswordResetControllerTest.php
@@ -30,7 +37,7 @@ paths:
 
 # ユーザーの API（chococo のマイページ）
 
-chococo のマイページ（ログイン・プロフィール・アイコン画像・パスワードの変更と、記事・ギャラリーの画像の投稿・承認の申請）のための API。ログインできるのは管理画面で登録したユーザーだけで、登録の API は持たない。
+chococo のマイページ（ログイン・プロフィール・アイコン画像・パスワードの変更と、記事・ギャラリーの画像の投稿・承認の申請）のための API。ログインできるのは管理画面で登録したユーザーと、管理者に招待されてプロフィールとパスワードを登録したユーザーだけで、自分で登録する API は持たない。
 
 ## 認証（Laravel Sanctum の API トークン）
 
@@ -65,6 +72,15 @@ chococo のマイページ（ログイン・プロフィール・アイコン画
 - `gallery_images` は投稿したユーザー `user_id`（null なら管理者の投稿）・公開ステータス `approval`（記事と同じ `ArticleApprovalStatus`。既定値は `published`）・差し戻しの理由 `review_comment` を持つ。管理画面からの登録は承認なしで公開にする。公開側（`GET /api/gallery-images`・呼び出しコンテンツ）は `GalleryImage::published()` で公開中だけを出す。
 - 登録（`POST /me/gallery-images`、multipart の `image`・`name`・`gallery_category_id`・`comment`）は並び順を末尾にする。項目の更新は `PUT`、画像ファイルの変更は `POST /me/gallery-images/{id}/image`。登録と画像の変更は `throttle:user-uploads`。分類の選択肢は公開側の `GET /api/gallery-categories` を使う。
 - 管理画面のギャラリー一覧はステータス・投稿者の列とステータスの絞り込みを持ち、承認待ちの件数をサイドメニューと一覧に出す（`View\Composers\PendingGalleryImageComposer`）。編集画面で公開ステータスを変え、ユーザーの画像には差し戻しの理由を入力できる。
+
+## 管理者からの招待（`UserInvitationController`・`API\InvitationController`）
+
+- 管理画面のユーザー一覧の「招待」（`admin.users.invite`）でメールアドレスと承認を飛ばす権限を入れると、アカウント名をメールアドレスの @ の前（`User::accountNameFromEmail()`）にした無効なユーザー（`users.active_flag` = false。パスワードは誰も知らないランダムな値）を作り、招待のメール（`UserInvitationNotification`・`mail/invitation.blade.php`）を送る。管理画面の「新規登録」でパスワードまで入れたユーザーは最初から有効。
+- 招待は `user_invitations`（`UserInvitation`。トークンは SHA-256 のハッシュ・有効期限 `expires_at`・受諾日時 `accepted_at`・招待した管理者）。有効期限は `config('auth.invitations.expire')`（分、`.env` の `INVITATION_EXPIRE_MINUTES`、既定 24 時間）。期限が切れたら、管理者がユーザー一覧の「招待を再送」（`admin.users.invitation.resend`、無効なユーザーだけ）で送り直す。再送すると古い招待は削除せず、有効期限を切らして無効にする（`UserInvitation::issue()`）。ユーザー一覧の「状態」は有効・招待中・招待の期限切れ。
+- メールのリンクは公開側の `{front_url}/invitation?token=…&email=…`（`SiteSetting::frontUrl()`）。`GET /api/auth/invitation`（リンクが使えるかと、アカウント名の初期値）・`POST /api/auth/invitation`（アカウント名・パスワード・ユーザー詳細・スキル。`AcceptInvitationRequest` は `StoreUserRequest` を継承し、メールアドレスと承認を飛ばす権限は変えられない）はログイン前の API で、`throttle:user-invitation`（接続元ごと）。受諾するとユーザーを有効にし、ログインと同じ応答（`AuthController::tokenResponse()`）でトークンを返す。リンクが無効・期限切れ・受諾済みなら `GET` は 404、`POST` は `token` の入力エラー。
+- 無効なユーザーはログインできず（登録がないときと同じ応答）、パスワード再設定のメールも送らない。
+- 監査ログは、招待を `created`（metadata `invited`）、再送を `invited`、受諾を `invitation_accepted`（操作者は招待されたユーザー）で残す。
+- chococo は `/invitation` のページと、`server/api/auth/invitation.get.ts`（中継）・`invitation.post.ts`（ログインと同じくトークンを Cookie に入れる）を持つ。
 
 ## パスワード再設定（`API\PasswordResetController`）
 

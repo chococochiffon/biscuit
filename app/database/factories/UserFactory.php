@@ -30,7 +30,19 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'active_flag' => true,
         ];
+    }
+
+    /**
+     * 管理者に招待されて、まだプロフィールとパスワードを登録していない(無効な)ユーザーにする。
+     */
+    public function invited(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'name' => Str::before($attributes['email'], '@'),
+            'active_flag' => false,
+        ]);
     }
 
     /**

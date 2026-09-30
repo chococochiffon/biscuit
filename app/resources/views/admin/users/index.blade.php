@@ -6,9 +6,14 @@
     <div class="mb-4 d-flex align-items-center justify-content-between">
         <h1 class="h5 mb-0">{{ __('ユーザー一覧') }}</h1>
 
-        <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
-            {{ __('新規登録') }}
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.users.invite') }}" class="btn btn-outline-primary">
+                {{ __('招待') }}
+            </a>
+            <a href="{{ route('admin.users.create') }}" class="btn btn-primary">
+                {{ __('新規登録') }}
+            </a>
+        </div>
     </div>
 
     <div class="card">
@@ -21,6 +26,7 @@
                     <th>{{ __('メールアドレス') }}</th>
                     <th>{{ __('トップへ表示する') }}</th>
                     <th>{{ __('名前の表示設定') }}</th>
+                    <th>{{ __('状態') }}</th>
                     <th></th>
                 </tr>
             </thead>
@@ -53,14 +59,31 @@
                             @endif
                         </td>
                         <td>{{ $user->detail?->name_settings->label() }}</td>
-                        <td class="text-end">
+                        <td class="text-nowrap">
+                            {{-- 招待されてまだプロフィールを登録していないユーザーは、招待中か期限切れかを出す --}}
+                            @if ($user->active_flag)
+                                <span class="badge text-bg-success">{{ __('有効') }}</span>
+                            @elseif ($user->latestInvitation?->isExpired() ?? true)
+                                <span class="badge text-bg-danger">{{ __('招待の期限切れ') }}</span>
+                            @else
+                                <span class="badge text-bg-warning">{{ __('招待中') }}</span>
+                            @endif
+                        </td>
+                        <td class="text-end text-nowrap">
+                            @unless ($user->active_flag)
+                                <form method="POST" action="{{ route('admin.users.invitation.resend', $user) }}" class="d-inline">
+                                    @csrf
+                                    <button type="submit" class="btn btn-sm btn-outline-primary">{{ __('招待を再送') }}</button>
+                                </form>
+                            @endunless
+
                             <a href="{{ route('admin.users.edit', $user) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
 
                             <x-admin.delete-button :action="route('admin.users.destroy', $user)" />
                         </td>
                     </tr>
                 @empty
-                    <x-admin.empty-row colspan="7">{{ __('ユーザーが登録されていません。') }}</x-admin.empty-row>
+                    <x-admin.empty-row colspan="8">{{ __('ユーザーが登録されていません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>
