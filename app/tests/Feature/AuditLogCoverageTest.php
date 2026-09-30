@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\API\PageViewController;
 use App\Http\Controllers\Auth\AdministratorSessionController;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Facades\Route as RouteFacade;
@@ -16,11 +17,12 @@ use Tests\TestCase;
 class AuditLogCoverageTest extends TestCase
 {
     /**
-     * 監査ログをアクションの中で記録しないルートのコントローラー(ログイン・ログアウトは認証イベントのリスナーが記録する)。
+     * 監査ログをアクションの中で記録しないルートのコントローラー(ログイン・ログアウトは認証イベントのリスナーが記録する。
+     * PV の記録は公開側の閲覧の記録で、操作ではないため記録しない)。
      *
      * @var list<class-string>
      */
-    private const EXCLUDED_CONTROLLERS = [AdministratorSessionController::class];
+    private const EXCLUDED_CONTROLLERS = [AdministratorSessionController::class, PageViewController::class];
 
     public function test_every_admin_and_api_write_route_records_an_audit_log(): void
     {

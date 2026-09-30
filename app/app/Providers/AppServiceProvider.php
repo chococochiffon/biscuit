@@ -70,6 +70,11 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(30)->by((string) $request->user()?->getAuthIdentifier());
         });
 
+        // PV の記録は chococo のサーバーからまとめて届くため、中継元ではなく閲覧者の IP アドレス(本文の ip)ごとに制限する
+        RateLimiter::for('page-views', function (Request $request) {
+            return Limit::perMinute(120)->by((string) ($request->input('ip') ?: $request->ip()));
+        });
+
         // マイページの記事({myArticle})・ギャラリーの画像({myGalleryImage})は、ログイン中のユーザーのものだけを取り出す
         // (ほかのユーザーのもの・論理削除したものは 404)。
         // ルートのキャッシュ時は routes/api.php が読まれないため、ここで登録する

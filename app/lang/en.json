@@ -419,5 +419,19 @@
     "【:site】ログインの確認コード": "[:site] Your login code",
     "ログインの確認コードをお送りします。ログイン画面に次のコードを入力してください。": "Here is your login code. Enter the following code on the login screen.",
     "このコードの有効期限は :minutes 分です。": "This code expires in :minutes minutes.",
-    "お心当たりがない場合は、このメールを破棄してください。パスワードが他人に知られている可能性があるため、パスワードの変更をおすすめします。": "If you did not try to log in, please discard this email. Your password may be known to someone else, so we recommend changing it."
+    "お心当たりがない場合は、このメールを破棄してください。パスワードが他人に知られている可能性があるため、パスワードの変更をおすすめします。": "If you did not try to log in, please discard this email. Your password may be known to someone else, so we recommend changing it.",
+    "アクセス解析": "Analytics",
+    "今日": "Today",
+    "昨日": "Yesterday",
+    "今月": "This month",
+    "累計": "All time",
+    "人気コンテンツ": "Popular content",
+    "7日": "7 days",
+    "30日": "30 days",
+    "期間指定": "Custom range",
+    "コンテンツ": "Content",
+    "この期間のアクセスはありません。": "No page views in this period.",
+    "直近30日のアクセス推移": "Page views in the last 30 days",
+    "カスタムページの一覧(:name)": "Custom page list (:name)",
+    ":label 一覧": ":label list"
 }
