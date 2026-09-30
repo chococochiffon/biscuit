@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ArticleApprovalStatus;
 use App\Models\GalleryCategory;
 use App\Models\GalleryImage;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -155,6 +157,9 @@ class GalleryImageControllerTest extends TestCase
         $this->assertSame($category->id, $galleryImage->gallery_category_id);
         $this->assertSame('夏の海です。', $galleryImage->comment);
         $this->assertSame(4, $galleryImage->sort_order);
+        // 管理者の登録は承認なしで公開にする
+        $this->assertNull($galleryImage->user_id);
+        $this->assertSame(ArticleApprovalStatus::Published, $galleryImage->approval);
         $this->assertStringStartsWith(GalleryImage::IMAGE_DIRECTORY.'/', $galleryImage->image);
         $this->assertSame([1200, 600], array_slice(getimagesizefromstring(Storage::disk('public')->get($galleryImage->image)), 0, 2));
     }
@@ -210,6 +215,7 @@ class GalleryImageControllerTest extends TestCase
             'name' => '新しい名前',
             'comment' => '',
             'gallery_category_id' => '',
+            'approval' => 'published',
         ]);
 
         $response->assertRedirect(route('admin.gallery-images.index'));
@@ -229,10 +235,68 @@ class GalleryImageControllerTest extends TestCase
         $this->put(route('admin.gallery-images.update', $galleryImage), [
             'image' => UploadedFile::fake()->image('new.jpg', 800, 800),
             'name' => $galleryImage->name,
+            'approval' => 'published',
         ])->assertSessionHasNoErrors();
 
         $this->assertNotSame('image/gallery/old.jpg', $galleryImage->fresh()->image);
         Storage::disk('public')->assertExists($galleryImage->fresh()->image);
+    }
+
+    public function test_index_shows_status_and_poster_and_filters_by_approval(): void
+    {
+        $this->actingAsAdmin();
+        $user = User::factory()->create(['name' => '投稿ユーザー']);
+        $pending = GalleryImage::factory()->byUser($user)->pending()->create(['name' => '承認待ちの画像']);
+        GalleryImage::factory()->create(['name' => '管理者の画像']);
+
+        $this->get(route('admin.gallery-images.index'))
+            ->assertOk()
+            ->assertSee('投稿ユーザー')
+            ->assertSee('承認待ち 1 件');
+
+        $this->get(route('admin.gallery-images.index', ['approval' => 'pending']))
+            ->assertOk()
+            ->assertSee($pending->name)
+            ->assertDontSee('管理者の画像')
+            ->assertDontSee('並び替えを保存');
+    }
+
+    public function test_update_approves_users_image_and_saves_review_comment(): void
+    {
+        $this->actingAsAdmin();
+        $galleryImage = GalleryImage::factory()->byUser()->pending()->create();
+
+        $this->put(route('admin.gallery-images.update', $galleryImage), [
+            'name' => $galleryImage->name,
+            'approval' => 'draft',
+            'review_comment' => '別の画像にしてください',
+        ])->assertSessionHasNoErrors();
+
+        $galleryImage->refresh();
+        $this->assertSame(ArticleApprovalStatus::Draft, $galleryImage->approval);
+        $this->assertSame('別の画像にしてください', $galleryImage->review_comment);
+
+        $this->put(route('admin.gallery-images.update', $galleryImage), [
+            'name' => $galleryImage->name,
+            'approval' => 'published',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(ArticleApprovalStatus::Published, $galleryImage->fresh()->approval);
+    }
+
+    public function test_edit_screen_shows_review_comment_only_for_users_images(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->get(route('admin.gallery-images.edit', GalleryImage::factory()->byUser()->create()))
+            ->assertOk()
+            ->assertSee('公開ステータス')
+            ->assertSee('差し戻しの理由');
+
+        $this->get(route('admin.gallery-images.edit', GalleryImage::factory()->create()))
+            ->assertOk()
+            ->assertSee('公開ステータス')
+            ->assertDontSee('差し戻しの理由');
     }
 
     public function test_destroy_soft_deletes_gallery_image(): void

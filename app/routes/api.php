@@ -11,6 +11,7 @@ use App\Http\Controllers\API\GalleryImageController;
 use App\Http\Controllers\API\LayoutController;
 use App\Http\Controllers\API\MeController;
 use App\Http\Controllers\API\MyArticleController;
+use App\Http\Controllers\API\MyGalleryImageController;
 use App\Http\Controllers\API\PasswordResetController;
 use App\Http\Controllers\API\QuestionAnswerController;
 use App\Http\Controllers\API\ResolveController;
@@ -79,4 +80,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('me/articles/{myArticle}/withdraw', [MyArticleController::class, 'withdraw'])
         ->whereNumber('myArticle')
         ->name('api.me.articles.withdraw');
+
+    // マイページからのギャラリーの画像の投稿(画像を受け取る登録・画像の変更はアップロードの回数を制限する)
+    Route::apiResource('me/gallery-images', MyGalleryImageController::class)
+        ->parameters(['gallery-images' => 'myGalleryImage'])
+        ->names('api.me.gallery-images')
+        ->middlewareFor('store', 'throttle:user-uploads')
+        ->where(['myGalleryImage' => '[0-9]+']);
+    Route::post('me/gallery-images/{myGalleryImage}/image', [MyGalleryImageController::class, 'updateImage'])
+        ->middleware('throttle:user-uploads')
+        ->whereNumber('myGalleryImage')
+        ->name('api.me.gallery-images.image');
+    Route::post('me/gallery-images/{myGalleryImage}/submit', [MyGalleryImageController::class, 'submit'])
+        ->whereNumber('myGalleryImage')
+        ->name('api.me.gallery-images.submit');
+    Route::post('me/gallery-images/{myGalleryImage}/withdraw', [MyGalleryImageController::class, 'withdraw'])
+        ->whereNumber('myGalleryImage')
+        ->name('api.me.gallery-images.withdraw');
 });

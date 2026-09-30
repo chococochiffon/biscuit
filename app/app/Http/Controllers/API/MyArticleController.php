@@ -4,6 +4,7 @@ namespace App\Http\Controllers\API;
 
 use App\Enums\ArticleApprovalStatus;
 use App\Enums\AuditAction;
+use App\Http\Controllers\Concerns\HandlesUserApproval;
 use App\Http\Controllers\Concerns\SavesArticle;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\API\StoreMyArticleRequest;
@@ -22,7 +23,6 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Enum;
-use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
 
 /**
@@ -34,7 +34,7 @@ use OpenApi\Attributes as OA;
  */
 class MyArticleController extends Controller
 {
-    use SavesArticle;
+    use HandlesUserApproval, SavesArticle;
 
     #[OA\Get(
         path: '/me/articles',
@@ -195,7 +195,7 @@ class MyArticleController extends Controller
 
         // 承認を飛ばす権限のあるユーザーは、管理者が承認したときと同じくそのまま公開する(初めてなら公開開始日時も決まる)。
         // 前回の差し戻しの理由は、申請し直したら対応済みとみなして消す
-        $approval = $this->user($request)->skip_approval ? ArticleApprovalStatus::Published : ArticleApprovalStatus::Pending;
+        $approval = $this->approvalOnSubmit($this->user($request));
 
         AuditLogger::updateWithLog($myArticle, function () use ($myArticle, $approval) {
             $myArticle->changeApproval($approval)->fill(['review_comment' => null])->save();
@@ -296,26 +296,5 @@ class MyArticleController extends Controller
     private function user(Request $request): User
     {
         return $request->user();
-    }
-
-    /**
-     * 公開中の記事を変更したときは、管理者が承認し直すまで公開側に出さないよう承認待ちに戻す(保存はしない)。
-     * 承認を飛ばす権限のあるユーザーの記事は公開中のままにする。
-     */
-    private function backToPendingIfPublished(Article $article, User $user): void
-    {
-        if ($article->approval === ArticleApprovalStatus::Published && ! $user->skip_approval) {
-            $article->approval = ArticleApprovalStatus::Pending;
-        }
-    }
-
-    /**
-     * 今の公開ステータスが $expected でなければ 422 にする(申請・取り下げの前の確認)。
-     */
-    private function ensureApproval(Article $article, ArticleApprovalStatus $expected, string $message): void
-    {
-        if ($article->approval !== $expected) {
-            throw ValidationException::withMessages(['approval' => $message]);
-        }
     }
 }

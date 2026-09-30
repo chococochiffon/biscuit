@@ -231,6 +231,8 @@ class CallContentResolverTest extends TestCase
         $third = GalleryImage::factory()->create(['sort_order' => 2]);
         $first = GalleryImage::factory()->create(['sort_order' => 0]);
         $second = GalleryImage::factory()->create(['sort_order' => 1]);
+        // ユーザーが投稿した承認前の画像は出さない
+        GalleryImage::factory()->byUser()->pending()->create(['sort_order' => 0]);
         $callContent = CallContent::factory()->create([
             'call_type' => CallType::TileList,
             'content_model_relation_id' => $this->relation('GalleryImage')->id,

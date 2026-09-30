@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\ArticleApprovalStatus;
 use App\Http\Controllers\Concerns\ReordersRows;
 use App\Http\Requests\StoreGalleryImageRequest;
 use App\Http\Requests\UpdateGalleryImageRequest;
@@ -13,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Enum;
 use Illuminate\View\View;
 
 class GalleryImageController extends Controller
@@ -35,7 +37,7 @@ class GalleryImageController extends Controller
     private const REORDERABLE_SORT = 'sort_order';
 
     /**
-     * ギャラリー画像の一覧を、分類(GET パラメータ category。分類の id、未分類は UNCATEGORIZED)で絞り込み、
+     * ギャラリー画像の一覧を、分類(GET パラメータ category。分類の id、未分類は UNCATEGORIZED)と公開ステータス(approval)で絞り込み、
      * 選択した並び順(デフォルトは更新日時の新しい順)で表示する。不正な値はリダイレクトせずに無視する。
      * ドラッグでの並び替え(表示順の保存)は、並び順が「表示順」かつ検索条件なしの場合のみ有効にする。
      */
@@ -43,18 +45,21 @@ class GalleryImageController extends Controller
     {
         $filters = Validator::make($request->query(), [
             'category' => ['nullable', 'regex:/^('.self::UNCATEGORIZED.'|[1-9][0-9]*)$/'],
+            'approval' => ['nullable', new Enum(ArticleApprovalStatus::class)],
             'sort' => ['nullable', Rule::in(array_keys($this->listSortOptions()))],
         ])->valid();
 
         $category = $filters['category'] ?? null;
+        $approval = $filters['approval'] ?? null;
         $sort = $filters['sort'] ?? self::DEFAULT_SORT;
-        $isSearching = $category !== null;
+        $isSearching = $category !== null || $approval !== null;
         ['column' => $column, 'direction' => $direction] = $this->listSortOptions()[$sort];
 
         $galleryImages = GalleryImage::query()
-            ->with('category')
+            ->with(['category', 'user'])
             ->when($category === self::UNCATEGORIZED, fn ($query) => $query->whereNull('gallery_category_id'))
-            ->when($isSearching && $category !== self::UNCATEGORIZED, fn ($query) => $query->where('gallery_category_id', $category))
+            ->when($category !== null && $category !== self::UNCATEGORIZED, fn ($query) => $query->where('gallery_category_id', $category))
+            ->when($approval !== null, fn ($query) => $query->where('approval', $approval))
             ->orderBy($column, $direction)
             ->orderBy('id', $direction)
             ->paginate(config('limits.admin_per_page'))
@@ -63,7 +68,7 @@ class GalleryImageController extends Controller
         $categories = GalleryCategory::query()->ordered()->get();
         $canReorder = $sort === self::REORDERABLE_SORT && ! $isSearching;
 
-        return view('admin.gallery_images.index', compact('galleryImages', 'categories', 'category', 'sort', 'isSearching', 'canReorder'));
+        return view('admin.gallery_images.index', compact('galleryImages', 'categories', 'category', 'approval', 'sort', 'isSearching', 'canReorder'));
     }
 
     /**
@@ -77,7 +82,7 @@ class GalleryImageController extends Controller
     }
 
     /**
-     * ギャラリー画像を登録する。並び順は末尾にする。
+     * ギャラリー画像を登録する。管理者の登録は承認なしで公開にし、並び順は末尾にする。
      */
     public function store(StoreGalleryImageRequest $request): RedirectResponse
     {
@@ -85,6 +90,8 @@ class GalleryImageController extends Controller
             ...$request->safe()->except('image'),
             'image' => GalleryImage::storeImage($request->file('image')),
             'sort_order' => GalleryImage::nextSortOrder(),
+            'user_id' => null,
+            'approval' => ArticleApprovalStatus::Published,
         ]));
 
         return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を登録しました。'));
@@ -101,7 +108,7 @@ class GalleryImageController extends Controller
     }
 
     /**
-     * ギャラリー画像を更新する。画像が送信されなければ登録済みの画像のままにする。
+     * ギャラリー画像を更新する(公開ステータスと差し戻しの理由を含む)。画像が送信されなければ登録済みの画像のままにする。
      */
     public function update(UpdateGalleryImageRequest $request, GalleryImage $galleryImage): RedirectResponse
     {

@@ -4,7 +4,15 @@
 
 @section('content')
     <div class="mb-4 d-flex align-items-center justify-content-between">
-        <h1 class="h5 mb-0">{{ __('ギャラリー一覧') }}</h1>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h5 mb-0">{{ __('ギャラリー一覧') }}</h1>
+
+            @if ($pendingGalleryImageCount > 0)
+                <a href="{{ route('admin.gallery-images.index', ['approval' => \App\Enums\ArticleApprovalStatus::Pending->value]) }}" class="badge text-bg-warning text-decoration-none">
+                    {{ __('承認待ち :count 件', ['count' => $pendingGalleryImageCount]) }}
+                </a>
+            @endif
+        </div>
 
         <div class="d-flex align-items-center gap-2">
             @if ($canReorder && $galleryImages->isNotEmpty())
@@ -60,6 +68,16 @@
                     </select>
                 </div>
 
+                <div>
+                    <label for="search-approval" class="form-label small">{{ __('ステータス') }}</label>
+                    <select id="search-approval" name="approval" class="form-select form-select-sm form-select-auto">
+                        <option value="">{{ __('すべて') }}</option>
+                        @foreach (\App\Enums\ArticleApprovalStatus::cases() as $status)
+                            <option value="{{ $status->value }}" @selected($approval === $status->value)>{{ $status->label() }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <div class="d-flex gap-2 text-nowrap">
                     <button type="submit" class="btn btn-sm btn-primary">{{ __('検索') }}</button>
                     <a href="{{ route('admin.gallery-images.index', ['sort' => $sort]) }}" class="btn btn-sm btn-outline-secondary">{{ __('クリア') }}</a>
@@ -88,6 +106,8 @@
                     @include('admin.partials._sortable_th', ['label' => __('名前'), 'field' => 'name', 'defaultDirection' => 'asc'])
                     @include('admin.partials._sortable_th', ['label' => __('分類'), 'field' => 'category', 'defaultDirection' => 'asc'])
                     <th>{{ __('コメント') }}</th>
+                    <th>{{ __('ステータス') }}</th>
+                    <th>{{ __('投稿者') }}</th>
                     @include('admin.partials._sortable_th', ['label' => __('更新日時'), 'field' => 'updated_at', 'defaultDirection' => 'desc'])
                     <th></th>
                 </tr>
@@ -112,6 +132,15 @@
                         <td>{{ $galleryImage->name }}</td>
                         <td>{{ $galleryImage->category?->name ?? __('未分類') }}</td>
                         <td>{{ $galleryImage->comment }}</td>
+                        <td>
+                            <span @class([
+                                'badge',
+                                'text-bg-secondary' => $galleryImage->approval === \App\Enums\ArticleApprovalStatus::Draft,
+                                'text-bg-warning' => $galleryImage->approval === \App\Enums\ArticleApprovalStatus::Pending,
+                                'text-bg-success' => $galleryImage->approval === \App\Enums\ArticleApprovalStatus::Published,
+                            ])>{{ $galleryImage->approval->label() }}</span>
+                        </td>
+                        <td>{{ $galleryImage->user_name }}</td>
                         <td class="text-nowrap">{{ $galleryImage->updated_at?->format('Y/m/d H:i') }}</td>
                         <td class="text-end text-nowrap">
                             <a href="{{ route('admin.gallery-images.edit', $galleryImage) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
@@ -120,7 +149,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-admin.empty-row :colspan="$canReorder ? 7 : 6">{{ __('該当するギャラリー画像がありません。') }}</x-admin.empty-row>
+                    <x-admin.empty-row :colspan="$canReorder ? 9 : 8">{{ __('該当するギャラリー画像がありません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>
