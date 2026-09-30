@@ -9,7 +9,13 @@ use App\Models\AuditLog;
 use App\Models\GalleryImage;
 use App\Models\PageView;
 use App\Models\SinglePage;
+use App\Models\TopSliderImage;
+use App\Models\User;
+use App\Services\MediaStatsService;
+use App\Services\SystemStatusService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DashboardControllerTest extends TestCase
@@ -164,6 +170,144 @@ class DashboardControllerTest extends TestCase
             ->assertOk()
             ->assertViewHas('auditLogs', fn ($logs) => $logs->pluck('actor_id')->all() === [$admin->id])
             ->assertDontSee(route('admin.audit-logs.index'));
+    }
+
+    public function test_dashboard_shows_user_status(): void
+    {
+        $this->actingAsAdmin();
+        User::factory()->count(2)->create();
+        User::factory()->skipsApproval()->create();
+        User::factory()->invited()->create();
+        Administrator::factory()->superAdmin()->create();
+        $user = User::factory()->create(['name' => 'ログインしたユーザー']);
+        AuditLog::create([
+            'actor_type' => 'user',
+            'actor_id' => $user->id,
+            'actor_name' => $user->name,
+            'action' => AuditAction::Login,
+        ]);
+
+        $response = $this->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('userStatus', fn (array $status) => $status['users'] === ['total' => 5, 'active' => 4, 'invited' => 1, 'skip_approval' => 1]
+            && $status['administrators']['admin']['count'] === 1
+            && $status['administrators']['super_admin']['count'] === 1
+            && $status['recent_logins']->pluck('actor_name')->all() === ['ログインしたユーザー']);
+    }
+
+    public function test_dashboard_shows_media_status_with_unused_images(): void
+    {
+        Storage::fake('public');
+        $this->actingAsAdmin();
+        Storage::disk('public')->put('image/thumbnail/used.png', str_repeat('a', 100));
+        Storage::disk('public')->put('image/content/in-content.png', str_repeat('b', 50));
+        Storage::disk('public')->put('image/top_image/deleted-slider.png', str_repeat('c', 10));
+        Storage::disk('public')->put('image/gallery/unused.png', str_repeat('d', 30));
+        Storage::disk('public')->put(Article::DEFAULT_THUMBNAIL_PATH, 'default');
+        Article::factory()->create([
+            'thumbnail' => 'image/thumbnail/used.png',
+            'content' => '<p><img src="http://localhost/storage/image/content/in-content.png"></p>',
+        ]);
+        TopSliderImage::factory()->create(['top_image' => 'image/top_image/deleted-slider.png'])->delete();
+
+        $response = $this->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('media', fn (array $media) => $media['total_count'] === 4
+            && $media['total_bytes'] === 190
+            && $media['unused_count'] === 1
+            && $media['unused_bytes'] === 30
+            && $media['unused_items'] === ['image/gallery/unused.png']);
+        $response->assertSee('image/gallery/unused.png');
+    }
+
+    public function test_media_status_is_cached(): void
+    {
+        Storage::fake('public');
+        $this->actingAsAdmin();
+        $this->get(route('admin.dashboard'))->assertViewHas('media', fn (array $media) => $media['total_count'] === 0);
+
+        Storage::disk('public')->put('image/gallery/new.png', 'x');
+
+        $this->get(route('admin.dashboard'))->assertViewHas('media', fn (array $media) => $media['total_count'] === 0);
+        cache()->forget(MediaStatsService::CACHE_KEY);
+        $this->get(route('admin.dashboard'))->assertViewHas('media', fn (array $media) => $media['total_count'] === 1);
+    }
+
+    public function test_super_admin_sees_system_info_without_warnings_when_healthy(): void
+    {
+        $this->actingAsSuperAdmin();
+        $this->useLogDirectory();
+
+        $response = $this->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('systemStatus', fn (array $status) => $status['info']['biscuit_version'] === config('biscuit.version')
+            && $status['info']['php_version'] === PHP_VERSION
+            && $status['errors']['count'] === 0
+            && $status['warnings'] === []);
+        $response->assertSee('Biscuit '.config('biscuit.version'));
+        $response->assertDontSee('data-system-warnings', false);
+    }
+
+    public function test_super_admin_sees_recent_errors_as_a_warning(): void
+    {
+        $this->actingAsSuperAdmin();
+        $this->travelTo('2026-10-15 12:00:00');
+        $directory = $this->useLogDirectory();
+        File::put($directory.'/laravel.log', implode("\n", [
+            '[2026-10-13 12:00:00] local.ERROR: 古いエラー',
+            '[2026-10-15 09:00:00] local.INFO: 情報',
+            '[2026-10-15 10:00:00] local.ERROR: 新しいエラー {"exception":"..."}',
+            '#0 stack trace',
+            '[2026-10-15 11:00:00] local.CRITICAL: 最後のエラー',
+        ]));
+        touch($directory.'/laravel.log', now()->getTimestamp());
+
+        $response = $this->get(route('admin.dashboard'));
+
+        $response->assertOk();
+        $response->assertViewHas('systemStatus', fn (array $status) => $status['errors']['count'] === 2
+            && $status['errors']['last_message'] === '最後のエラー'
+            && collect($status['warnings'])->contains('level', 'danger'));
+        $response->assertSee('data-system-warnings', false);
+        $response->assertSee('最後のエラー');
+    }
+
+    public function test_super_admin_sees_debug_mode_warning_in_production(): void
+    {
+        $this->actingAsSuperAdmin();
+        $this->useLogDirectory();
+        config(['app.debug' => true]);
+        $this->app['env'] = 'production';
+
+        $this->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('本番環境でデバッグモード(APP_DEBUG)が有効です。');
+    }
+
+    public function test_admin_does_not_see_system_status(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertViewHas('systemStatus', null)
+            ->assertDontSee('data-system-info', false);
+    }
+
+    /**
+     * システム情報が読むログのディレクトリを、テスト用の空のディレクトリに差し替える。
+     */
+    private function useLogDirectory(): string
+    {
+        $directory = storage_path('framework/testing/logs-'.uniqid());
+        File::ensureDirectoryExists($directory);
+        $this->beforeApplicationDestroyed(fn () => File::deleteDirectory($directory));
+        $this->app->instance(SystemStatusService::class, new SystemStatusService($directory));
+
+        return $directory;
     }
 
     /**

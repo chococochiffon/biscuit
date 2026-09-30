@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Enums\AdministratorRole;
 use App\Enums\ArticleApprovalStatus;
+use App\Enums\AuditAction;
 use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\AuditLog;
 use App\Models\GalleryImage;
 use App\Models\SinglePage;
+use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -38,6 +41,11 @@ class DashboardService
      * 「今週公開予定」に含める日数(明日から数える)。
      */
     public const UPCOMING_DAYS = 7;
+
+    /**
+     * 最近ログインしたユーザー・管理者の件数。
+     */
+    public const RECENT_LOGIN_LIMIT = 5;
 
     /**
      * 記事と固定ページの件数を状態ごとに数える。
@@ -185,6 +193,36 @@ class DashboardService
             ->newest()
             ->limit(self::RECENT_LIMIT)
             ->get();
+    }
+
+    /**
+     * ユーザー(有効・招待中・承認を飛ばす権限あり)と管理者(権限ごと)の人数、最近ログインしたユーザー・管理者(操作ログのログインの記録)。
+     *
+     * @return array{users: array{total: int, active: int, invited: int, skip_approval: int}, administrators: array<string, array{label: string, count: int}>, recent_logins: Collection<int, AuditLog>}
+     */
+    public function userStatus(): array
+    {
+        $administratorCounts = Administrator::query()->toBase()->selectRaw('role, count(*) as aggregate')->groupBy('role')->pluck('aggregate', 'role');
+
+        return [
+            'users' => [
+                'total' => User::query()->count(),
+                'active' => User::query()->where('active_flag', true)->count(),
+                'invited' => User::query()->where('active_flag', false)->count(),
+                'skip_approval' => User::query()->where('skip_approval', true)->count(),
+            ],
+            'administrators' => collect(AdministratorRole::cases())
+                ->mapWithKeys(fn (AdministratorRole $role) => [$role->value => [
+                    'label' => $role->label(),
+                    'count' => (int) ($administratorCounts[$role->value] ?? 0),
+                ]])
+                ->all(),
+            'recent_logins' => AuditLog::query()
+                ->where('action', AuditAction::Login)
+                ->newest()
+                ->limit(self::RECENT_LOGIN_LIMIT)
+                ->get(),
+        ];
     }
 
     /**
