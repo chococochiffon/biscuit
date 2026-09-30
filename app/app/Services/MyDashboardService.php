@@ -41,9 +41,9 @@ class MyDashboardService
             'articles' => DashboardService::countArticles(fn () => $this->articles()),
             'gallery_images' => [
                 'total' => $this->galleryImages()->count(),
-                'published' => $this->galleryImages()->where('approval', ArticleApprovalStatus::Published)->count(),
-                'draft' => $this->galleryImages()->where('approval', ArticleApprovalStatus::Draft)->count(),
-                'pending' => $this->galleryImages()->where('approval', ArticleApprovalStatus::Pending)->count(),
+                'published' => $this->galleryImages()->withApproval(ArticleApprovalStatus::Published)->count(),
+                'draft' => $this->galleryImages()->withApproval(ArticleApprovalStatus::Draft)->count(),
+                'pending' => $this->galleryImages()->withApproval(ArticleApprovalStatus::Pending)->count(),
             ],
         ];
     }
@@ -112,13 +112,6 @@ class MyDashboardService
      */
     public function contentWarnings(): array
     {
-        $returned = fn (Builder|HasMany $query) => $query
-            ->where('approval', ArticleApprovalStatus::Draft)
-            ->whereNotNull('review_comment')
-            ->where('review_comment', '!=', '');
-
-        $pending = fn (Builder|HasMany $query) => $query->where('approval', ArticleApprovalStatus::Pending);
-
         $warning = fn (string $key, Builder|HasMany $articles, Builder|HasMany|null $galleryImages = null) => [
             'key' => $key,
             'count' => $articles->count() + ($galleryImages?->count() ?? 0),
@@ -130,7 +123,7 @@ class MyDashboardService
         $brokenLinks = $this->brokenLinks->inArticles($this->articles());
 
         $warnings = [
-            $warning('returned', $returned($this->articles()), $returned($this->galleryImages())),
+            $warning('returned', $this->articles()->returned(), $this->galleryImages()->returned()),
             [
                 'key' => 'broken_links',
                 'count' => $brokenLinks->count(),
@@ -142,7 +135,7 @@ class MyDashboardService
                 ])->values(),
             ],
             $warning('no_thumbnail', $this->articles()->missingThumbnail()),
-            $warning('pending', $pending($this->articles()), $pending($this->galleryImages())),
+            $warning('pending', $this->articles()->withApproval(ArticleApprovalStatus::Pending), $this->galleryImages()->withApproval(ArticleApprovalStatus::Pending)),
         ];
 
         return array_values(array_filter($warnings, fn (array $warning) => $warning['count'] > 0));

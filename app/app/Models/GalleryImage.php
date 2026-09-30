@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ArticleApprovalStatus;
+use App\Models\Concerns\HasApproval;
 use App\Models\Concerns\HasPublicImages;
 use App\Models\Concerns\HasSortOrder;
 use Database\Factories\GalleryImageFactory;
@@ -25,7 +26,7 @@ use Illuminate\Support\Str;
 class GalleryImage extends Model
 {
     /** @use HasFactory<GalleryImageFactory> */
-    use HasFactory, HasPublicImages, HasSortOrder, SoftDeletes;
+    use HasApproval, HasFactory, HasPublicImages, HasSortOrder, SoftDeletes;
 
     /**
      * ギャラリー画像の保存先ディレクトリ(公開ディスク基準)。
@@ -79,7 +80,7 @@ class GalleryImage extends Model
     #[Scope]
     protected function published(Builder $query): void
     {
-        $query->where('approval', ArticleApprovalStatus::Published);
+        $query->withApproval(ArticleApprovalStatus::Published);
     }
 
     /**
