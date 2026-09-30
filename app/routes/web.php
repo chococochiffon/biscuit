@@ -14,6 +14,7 @@ use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
 use App\Http\Controllers\SiteSettingController;
@@ -56,6 +57,10 @@ Route::middleware('auth:admin')->group(function () {
     // ダッシュボード(ログイン後の既定の画面)
     Route::get('admin/dashboard', DashboardController::class)
         ->name('admin.dashboard');
+
+    // アクセス解析(公開側の PV・UU の集計。閲覧だけ)
+    Route::get('admin/page-views', [PageViewController::class, 'index'])
+        ->name('admin.page-views.index');
 
     // 管理モーダル・タグ選択が Ajax で使う JSON(画面用のコントローラーとは分ける)
     Route::get('admin/json/tags/search', [TagJsonController::class, 'search'])

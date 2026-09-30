@@ -13,6 +13,7 @@ use App\Http\Controllers\API\LayoutController;
 use App\Http\Controllers\API\MeController;
 use App\Http\Controllers\API\MyArticleController;
 use App\Http\Controllers\API\MyGalleryImageController;
+use App\Http\Controllers\API\PageViewController;
 use App\Http\Controllers\API\PasswordResetController;
 use App\Http\Controllers\API\QuestionAnswerController;
 use App\Http\Controllers\API\ResolveController;
@@ -40,6 +41,11 @@ Route::get('resolve', ResolveController::class)->name('api.resolve');
 Route::get('custom-page-types', [CustomPageTypeController::class, 'index'])->name('api.custom-page-types.index');
 
 Route::get('custom-pages/{customPageType:name}', [CustomPageController::class, 'index'])->name('api.custom-pages.index');
+
+// PV の記録(chococo のサーバーが公開側のページの表示ごとに中継する。共有の鍵が必要で、閲覧者ごとに回数を制限する)
+Route::post('page-views', [PageViewController::class, 'store'])
+    ->middleware('throttle:page-views')
+    ->name('api.page-views.store');
 
 // chococo のマイページ(ログインが必要。Authorization: Bearer で API トークンを送る)
 Route::post('auth/login', [AuthController::class, 'login'])

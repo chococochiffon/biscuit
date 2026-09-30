@@ -30,6 +30,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.page-views.index') }}" class="nav-link">
+                            <i class="bi bi-graph-up"></i>{{ __('アクセス解析') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.articles.index') }}" class="nav-link">
                             <i class="bi bi-file-earmark-text"></i>{{ __('記事一覧') }}
                             @if ($pendingArticleCount > 0)

@@ -19,6 +19,8 @@ use App\Models\CustomPageType;
 use App\Models\SinglePage;
 use App\Support\Breadcrumbs;
 use App\Support\CallContentResolver;
+use App\Support\PublicPage;
+use App\Support\PublicPageResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -34,7 +36,7 @@ class ResolveController extends Controller
      * - カスタムページ(例: /recipes/nikujaga): type=custom_page と本文(data。詳細とカスタムフォームの項目を含む)、種類、本文内の呼び出しコンテンツ一覧
      * - それ以外: type=single_page/article と本文(data)、本文内(Inside)の呼び出しコンテンツ一覧
      *   (本文内の原文枠には本文が入り、データ種別が本文と異なる原文枠は含めない)
-     * 本文は固定ページ、なければ公開済みの記事から探し、どちらも公開期間外のものは該当なしとして扱う。
+     * パスの解決は Support\PublicPageResolver(PV の記録と共通)。本文は固定ページ、なければ公開済みの記事から探し、どちらも公開期間外のものは該当なしとして扱う。
      * URL の先頭がカスタムページの種類(カスタム名の複数形)なら、カスタムページとして扱う(記事・固定ページはこの先頭を使えない)。
      * 呼び出しコンテンツはいずれも並び順(sort_order)で返す。
      * breadcrumbs はパンくず(Home から表示中のページまで。各項目は label と path(リンクしない途中の階層は null)。トップは空。Support\Breadcrumbs)。
@@ -52,30 +54,39 @@ class ResolveController extends Controller
             new OA\Response(response: 422, description: 'path が未指定'),
         ]
     )]
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, PublicPageResolver $resolver): JsonResponse
     {
         $validated = $request->validate([
             'path' => ['required', 'string', 'max:255'],
         ]);
 
-        $path = '/'.trim($validated['path'], '/');
+        $page = $resolver->resolve($validated['path']) ?? abort(404);
 
-        if ($path === '/') {
-            return response()->json([
+        return match ($page->type) {
+            PublicPage::TYPE_TOP => response()->json([
                 'type' => 'top',
                 'data' => null,
                 'breadcrumbs' => [],
                 'call_contents' => $this->callContents(CallContentPlace::Top),
-            ]);
-        }
+            ]),
+            PublicPage::TYPE_CUSTOM_PAGE_LIST => response()->json([
+                'type' => 'custom_page_list',
+                'data' => null,
+                'custom_page_type' => new CustomPageTypeResource($page->customPageType),
+                'breadcrumbs' => Breadcrumbs::forCustomPageList($page->customPageType),
+                'call_contents' => [],
+            ]),
+            PublicPage::TYPE_CUSTOM_PAGE => $this->customPageResponse($page->customPageType, $page->content),
+            default => $this->pageContentResponse($page->content),
+        };
+    }
 
-        $customPageType = CustomPageType::query()->get()->first(fn (CustomPageType $type) => str_starts_with($path.'/', $type->publicPath().'/'));
-
-        if ($customPageType !== null) {
-            return $this->resolveCustomPage($customPageType, $path);
-        }
-
-        $pageContent = $this->findPageContent($path);
+    /**
+     * 固定ページ・記事の本文を返す。
+     */
+    private function pageContentResponse(Article|SinglePage $pageContent): JsonResponse
+    {
+        $pageContent->load($pageContent instanceof Article ? ['user.detail', 'tags'] : ['details']);
 
         return response()->json([
             'type' => $pageContent instanceof Article ? 'article' : 'single_page',
@@ -86,49 +97,10 @@ class ResolveController extends Controller
     }
 
     /**
-     * パスに一致する公開期間内の固定ページ、なければ公開済みかつ公開期間内の記事を取得する(どちらもなければ404)。
+     * カスタムページ 1 件を、詳細とカスタムフォームの項目付きで返す。
      */
-    private function findPageContent(string $path): Article|SinglePage
+    private function customPageResponse(CustomPageType $type, CustomPageEntry $entry): JsonResponse
     {
-        $singlePage = SinglePage::query()
-            ->where('path', $path)
-            ->published()
-            ->with('details')
-            ->first();
-
-        return $singlePage ?? Article::query()
-            ->where('path', $path)
-            ->published()
-            ->with(['user.detail', 'tags'])
-            ->firstOrFail();
-    }
-
-    /**
-     * カスタムページの一覧(/カスタム名の複数形)か、1 件(/カスタム名の複数形/スラッグ。スラッグ未入力の記事型は id)を返す。
-     * 公開されていないページや、それより深い階層は 404。
-     */
-    private function resolveCustomPage(CustomPageType $type, string $path): JsonResponse
-    {
-        $rest = trim(substr($path, strlen($type->publicPath())), '/');
-
-        if ($rest === '') {
-            return response()->json([
-                'type' => 'custom_page_list',
-                'data' => null,
-                'custom_page_type' => new CustomPageTypeResource($type),
-                'breadcrumbs' => Breadcrumbs::forCustomPageList($type),
-                'call_contents' => [],
-            ]);
-        }
-
-        abort_if(str_contains($rest, '/'), 404);
-
-        $entry = CustomPageEntry::publishedQueryFor($type)
-            ->where(fn ($query) => $query
-                ->where('slug', $rest)
-                ->when(! $type->hasDetails() && ctype_digit($rest), fn ($query) => $query->orWhere(fn ($query) => $query->whereNull('slug')->whereKey($rest))))
-            ->firstOrFail();
-
         $resource = (new CustomPageEntryResource($entry))->withCustomFields(
             CustomForm::queryFor($type)->ordered()->get(),
             CustomFormValue::queryFor($type)->where($type->entryForeignKey(), $entry->id)->pluck('value', $type->formForeignKey()),
