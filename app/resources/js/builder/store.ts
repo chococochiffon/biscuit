@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
-import type { ArticleSummary, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
+import type { ArticleSummary, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -54,6 +54,8 @@ export function createBuilderStore(api: BuilderApi) {
 
   // 記事一覧のブロックの見本(取得の条件 → 記事)。同じ条件では取得し直さない
   const articleListCache = new Map<string, Promise<ArticleSummary[]>>()
+  // ナビゲーションのブロックの見本(項目の出どころ → 項目)
+  const navigationCache = new Map<string, Promise<NavigationItem[]>>()
 
   function syncHistory(): void {
     state.canUndo = history.canUndo()
@@ -560,6 +562,23 @@ export function createBuilderStore(api: BuilderApi) {
       }
 
       return articleListCache.get(key)!
+    },
+
+    /**
+     * ナビゲーションのブロックの見本(項目の出どころどおりの項目)。取得できなければ空。
+     */
+    navigationPreview(source: unknown): Promise<NavigationItem[]> {
+      const key = source === 'pages' ? 'pages' : 'site'
+
+      if (!navigationCache.has(key)) {
+        navigationCache.set(key, api.navigation(key).then(response => response.items).catch(() => {
+          navigationCache.delete(key)
+
+          return []
+        }))
+      }
+
+      return navigationCache.get(key)!
     },
 
     async uploadImage(file: File): Promise<string | null> {

@@ -100,6 +100,28 @@ class LayoutBlock extends Model
     }
 
     /**
+     * サイトのナビメニューの項目(ページビルダーのナビゲーションのブロック用)。ナビメニューの部品のうちヘッダーのもの(なければほかの領域のもの)の
+     * 項目を使い、ナビメニューの部品がなければ navMenuItems() と同じく自動で並べる。
+     *
+     * @return list<array{label: string, path: string, prefix: bool}>
+     */
+    public static function siteNavMenuItems(): array
+    {
+        $block = self::query()
+            ->where('block_type', LayoutBlockType::NavMenu)
+            ->with([
+                'navItems' => fn ($query) => $query->ordered(),
+                'navItems.singlePage' => fn ($query) => $query->published(),
+                'navItems.customPageType',
+            ])
+            ->get()
+            ->sortBy(fn (self $block) => [$block->region === LayoutRegion::Header ? 0 : 1, $block->sort_order, $block->id])
+            ->first();
+
+        return ($block ?? new self)->navMenuItems();
+    }
+
+    /**
      * 呼び出しコンテンツの部品を、実データの解決(CallContentResolver・CallContentResource)に渡す
      * 保存しない呼び出しコンテンツにする(呼び出しコンテンツの部品でなければ null)。
      */

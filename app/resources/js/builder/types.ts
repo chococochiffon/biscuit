@@ -91,9 +91,17 @@ export interface EditorConfig {
     images: string
     // テンプレートの一覧・保存(削除は末尾に /{id} を付ける)
     templates: string
-    // 記事一覧のブロックの Canvas の見本
+    // 記事一覧・ナビゲーションのブロックの Canvas の見本
     articleList: string
+    navigation: string
   }
+}
+
+// ナビゲーションのブロックの項目(biscuit の BlockDataResolver::navigationItems())
+export interface NavigationItem {
+  label: string
+  path: string
+  prefix: boolean
 }
 
 // 記事一覧のブロックの見本の記事(biscuit の ArticleResource のうち、エディタで使うもの)
