@@ -72,3 +72,83 @@ export function columnSpan(node: BuilderNode, device: Device): number {
 
   return device === 'tablet' ? int(node.props.spanTablet, span) : int(node.props.spanMobile, 12)
 }
+
+// スタイルの値の形(biscuit の StyleRegistry と同じ。エディタは BlockRegistry::toArray() の styles で種類を受け取る)
+const STYLE_PATTERNS: Record<string, RegExp> = {
+  length: /^(?:0|auto|\d{1,4}(?:\.\d{1,2})?(?:px|rem|em|%|vh|vw))$/,
+  color: /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/,
+  number: /^\d(?:\.\d{1,2})?$/,
+}
+
+/**
+ * スタイルの値が、そのスタイルの種類(length・color・number、または選べる値の一覧)で許した形か。
+ */
+export function isValidStyleValue(kind: string | string[] | undefined, value: string): boolean {
+  if (kind === undefined) {
+    return false
+  }
+
+  return Array.isArray(kind) ? kind.includes(value) : STYLE_PATTERNS[kind]?.test(value) ?? false
+}
+
+/**
+ * 端末のスタイルを変える(デスクトップは styles、タブレット・スマートフォンは responsive の上書き)。
+ * null なら指定を外し、空になった端末の上書きは取り除く。変わったら true。
+ */
+export function setNodeStyle(node: BuilderNode, device: Device, name: string, value: string | null): boolean {
+  if (device === 'desktop') {
+    if ((node.styles[name] ?? null) === value) {
+      return false
+    }
+    if (value === null) {
+      delete node.styles[name]
+    }
+    else {
+      node.styles[name] = value
+    }
+
+    return true
+  }
+
+  const overrides = { ...node.responsive?.[device] }
+
+  if ((overrides[name] ?? null) === value) {
+    return false
+  }
+  if (value === null) {
+    delete overrides[name]
+  }
+  else {
+    overrides[name] = value
+  }
+
+  const responsive = { ...node.responsive, [device]: overrides }
+
+  if (Object.keys(overrides).length === 0) {
+    delete responsive[device]
+  }
+
+  if (Object.keys(responsive).length === 0) {
+    delete node.responsive
+  }
+  else {
+    node.responsive = responsive
+  }
+
+  return true
+}
+
+/**
+ * 端末で使われるスタイルの値と、それがどこで決まっているか(own: その端末で指定・inherited: 上の端末から引き継ぎ・none: 指定なし)。
+ */
+export function styleValueFor(node: BuilderNode, device: Device, name: string): { value: string | null, source: 'own' | 'inherited' | 'none' } {
+  const own = device === 'desktop' ? node.styles[name] : node.responsive?.[device]?.[name]
+
+  if (own !== undefined) {
+    return { value: own, source: 'own' }
+  }
+
+  const inherited = effectiveStyles(node, device)[name]
+
+  return inherited !== undefined ? { value: inherited, source: 'inherited' } : { value: null, source: 'none' }
+}

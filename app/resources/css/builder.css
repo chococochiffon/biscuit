@@ -233,3 +233,8 @@
 .builder-image-field-preview {
     max-height: 120px;
 }
+
+/* スタイルの色の入力欄は、色見本だけの幅にする(入力グループの中で横に広がらないように) */
+.builder-properties .form-control-color {
+    flex: 0 0 2.75rem;
+}
