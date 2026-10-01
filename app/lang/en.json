@@ -693,5 +693,12 @@
     "縦に並べる": "Vertical",
     "ピル": "Pills",
     "下線": "Underline",
-    "表示する項目がありません。": "There are no items to show."
+    "表示する項目がありません。": "There are no items to show.",
+    "パンくず": "Breadcrumbs",
+    "区切り": "Separator",
+    "今のページを表示する": "Show the current page",
+    "スラッシュ( / )": "Slash ( / )",
+    "山かっこ( › )": "Chevron ( › )",
+    "矢印( → )": "Arrow ( → )",
+    "トップページではパンくずを表示しません。": "Breadcrumbs are not shown on the top page."
 }

@@ -74,9 +74,17 @@ export interface BuilderStatePayload {
   updated_at: string | null
 }
 
+// パンくずの項目(path が null の項目はリンクしない。末尾は表示しているページ)
+export interface Breadcrumb {
+  label: string
+  path: string | null
+}
+
 export interface ShowPayload extends BuilderStatePayload {
   registry: Registry
   image_base_url: string
+  // 編集しているページのパンくず(トップは空)
+  breadcrumbs: Breadcrumb[]
 }
 
 // 画面(resources/views/admin/builder/edit.blade.php)が渡す設定

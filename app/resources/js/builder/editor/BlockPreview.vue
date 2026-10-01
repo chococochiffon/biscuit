@@ -5,6 +5,7 @@ import { useBuilderStore } from '../store'
 import { blockStyle } from '../styles'
 import type { BuilderNode } from '../types'
 import ArticleListPreview from './ArticleListPreview.vue'
+import BreadcrumbPreview from './BreadcrumbPreview.vue'
 import DropList from './DropList.vue'
 import NavigationPreview from './NavigationPreview.vue'
 
@@ -85,6 +86,7 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
   <hr v-else-if="node.type === 'divider'" class="builder-preview-divider" :style="style">
   <ArticleListPreview v-else-if="node.type === 'article-list'" :node="node" :style="style" />
   <NavigationPreview v-else-if="node.type === 'navigation'" :node="node" :style="style" />
+  <BreadcrumbPreview v-else-if="node.type === 'breadcrumb'" :node="node" :style="style" />
   <div v-else class="builder-preview-placeholder">
     {{ t('この種類のブロックは表示できません。') }}
   </div>

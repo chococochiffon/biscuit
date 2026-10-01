@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
-import type { ArticleSummary, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, NavigationItem, PageInfo, Registry } from './types'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -20,6 +20,8 @@ export function createBuilderStore(api: BuilderApi) {
     page: null as PageInfo | null,
     registry: { rootChildren: [], blocks: {}, styles: {} } as Registry,
     imageBaseUrl: '',
+    // 編集しているページのパンくず(パンくずのブロックの見本)
+    breadcrumbs: [] as Breadcrumb[],
     content: { version: 1, children: [] } as BuilderContent,
     device: 'desktop' as Device,
     selectedId: null as string | null,
@@ -156,6 +158,7 @@ export function createBuilderStore(api: BuilderApi) {
         const payload = await api.show()
         state.registry = payload.registry
         state.imageBaseUrl = payload.image_base_url
+        state.breadcrumbs = payload.breadcrumbs
         applyState(payload, true)
         state.loaded = true
       }
