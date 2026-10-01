@@ -15,10 +15,11 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 
-#[Fillable(['title', 'short_sentences', 'header_image', 'parent_path', 'slug', 'top_page_view', 'link_list_view', 'sort_order', 'publication_start_datetime', 'publication_end_datetime'])]
+#[Fillable(['title', 'short_sentences', 'header_image', 'parent_path', 'slug', 'top_page_view', 'link_list_view', 'use_builder', 'sort_order', 'publication_start_datetime', 'publication_end_datetime'])]
 #[Hidden(['unique_path'])]
 class SinglePage extends Model
 {
@@ -40,6 +41,7 @@ class SinglePage extends Model
         return [
             'top_page_view' => 'boolean',
             'link_list_view' => 'boolean',
+            'use_builder' => 'boolean',
             'publication_start_datetime' => 'datetime',
             'publication_end_datetime' => 'datetime',
         ];
@@ -78,5 +80,13 @@ class SinglePage extends Model
     public function details(): HasMany
     {
         return $this->hasMany(SinglePageDetail::class)->ordered();
+    }
+
+    /**
+     * この固定ページのページビルダーを取得する(use_builder が true のとき、公開側には詳細の代わりにこの公開中の内容を出す)。
+     */
+    public function builder(): HasOne
+    {
+        return $this->hasOne(PageBuilder::class);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Article;
 use App\Models\CustomPageType;
 use App\Models\GalleryImage;
+use App\Models\PageBuilder;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Models\TopSliderImage;
@@ -45,6 +46,7 @@ class MediaStatsService
         'answers',
         'questions',
         'question_answers',
+        'page_builders',
     ];
 
     /**
@@ -117,6 +119,7 @@ class MediaStatsService
             UserDetail::USER_IMAGE_DIRECTORY => __('ユーザーのアイコン'),
             SiteSetting::SITE_ICON_DIRECTORY => __('サイトアイコン'),
             SiteSetting::SITE_IMAGE_DIRECTORY => __('サイト画像'),
+            PageBuilder::IMAGE_DIRECTORY => __('ページビルダー'),
         ];
     }
 
