@@ -44,7 +44,7 @@ class BuilderValidatorTest extends TestCase
 
     public function test_every_block_with_default_props_is_valid_where_it_can_be_placed(): void
     {
-        $leaves = array_map(fn (string $type) => BuilderContent::node($type), ['heading', 'text', 'image', 'button', 'spacer', 'divider']);
+        $leaves = array_map(fn (string $type) => BuilderContent::node($type), ['heading', 'text', 'image', 'button', 'spacer', 'divider', 'article-list']);
         $content = [
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
@@ -56,7 +56,7 @@ class BuilderValidatorTest extends TestCase
         ];
 
         // 同じ ID を 2 回使わないよう、カラムの中は ID を振り直す
-        $content['children'][0]['children'][6]['children'][0]['children'][0]['children'] = array_map(
+        $content['children'][0]['children'][count($leaves)]['children'][0]['children'][0]['children'] = array_map(
             fn (array $leaf) => [...$leaf, 'id' => BuilderContent::newId($leaf['type'])],
             $leaves,
         );
@@ -125,6 +125,21 @@ class BuilderValidatorTest extends TestCase
 
                 return $content;
             }, 'heading'],
+            '真偽値の項目に文字' => [function (array $content) {
+                $content['children'][0]['children'][] = BuilderContent::node('article-list', ['showDate' => 'yes']);
+
+                return $content;
+            }, 'article-list'],
+            '記事一覧の件数が上限を超える' => [function (array $content) {
+                $content['children'][0]['children'][] = BuilderContent::node('article-list', ['limit' => 21]);
+
+                return $content;
+            }, 'article-list'],
+            '行の中に記事一覧' => [function (array $content) {
+                $content['children'][0]['children'][0]['children'][0]['children'][] = BuilderContent::node('article-list');
+
+                return $content;
+            }, 'article-list'],
             'ボタンの target が選択肢にない' => [function (array $content) {
                 $content['children'][0]['children'][] = BuilderContent::node('button', ['target' => '_parent']);
 

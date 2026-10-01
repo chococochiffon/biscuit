@@ -23,7 +23,7 @@ export interface BuilderContent {
   children: BuilderNode[]
 }
 
-export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image'
+export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image' | 'bool'
 
 export interface PropDefinition {
   label: string
@@ -37,7 +37,8 @@ export interface PropDefinition {
 
 export interface BlockDefinition {
   label: string
-  category: 'layout' | 'basic'
+  // layout・basic・cms(記事一覧など CMS のデータを表示するブロック)
+  category: 'layout' | 'basic' | 'cms'
   // Bootstrap Icons の名前
   icon: string
   children: string[]
@@ -90,7 +91,19 @@ export interface EditorConfig {
     images: string
     // テンプレートの一覧・保存(削除は末尾に /{id} を付ける)
     templates: string
+    // 記事一覧のブロックの Canvas の見本
+    articleList: string
   }
+}
+
+// 記事一覧のブロックの見本の記事(biscuit の ArticleResource のうち、エディタで使うもの)
+export interface ArticleSummary {
+  id: number
+  title: string
+  path: string
+  content: string | null
+  thumbnail_url: string | null
+  published_at: string | null
 }
 
 // ページビルダーのテンプレート(PageBuilderTemplateJsonController)

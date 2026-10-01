@@ -419,3 +419,9 @@
     padding-top: 2rem;
     text-align: center;
 }
+
+/* 記事一覧のブロックの見本のサムネイル(公開側のカードと同じ高さにそろえる) */
+.builder-article-thumbnail {
+    height: 140px;
+    object-fit: cover;
+}

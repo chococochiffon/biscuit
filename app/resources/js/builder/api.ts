@@ -1,4 +1,4 @@
-import type { BuilderContent, BuilderStatePayload, BuilderTemplate, EditorConfig, ShowPayload } from './types'
+import type { ArticleSummary, BuilderContent, BuilderStatePayload, BuilderTemplate, EditorConfig, ShowPayload } from './types'
 
 // PageBuilderJsonController を呼ぶ。セッションで認証するため、CSRF トークンを付けて同じオリジンへ送る
 
@@ -51,6 +51,8 @@ export function createApi(config: EditorConfig) {
     saveTemplate: (name: string, description: string, content: BuilderContent) =>
       request<BuilderTemplate>(endpoints.templates, 'POST', { name, description: description || null, content }),
     deleteTemplate: (id: number) => request<unknown>(`${endpoints.templates}/${id}`, 'DELETE'),
+    articleList: (query: Record<string, string>) =>
+      request<{ articles: ArticleSummary[] }>(`${endpoints.articleList}?${new URLSearchParams(query)}`, 'GET'),
     uploadImage: (file: File) => {
       const form = new FormData()
       form.append('image', file)

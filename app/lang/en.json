@@ -670,5 +670,17 @@
     "テンプレートとして保存しました。": "Saved as a template.",
     "テンプレートとして保存": "Save as template",
     "テンプレートから始める": "Start from a template",
-    "ページビルダーのテンプレート": "Page builder template"
+    "ページビルダーのテンプレート": "Page builder template",
+    "並び順": "Order",
+    "投稿先で絞り込む(親パス。例: news)": "Filter by section (parent path, e.g. news)",
+    "タグで絞り込む(タグ名)": "Filter by tag (tag name)",
+    "表示のしかた": "Display",
+    "カードの列数(デスクトップ)": "Card columns (desktop)",
+    "本文の書き出しを表示する": "Show excerpt",
+    "公開日を表示する": "Show published date",
+    "新しい順": "Newest first",
+    "古い順": "Oldest first",
+    "カード": "Cards",
+    "リスト": "List",
+    "条件に合う公開中の記事がありません。": "No published articles match the conditions."
 }

@@ -4,6 +4,7 @@ import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import { blockStyle } from '../styles'
 import type { BuilderNode } from '../types'
+import ArticleListPreview from './ArticleListPreview.vue'
 import DropList from './DropList.vue'
 
 // Canvas に描くブロックの中身。公開側(chococo の components/builder/blocks)と同じ Bootstrap の要素で近い見た目にする。
@@ -81,6 +82,7 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
   </div>
   <div v-else-if="node.type === 'spacer'" class="builder-preview-spacer" :style="{ height: `${int('height', 32)}px` }" />
   <hr v-else-if="node.type === 'divider'" class="builder-preview-divider" :style="style">
+  <ArticleListPreview v-else-if="node.type === 'article-list'" :node="node" :style="style" />
   <div v-else class="builder-preview-placeholder">
     {{ t('この種類のブロックは表示できません。') }}
   </div>

@@ -12,7 +12,8 @@ const groups = computed(() => {
   return [
     { label: t('レイアウト'), items: blocks.filter(([, block]) => block.category === 'layout') },
     { label: t('基本'), items: blocks.filter(([, block]) => block.category === 'basic') },
-  ]
+    { label: t('コンテンツ'), items: blocks.filter(([, block]) => block.category === 'cms') },
+  ].filter(group => group.items.length > 0)
 })
 
 function startDrag(event: DragEvent, type: string): void {

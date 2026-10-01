@@ -7,7 +7,7 @@ namespace App\Support\Builder;
  * 保存時の検証(BuilderValidator)と管理画面のエディタ(toArray() を JSON で渡す)のどちらもここを元にする。
  * 置ける親(allowedParents)は allowedChildren を逆に引いて作り、定義は片側だけに書く。
  *
- * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image)と default を持ち、
+ * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool)と default を持ち、
  * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image は常に null 可)。
  */
 final class BlockRegistry
@@ -25,6 +25,13 @@ final class BlockRegistry
      * @var list<string>
      */
     private const BASIC_BLOCKS = ['heading', 'text', 'image', 'button', 'spacer', 'divider'];
+
+    /**
+     * セクション・コンテナ・カラムの中に置ける、中に何も置けないブロック(基本のブロックと、CMS のデータを表示するブロック)。
+     *
+     * @var list<string>
+     */
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list'];
 
     /**
      * 余白のスタイル。
@@ -52,7 +59,7 @@ final class BlockRegistry
                 'label' => 'セクション',
                 'category' => 'layout',
                 'icon' => 'square',
-                'children' => ['container', 'row', ...self::BASIC_BLOCKS],
+                'children' => ['container', 'row', ...self::CONTENT_BLOCKS],
                 'props' => [
                     'backgroundImage' => ['label' => '背景画像', 'type' => 'image', 'default' => null],
                 ],
@@ -62,7 +69,7 @@ final class BlockRegistry
                 'label' => 'コンテナ',
                 'category' => 'layout',
                 'icon' => 'bounding-box',
-                'children' => ['row', ...self::BASIC_BLOCKS],
+                'children' => ['row', ...self::CONTENT_BLOCKS],
                 'props' => [],
                 'styles' => [...self::SPACING_STYLES, 'maxWidth', 'backgroundColor', 'textAlign'],
             ],
@@ -81,7 +88,7 @@ final class BlockRegistry
                 'label' => 'カラム',
                 'category' => 'layout',
                 'icon' => 'layout-split',
-                'children' => self::BASIC_BLOCKS,
+                'children' => self::CONTENT_BLOCKS,
                 'props' => [
                     // 12 分割の幅。タブレット・スマートフォンは未指定(null)なら、タブレットはデスクトップと同じ・スマートフォンは 12
                     'span' => ['label' => '幅(デスクトップ)', 'type' => 'int', 'default' => 12, 'min' => 1, 'max' => 12],
@@ -147,6 +154,24 @@ final class BlockRegistry
                     'height' => ['label' => '高さ(px)', 'type' => 'int', 'default' => 32, 'min' => 0, 'max' => 400],
                 ],
                 'styles' => [],
+            ],
+            // 記事一覧: 保存するのは取得の条件だけで、公開側に返すときに条件どおりの公開中の記事を入れる(ArticleListQuery)
+            'article-list' => [
+                'label' => '記事一覧',
+                'category' => 'cms',
+                'icon' => 'newspaper',
+                'children' => [],
+                'props' => [
+                    'limit' => ['label' => '表示件数', 'type' => 'int', 'default' => 6, 'min' => 1, 'max' => 20],
+                    'order' => ['label' => '並び順', 'type' => 'enum', 'default' => 'newest', 'options' => ['newest', 'oldest']],
+                    'parentPath' => ['label' => '投稿先で絞り込む(親パス。例: news)', 'type' => 'string', 'default' => '', 'max' => 255],
+                    'tag' => ['label' => 'タグで絞り込む(タグ名)', 'type' => 'string', 'default' => '', 'max' => 100],
+                    'layout' => ['label' => '表示のしかた', 'type' => 'enum', 'default' => 'card', 'options' => ['card', 'list']],
+                    'columns' => ['label' => 'カードの列数(デスクトップ)', 'type' => 'int', 'default' => 3, 'min' => 1, 'max' => 4],
+                    'showExcerpt' => ['label' => '本文の書き出しを表示する', 'type' => 'bool', 'default' => true],
+                    'showDate' => ['label' => '公開日を表示する', 'type' => 'bool', 'default' => true],
+                ],
+                'styles' => [...self::MARGIN_STYLES],
             ],
             'divider' => [
                 'label' => '区切り線',

@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
-import type { BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
+import type { ArticleSummary, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -51,6 +51,9 @@ export function createBuilderStore(api: BuilderApi) {
   })
 
   const history = createHistory()
+
+  // 記事一覧のブロックの見本(取得の条件 → 記事)。同じ条件では取得し直さない
+  const articleListCache = new Map<string, Promise<ArticleSummary[]>>()
 
   function syncHistory(): void {
     state.canUndo = history.canUndo()
@@ -534,6 +537,29 @@ export function createBuilderStore(api: BuilderApi) {
 
         return false
       }
+    },
+
+    /**
+     * 記事一覧のブロックの見本(条件どおりの公開中の記事)。取得できなければ空。
+     */
+    articleListPreview(props: Record<string, unknown>): Promise<ArticleSummary[]> {
+      const query = {
+        limit: String(props.limit ?? 6),
+        order: String(props.order ?? 'newest'),
+        parentPath: typeof props.parentPath === 'string' ? props.parentPath : '',
+        tag: typeof props.tag === 'string' ? props.tag : '',
+      }
+      const key = JSON.stringify(query)
+
+      if (!articleListCache.has(key)) {
+        articleListCache.set(key, api.articleList(query).then(response => response.articles).catch(() => {
+          articleListCache.delete(key)
+
+          return []
+        }))
+      }
+
+      return articleListCache.get(key)!
     },
 
     async uploadImage(file: File): Promise<string | null> {

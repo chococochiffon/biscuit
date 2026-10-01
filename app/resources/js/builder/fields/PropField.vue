@@ -26,6 +26,10 @@ const OPTION_LABELS: Record<string, string> = {
   'outline-primary': t('枠線(メイン)'),
   'outline-secondary': t('枠線(サブ)'),
   'link': t('リンク'),
+  'newest': t('新しい順'),
+  'oldest': t('古い順'),
+  'card': t('カード'),
+  'list': t('リスト'),
 }
 
 // 範囲の狭い整数(見出しのレベル・カラムの幅・余白の段階)は選択肢にする
@@ -50,7 +54,19 @@ function updateInt(raw: string): void {
 
 <template>
   <div class="mb-3">
-    <label :for="id" class="form-label small fw-semibold mb-1">{{ prop.label }}</label>
+    <div v-if="prop.type === 'bool'" class="form-check form-switch">
+      <input
+        :id="id"
+        type="checkbox"
+        class="form-check-input"
+        role="switch"
+        :checked="value === true"
+        @change="update(($event.target as HTMLInputElement).checked)"
+      >
+      <label :for="id" class="form-check-label small fw-semibold">{{ prop.label }}</label>
+    </div>
+
+    <label v-else :for="id" class="form-label small fw-semibold mb-1">{{ prop.label }}</label>
 
     <input
       v-if="prop.type === 'string'"
