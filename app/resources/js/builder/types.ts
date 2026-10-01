@@ -96,8 +96,9 @@ export type Dragging =
   | { kind: 'new', type: string }
   | { kind: 'move', id: string, type: string }
 
-// ドロップ先(parentId が null ならページの直下)
+// ドロップ先(parentId が null ならページの直下)。from は入れる位置を示している場所(Canvas とコンポーネントツリー)
 export interface DropTarget {
   parentId: string | null
   index: number
+  from?: 'canvas' | 'tree'
 }

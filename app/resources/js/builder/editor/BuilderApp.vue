@@ -5,11 +5,11 @@ import { t } from '../i18n'
 import { builderStoreKey, createBuilderStore } from '../store'
 import type { EditorConfig } from '../types'
 import BuilderCanvas from './BuilderCanvas.vue'
-import BuilderPalette from './BuilderPalette.vue'
 import BuilderToolbar from './BuilderToolbar.vue'
+import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
 
-// ページビルダーのエディタ全体(上にツールバー、左にパレット、中央に Canvas、右にプロパティ)
+// ページビルダーのエディタ全体(上にツールバー、左にパレットとコンポーネントツリー、中央に Canvas、右にプロパティ)
 const props = defineProps<{
   config: EditorConfig
 }>()
@@ -109,7 +109,7 @@ onBeforeUnmount(() => {
       {{ t('読み込んでいます...') }}
     </div>
     <div v-else class="builder-body">
-      <BuilderPalette />
+      <LeftPanel />
       <BuilderCanvas />
       <PropertyPanel />
     </div>

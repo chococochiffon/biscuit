@@ -2,7 +2,7 @@ import { inject, reactive, type InjectionKey } from 'vue'
 import { ApiError, type BuilderApi } from './api'
 import { createHistory } from './history'
 import { t } from './i18n'
-import { canPlace, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
+import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
 import type { BuilderContent, BuilderNode, BuilderStatePayload, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
 
@@ -266,6 +266,28 @@ export function createBuilderStore(api: BuilderApi) {
       if (mutate(null, () => removeNode(state.content, id) !== null) && state.selectedId && !findNode(state.content, state.selectedId)) {
         state.selectedId = null
       }
+    },
+
+    /**
+     * ブロックを(子ごと)複製してすぐ後ろに置き、複製を選択する。複製と子孫には新しい ID を振る。
+     * 行の中のカラムを複製したら、行のカラムの幅をそろえる。
+     */
+    duplicate(id: string): void {
+      const location = findLocation(state.content, id)
+
+      if (!location) {
+        return
+      }
+
+      const copy = cloneWithNewIds(location.siblings[location.index])
+
+      mutate(null, () => {
+        location.siblings.splice(location.index + 1, 0, copy)
+        equalizeIfAddedToRow(copy.id, location.parent?.id ?? null)
+
+        return true
+      })
+      state.selectedId = copy.id
     },
 
     updateProp(id: string, name: string, value: unknown): void {

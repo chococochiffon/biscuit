@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 
-// 左のパレット: ブロックの種類の一覧。Canvas へドラッグして置くか、クリックで選択中のブロックの中(または後ろ)に置く
+// パレット(左のパネルの「ブロック」): ブロックの種類の一覧。Canvas へドラッグして置くか、クリックで選択中のブロックの中(または後ろ)に置く
 const store = useBuilderStore()
 
 const groups = computed(() => {
@@ -25,7 +25,7 @@ function startDrag(event: DragEvent, type: string): void {
 </script>
 
 <template>
-  <aside class="builder-palette">
+  <div>
     <section v-for="group in groups" :key="group.label" class="mb-3">
       <h2 class="builder-panel-heading">{{ group.label }}</h2>
       <div class="builder-palette-items">
@@ -48,5 +48,5 @@ function startDrag(event: DragEvent, type: string): void {
     <p class="small text-secondary">
       {{ t('ページの一番外側にはセクションを置き、その中にブロックを並べます。') }}
     </p>
-  </aside>
+  </div>
 </template>
