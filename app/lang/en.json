@@ -705,5 +705,11 @@
     "タイルの列数(デスクトップ)": "Tile columns (desktop)",
     "名前を表示する": "Show names",
     "(削除された分類)": "(Deleted category)",
-    "条件に合う公開中の画像がありません。": "No published images match the conditions."
+    "条件に合う公開中の画像がありません。": "No published images match the conditions.",
+    "動画": "Video",
+    "動画の URL(YouTube・Vimeo)": "Video URL (YouTube / Vimeo)",
+    "動画のタイトル(読み上げ用)": "Video title (for screen readers)",
+    "縦横比": "Aspect ratio",
+    "YouTube か Vimeo の動画の URL を入力してください。": "Enter a YouTube or Vimeo video URL.",
+    "動画の URL を入力してください": "Enter a video URL"
 }

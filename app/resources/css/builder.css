@@ -452,3 +452,9 @@
     white-space: nowrap;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
 }
+
+/* 動画のブロックの見本(iframe の上に透明な覆いを重ね、クリックでブロックを選べるようにする) */
+.builder-preview-video-cover {
+    position: absolute;
+    inset: 0;
+}

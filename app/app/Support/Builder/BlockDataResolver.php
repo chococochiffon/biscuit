@@ -11,11 +11,12 @@ use App\Support\CallContent\SinglePageContentSource;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * CMS のデータを表示するブロック(BlockRegistry の category が cms)の data を、ブロックの props(取得の条件)から取得する。
+ * CMS のデータを表示するブロック(BlockRegistry の category が cms)と動画のブロックの data を、ブロックの props(取得の条件)から取得する。
  * 保存する内容には条件だけを持ち、公開側に返すとき(BuilderPresenter::forPublic())と、エディタの Canvas の見本で取得する。
  * - article-list: articles(条件どおりの公開中の記事。ArticleListQuery)
  * - navigation: items(label・path・prefix。サイトのナビメニューか、リンクリストに表示する固定ページ)
  * - gallery: images(条件どおりの公開中のギャラリー画像。並び順)
+ * - video: embed_url(動画の URL から組み立てた埋め込み用の URL。VideoUrl)
  */
 final class BlockDataResolver
 {
@@ -31,6 +32,7 @@ final class BlockDataResolver
             'article-list' => ['articles' => ArticleResource::collection(ArticleListQuery::articles($props))->resolve()],
             'navigation' => ['items' => self::navigationItems($props)],
             'gallery' => ['images' => GalleryImageResource::collection(self::galleryImages($props))->resolve()],
+            'video' => ['embed_url' => is_string($props['url'] ?? null) ? VideoUrl::embedUrl($props['url']) : null],
             default => null,
         };
     }

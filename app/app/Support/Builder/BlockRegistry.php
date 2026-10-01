@@ -7,8 +7,9 @@ namespace App\Support\Builder;
  * 保存時の検証(BuilderValidator)と管理画面のエディタ(toArray() を JSON で渡す)のどちらもここを元にする。
  * 置ける親(allowedParents)は allowedChildren を逆に引いて作り、定義は片側だけに書く。
  *
- * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool)と default を持ち、
- * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image は常に null 可)。
+ * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool・video)と default を持ち、
+ * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image・video は常に null 可)。
+ * video は YouTube・Vimeo の動画の URL だけを受け付ける(VideoUrl)。
  * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類)。
  */
 final class BlockRegistry
@@ -32,7 +33,7 @@ final class BlockRegistry
      *
      * @var list<string>
      */
-    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list', 'navigation', 'breadcrumb', 'gallery'];
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'video', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
 
     /**
      * 余白のスタイル。
@@ -155,6 +156,19 @@ final class BlockRegistry
                     'height' => ['label' => '高さ(px)', 'type' => 'int', 'default' => 32, 'min' => 0, 'max' => 400],
                 ],
                 'styles' => [],
+            ],
+            // 動画: YouTube・Vimeo の URL を保存し、公開側に返すときに動画の ID から組み立てた埋め込み用の URL を入れる(BlockDataResolver)
+            'video' => [
+                'label' => '動画',
+                'category' => 'basic',
+                'icon' => 'play-btn',
+                'children' => [],
+                'props' => [
+                    'url' => ['label' => '動画の URL(YouTube・Vimeo)', 'type' => 'video', 'default' => null],
+                    'title' => ['label' => '動画のタイトル(読み上げ用)', 'type' => 'string', 'default' => '動画', 'max' => 200],
+                    'aspect' => ['label' => '縦横比', 'type' => 'enum', 'default' => '16x9', 'options' => ['16x9', '4x3', '1x1', '21x9']],
+                ],
+                'styles' => [...self::MARGIN_STYLES, 'maxWidth'],
             ],
             // 記事一覧: 保存するのは取得の条件だけで、公開側に返すときに条件どおりの公開中の記事を入れる(ArticleListQuery)
             'article-list' => [

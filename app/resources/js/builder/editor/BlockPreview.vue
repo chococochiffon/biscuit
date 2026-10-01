@@ -7,6 +7,7 @@ import type { BuilderNode } from '../types'
 import ArticleListPreview from './ArticleListPreview.vue'
 import BreadcrumbPreview from './BreadcrumbPreview.vue'
 import DropList from './DropList.vue'
+import { videoEmbedUrl } from '../video'
 import GalleryPreview from './GalleryPreview.vue'
 import NavigationPreview from './NavigationPreview.vue'
 
@@ -33,6 +34,7 @@ const sectionStyle = computed(() => {
     : style.value
 })
 const imageUrl = computed(() => store.imageUrl(props.node.props.src))
+const videoUrl = computed(() => videoEmbedUrl(props.node.props.url))
 const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}`)
 </script>
 
@@ -85,6 +87,16 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
   </div>
   <div v-else-if="node.type === 'spacer'" class="builder-preview-spacer" :style="{ height: `${int('height', 32)}px` }" />
   <hr v-else-if="node.type === 'divider'" class="builder-preview-divider" :style="style">
+  <div v-else-if="node.type === 'video'" :style="style">
+    <div v-if="videoUrl" class="ratio builder-preview-video" :class="`ratio-${text('aspect') || '16x9'}`">
+      <iframe :src="videoUrl" :title="text('title')" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" />
+      <!-- iframe がクリックを受けるとブロックを選べないため、上に透明な覆いを重ねる(動画は公開側・プレビューで再生する) -->
+      <div class="builder-preview-video-cover" />
+    </div>
+    <div v-else class="builder-preview-placeholder">
+      <i class="bi bi-play-btn" /> {{ t('動画の URL を入力してください') }}
+    </div>
+  </div>
   <ArticleListPreview v-else-if="node.type === 'article-list'" :node="node" :style="style" />
   <NavigationPreview v-else-if="node.type === 'navigation'" :node="node" :style="style" />
   <BreadcrumbPreview v-else-if="node.type === 'breadcrumb'" :node="node" :style="style" />
