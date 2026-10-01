@@ -16,8 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [SetLocale::class]);
 
-        // ページビルダーの内容(JSON)は送られたとおりに検証・保存する(空文字を null にしたり、前後の空白を削ったりしない)
-        $isPageBuilderJson = fn (Request $request) => $request->is('admin/json/builder/*');
+        // ページビルダーの内容(JSON。下書き・テンプレート)は送られたとおりに検証・保存する(空文字を null にしたり、前後の空白を削ったりしない)
+        $isPageBuilderJson = fn (Request $request) => $request->is('admin/json/builder/*', 'admin/json/builder-templates', 'admin/json/builder-templates/*');
         $middleware->convertEmptyStringsToNull(except: [$isPageBuilderJson]);
         $middleware->trimStrings(except: [$isPageBuilderJson]);
 

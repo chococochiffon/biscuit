@@ -16,6 +16,7 @@ use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\PageBuilderController;
 use App\Http\Controllers\PageBuilderJsonController;
+use App\Http\Controllers\PageBuilderTemplateJsonController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
@@ -82,6 +83,12 @@ Route::middleware('auth:admin')->group(function () {
         ->name('admin.builder.top');
     Route::get('admin/builder/single-pages/{singlePage}', [PageBuilderController::class, 'edit'])
         ->name('admin.builder.single-pages');
+
+    // ページビルダーのテンプレート(エディタが一覧・保存・削除に使う JSON)
+    Route::resource('admin/json/builder-templates', PageBuilderTemplateJsonController::class)
+        ->parameters(['builder-templates' => 'pageBuilderTemplate'])
+        ->only(['index', 'store', 'destroy'])
+        ->names('admin.json.builder-templates');
 
     // ページビルダーのエディタが使う JSON。対象はトップ(admin/json/builder/top)と固定ページ(admin/json/builder/single-pages/{singlePage})
     Route::post('admin/json/builder/images', [PageBuilderJsonController::class, 'storeImage'])

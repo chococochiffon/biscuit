@@ -8,6 +8,7 @@ import BuilderCanvas from './BuilderCanvas.vue'
 import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
+import TemplateDialog from './TemplateDialog.vue'
 
 // ページビルダーのエディタ全体(上にツールバー、左にパレットとコンポーネントツリー、中央に Canvas、右にプロパティ)
 const props = defineProps<{
@@ -53,6 +54,15 @@ function handleKeydown(event: KeyboardEvent): void {
   const target = event.target as HTMLElement | null
   const withModifier = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
+
+  // テンプレートの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
+  if (store.state.templatesOpen) {
+    if (event.key === 'Escape') {
+      store.state.templatesOpen = false
+    }
+
+    return
+  }
 
   if (withModifier && key === 's') {
     event.preventDefault()
@@ -113,5 +123,6 @@ onBeforeUnmount(() => {
       <BuilderCanvas />
       <PropertyPanel />
     </div>
+    <TemplateDialog v-if="store.state.templatesOpen" />
   </div>
 </template>

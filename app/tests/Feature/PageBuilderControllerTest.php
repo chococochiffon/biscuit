@@ -35,6 +35,7 @@ class PageBuilderControllerTest extends TestCase
         $this->assertSame(route('admin.json.builder.single-pages.update', $singlePage), $config['endpoints']['update']);
         $this->assertSame(route('admin.json.builder.single-pages.preview-url', $singlePage), $config['endpoints']['previewUrl']);
         $this->assertSame(route('admin.json.builder.images'), $config['endpoints']['images']);
+        $this->assertSame(route('admin.json.builder-templates.index'), $config['endpoints']['templates']);
     }
 
     public function test_top_editor_goes_back_to_the_site_settings(): void

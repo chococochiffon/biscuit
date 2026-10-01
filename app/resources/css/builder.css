@@ -117,6 +117,21 @@
     transition: max-width 0.2s;
 }
 
+/* 管理画面はボタンの色も変えている(admin.css)ため、Canvas のボタンは Bootstrap の既定の色に戻す */
+.builder-canvas .btn-primary {
+    --bs-btn-bg: #0d6efd;
+    --bs-btn-border-color: #0d6efd;
+    --bs-btn-hover-bg: #0b5ed7;
+    --bs-btn-hover-border-color: #0a58ca;
+}
+
+.builder-canvas .btn-outline-primary {
+    --bs-btn-color: #0d6efd;
+    --bs-btn-border-color: #0d6efd;
+    --bs-btn-hover-bg: #0d6efd;
+    --bs-btn-hover-border-color: #0d6efd;
+}
+
 .builder-canvas .rich-content img {
     max-width: 100%;
 }
@@ -351,4 +366,56 @@
 
 .builder-tree-end.is-drop-after::after {
     top: 0;
+}
+
+/* テンプレートの画面 */
+.builder-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 4rem 1rem;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.builder-dialog {
+    width: 100%;
+    max-width: 640px;
+    background: #fff;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
+}
+
+.builder-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.builder-dialog-body {
+    padding: 1rem;
+}
+
+.builder-template-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.builder-template-item {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+}
+
+.builder-canvas-start {
+    padding-top: 2rem;
+    text-align: center;
 }

@@ -5,7 +5,7 @@ import { useBuilderStore } from '../store'
 import type { Device } from '../types'
 
 // 上のツールバー: 戻る・ページ名・公開の状態・保存の状態・メッセージ、元に戻す/やり直す、端末の切り替え、
-// プレビュー・下書き保存・公開・変更の破棄
+// テンプレート・プレビュー・下書き保存・公開・変更の破棄
 defineProps<{
   backUrl: string
 }>()
@@ -104,6 +104,9 @@ function discard(): void {
       </button>
     </div>
     <div class="builder-toolbar-actions">
+      <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.templatesOpen = true">
+        <i class="bi bi-files" /> {{ t('テンプレート') }}
+      </button>
       <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="state.busy || !state.loaded" @click="openPreview">
         <i class="bi bi-eye" /> {{ t('プレビュー') }}
       </button>

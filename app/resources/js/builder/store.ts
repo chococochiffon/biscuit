@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
-import type { BuilderContent, BuilderNode, BuilderStatePayload, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
+import type { BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -46,6 +46,8 @@ export function createBuilderStore(api: BuilderApi) {
     lastSavedAt: null as Date | null,
     // ほかの管理者が先に保存した(読み込み直すまで自動保存を止める)
     conflict: false,
+    // テンプレートの画面を開いているか
+    templatesOpen: false,
   })
 
   const history = createHistory()
@@ -480,6 +482,57 @@ export function createBuilderStore(api: BuilderApi) {
         handleError(error, t('プレビューを開けませんでした。'))
 
         return null
+      }
+    },
+
+    /**
+     * テンプレートの内容で今の内容を置き換える(元に戻せる)。ブロックには新しい ID を振る。
+     */
+    applyTemplate(template: BuilderTemplate): void {
+      mutate(null, () => {
+        state.content.children = template.content.children.map(cloneWithNewIds)
+
+        return true
+      })
+      state.selectedId = null
+      state.message = { type: 'success', text: t('テンプレート「:name」を使いました。', { name: template.name }) }
+    },
+
+    async loadTemplates(): Promise<BuilderTemplate[] | null> {
+      try {
+        return await api.templates()
+      }
+      catch (error) {
+        handleError(error, t('テンプレートを読み込めませんでした。'))
+
+        return null
+      }
+    },
+
+    /**
+     * 今の内容をテンプレートとして保存する。保存できなければ、理由の文言を返す。
+     */
+    async saveAsTemplate(name: string, description: string): Promise<string | null> {
+      try {
+        await api.saveTemplate(name, description, state.content)
+
+        return null
+      }
+      catch (error) {
+        return error instanceof ApiError && error.data.message ? error.data.message : t('テンプレートの保存に失敗しました。')
+      }
+    },
+
+    async deleteTemplate(id: number): Promise<boolean> {
+      try {
+        await api.deleteTemplate(id)
+
+        return true
+      }
+      catch (error) {
+        handleError(error, t('テンプレートの削除に失敗しました。'))
+
+        return false
       }
     },
 

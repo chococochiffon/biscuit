@@ -80,6 +80,7 @@ class AuditLog extends Model
             'layout' => __('レイアウト'),
             'page_builder' => __('ページビルダー'),
             'page_builder_image' => __('ページビルダーの画像'),
+            'page_builder_template' => __('ページビルダーのテンプレート'),
             'question_answer' => __('Q&A'),
             'single_page' => __('固定ページ'),
             'site_setting' => __('サイト設定'),
