@@ -11,6 +11,7 @@ use App\Models\PageBuilder;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Support\AuditLogger;
+use App\Support\Breadcrumbs;
 use App\Support\Builder\ArticleListQuery;
 use App\Support\Builder\BlockDataResolver;
 use App\Support\Builder\BlockRegistry;
@@ -44,7 +45,7 @@ class PageBuilderJsonController extends Controller
     public const PREVIEW_EXPIRE_MINUTES = 30;
 
     /**
-     * エディタを開くときの内容(ページの情報・下書き・公開の状態・ブロックの定義・画像の URL の先頭)。
+     * エディタを開くときの内容(ページの情報・下書き・公開の状態・ブロックの定義・画像の URL の先頭・パンくず)。
      */
     public function show(?SinglePage $singlePage = null): JsonResponse
     {
@@ -52,6 +53,8 @@ class PageBuilderJsonController extends Controller
             ...$this->state($this->builderOrNew($singlePage), $singlePage),
             'registry' => BlockRegistry::toArray(),
             'image_base_url' => Storage::disk('public')->url(''),
+            // パンくずのブロックの Canvas の見本(公開側と同じ組み立て。トップは空)
+            'breadcrumbs' => $singlePage === null ? [] : Breadcrumbs::forPage($singlePage->path, $singlePage->title),
         ]);
     }
 

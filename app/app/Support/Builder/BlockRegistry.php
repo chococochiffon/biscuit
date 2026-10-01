@@ -31,7 +31,7 @@ final class BlockRegistry
      *
      * @var list<string>
      */
-    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list', 'navigation'];
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list', 'navigation', 'breadcrumb'];
 
     /**
      * 余白のスタイル。
@@ -184,6 +184,19 @@ final class BlockRegistry
                     'source' => ['label' => 'メニューの項目', 'type' => 'enum', 'default' => 'site', 'options' => ['site', 'pages']],
                     'direction' => ['label' => '並べ方', 'type' => 'enum', 'default' => 'horizontal', 'options' => ['horizontal', 'vertical']],
                     'variant' => ['label' => '見た目', 'type' => 'enum', 'default' => 'links', 'options' => ['links', 'pills', 'underline']],
+                    'align' => ['label' => '揃え', 'type' => 'enum', 'default' => 'start', 'options' => ['start', 'center', 'end']],
+                ],
+                'styles' => [...self::MARGIN_STYLES, 'fontSize'],
+            ],
+            // パンくず: 保存するのは見た目だけで、公開側は表示しているページのパンくず(パス解決 API の breadcrumbs)を並べる
+            'breadcrumb' => [
+                'label' => 'パンくず',
+                'category' => 'cms',
+                'icon' => 'chevron-double-right',
+                'children' => [],
+                'props' => [
+                    'separator' => ['label' => '区切り', 'type' => 'enum', 'default' => 'slash', 'options' => ['slash', 'chevron', 'arrow']],
+                    'showCurrent' => ['label' => '今のページを表示する', 'type' => 'bool', 'default' => true],
                     'align' => ['label' => '揃え', 'type' => 'enum', 'default' => 'start', 'options' => ['start', 'center', 'end']],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'fontSize'],
