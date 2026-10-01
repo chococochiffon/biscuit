@@ -99,6 +99,20 @@ function updateInt(raw: string): void {
     />
 
     <select
+      v-else-if="prop.source === 'gallery-categories'"
+      :id="id"
+      class="form-select form-select-sm form-select-auto"
+      :value="value ?? ''"
+      @change="updateInt(($event.target as HTMLSelectElement).value)"
+    >
+      <option value="">{{ t('すべて') }}</option>
+      <option v-for="category in store.state.galleryCategories" :key="category.id" :value="category.id">{{ category.name }}</option>
+      <option v-if="typeof value === 'number' && !store.state.galleryCategories.some(category => category.id === value)" :value="value">
+        {{ t('(削除された分類)') }}
+      </option>
+    </select>
+
+    <select
       v-else-if="prop.type === 'int' && intOptions"
       :id="id"
       class="form-select form-select-sm form-select-auto"

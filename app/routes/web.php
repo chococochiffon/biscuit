@@ -97,6 +97,8 @@ Route::middleware('auth:admin')->group(function () {
         ->name('admin.json.builder.article-list');
     Route::get('admin/json/builder/navigation', [PageBuilderJsonController::class, 'navigation'])
         ->name('admin.json.builder.navigation');
+    Route::get('admin/json/builder/gallery', [PageBuilderJsonController::class, 'gallery'])
+        ->name('admin.json.builder.gallery');
 
     Route::get('admin/json/builder/top', [PageBuilderJsonController::class, 'show'])
         ->name('admin.json.builder.top.show');

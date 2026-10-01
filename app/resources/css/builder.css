@@ -425,3 +425,30 @@
     height: 140px;
     object-fit: cover;
 }
+
+/* ギャラリーのブロックの見本(公開側と同じく正方形のタイルに、名前を下に重ねる) */
+.builder-gallery-tile {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+}
+
+.builder-gallery-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.builder-gallery-caption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    padding: 0.25rem 0.5rem;
+    overflow: hidden;
+    font-size: 0.75rem;
+    color: #fff;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+}

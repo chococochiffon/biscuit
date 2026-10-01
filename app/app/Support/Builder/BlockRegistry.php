@@ -9,6 +9,7 @@ namespace App\Support\Builder;
  *
  * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool)と default を持ち、
  * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image は常に null 可)。
+ * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類)。
  */
 final class BlockRegistry
 {
@@ -31,7 +32,7 @@ final class BlockRegistry
      *
      * @var list<string>
      */
-    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list', 'navigation', 'breadcrumb'];
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list', 'navigation', 'breadcrumb', 'gallery'];
 
     /**
      * 余白のスタイル。
@@ -200,6 +201,21 @@ final class BlockRegistry
                     'align' => ['label' => '揃え', 'type' => 'enum', 'default' => 'start', 'options' => ['start', 'center', 'end']],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'fontSize'],
+            ],
+            // ギャラリー: 保存するのは取得の条件と見た目だけで、公開側に返すときに条件どおりの公開中の画像を入れる(BlockDataResolver)
+            'gallery' => [
+                'label' => 'ギャラリー',
+                'category' => 'cms',
+                'icon' => 'images',
+                'children' => [],
+                'props' => [
+                    // 分類の id(null はすべて)。エディタは登録済みの分類から選ぶ
+                    'category' => ['label' => '分類で絞り込む', 'type' => 'int', 'default' => null, 'min' => 1, 'max' => 2147483647, 'nullable' => true, 'source' => 'gallery-categories'],
+                    'limit' => ['label' => '表示件数', 'type' => 'int', 'default' => 8, 'min' => 1, 'max' => 48],
+                    'columns' => ['label' => 'タイルの列数(デスクトップ)', 'type' => 'int', 'default' => 4, 'min' => 2, 'max' => 6],
+                    'showCaption' => ['label' => '名前を表示する', 'type' => 'bool', 'default' => true],
+                ],
+                'styles' => self::MARGIN_STYLES,
             ],
             'divider' => [
                 'label' => '区切り線',

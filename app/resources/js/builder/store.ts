@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
-import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, NavigationItem, PageInfo, Registry } from './types'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -22,6 +22,8 @@ export function createBuilderStore(api: BuilderApi) {
     imageBaseUrl: '',
     // 編集しているページのパンくず(パンくずのブロックの見本)
     breadcrumbs: [] as Breadcrumb[],
+    // ギャラリーの分類(ギャラリーのブロックの選択肢)
+    galleryCategories: [] as { id: number, name: string }[],
     content: { version: 1, children: [] } as BuilderContent,
     device: 'desktop' as Device,
     selectedId: null as string | null,
@@ -58,6 +60,8 @@ export function createBuilderStore(api: BuilderApi) {
   const articleListCache = new Map<string, Promise<ArticleSummary[]>>()
   // ナビゲーションのブロックの見本(項目の出どころ → 項目)
   const navigationCache = new Map<string, Promise<NavigationItem[]>>()
+  // ギャラリーのブロックの見本(取得の条件 → 画像)
+  const galleryCache = new Map<string, Promise<GalleryImageSummary[]>>()
 
   function syncHistory(): void {
     state.canUndo = history.canUndo()
@@ -159,6 +163,7 @@ export function createBuilderStore(api: BuilderApi) {
         state.registry = payload.registry
         state.imageBaseUrl = payload.image_base_url
         state.breadcrumbs = payload.breadcrumbs
+        state.galleryCategories = payload.gallery_categories
         applyState(payload, true)
         state.loaded = true
       }
@@ -582,6 +587,27 @@ export function createBuilderStore(api: BuilderApi) {
       }
 
       return navigationCache.get(key)!
+    },
+
+    /**
+     * ギャラリーのブロックの見本(条件どおりの公開中の画像)。取得できなければ空。
+     */
+    galleryPreview(props: Record<string, unknown>): Promise<GalleryImageSummary[]> {
+      const query = {
+        category: typeof props.category === 'number' ? String(props.category) : '',
+        limit: String(props.limit ?? 8),
+      }
+      const key = JSON.stringify(query)
+
+      if (!galleryCache.has(key)) {
+        galleryCache.set(key, api.gallery(query).then(response => response.images).catch(() => {
+          galleryCache.delete(key)
+
+          return []
+        }))
+      }
+
+      return galleryCache.get(key)!
     },
 
     async uploadImage(file: File): Promise<string | null> {

@@ -700,5 +700,10 @@
     "スラッシュ( / )": "Slash ( / )",
     "山かっこ( › )": "Chevron ( › )",
     "矢印( → )": "Arrow ( → )",
-    "トップページではパンくずを表示しません。": "Breadcrumbs are not shown on the top page."
+    "トップページではパンくずを表示しません。": "Breadcrumbs are not shown on the top page.",
+    "分類で絞り込む": "Filter by category",
+    "タイルの列数(デスクトップ)": "Tile columns (desktop)",
+    "名前を表示する": "Show names",
+    "(削除された分類)": "(Deleted category)",
+    "条件に合う公開中の画像がありません。": "No published images match the conditions."
 }
