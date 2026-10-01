@@ -8,6 +8,7 @@ use App\Enums\CallType;
 use App\Enums\SocialService;
 use App\Models\CallContent;
 use App\Models\ContentModelRelation;
+use App\Models\PageBuilder;
 use App\Models\SiteSetting;
 use App\Models\SocialLink;
 use App\Models\TopSliderImage;
@@ -996,5 +997,20 @@ class SiteSettingControllerTest extends TestCase
             ->assertSee('https://front.example.com')
             ->assertSee($topSliderImage->top_image)
             ->assertSee('https://example.com/slide-link');
+    }
+
+    public function test_top_use_builder_can_be_turned_on_only_after_the_top_builder_is_published(): void
+    {
+        $this->actingAsAdmin();
+        $siteSetting = SiteSetting::factory()->create(['top_use_builder' => false]);
+        $input = ['site_title' => $siteSetting->site_title, 'top_use_builder' => '1'];
+
+        $this->put(route('admin.site-settings.update', $siteSetting), $input)->assertSessionHasErrors('top_use_builder');
+
+        PageBuilder::factory()->top()->published()->create();
+        $this->put(route('admin.site-settings.update', $siteSetting), $input)->assertSessionHasNoErrors();
+        $this->assertTrue($siteSetting->fresh()->top_use_builder);
+
+        $this->get(route('admin.site-settings.show', $siteSetting))->assertSeeInOrder(['トップでページビルダーを使う', '使う']);
     }
 }

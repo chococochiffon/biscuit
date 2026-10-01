@@ -50,13 +50,10 @@ class PageBuilderFactory extends Factory
     }
 
     /**
-     * 編集中の内容を公開済み。
+     * 編集中の内容を公開済み(create() に渡した編集中の内容も公開中の内容にするため、作ったあとで公開する)。
      */
     public function published(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'published_content' => $attributes['draft_content'],
-            'published_at' => now(),
-        ]);
+        return $this->afterMaking(fn (PageBuilder $builder) => $builder->publish());
     }
 }

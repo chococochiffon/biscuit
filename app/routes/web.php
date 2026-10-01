@@ -14,6 +14,7 @@ use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PageBuilderJsonController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
@@ -74,6 +75,32 @@ Route::middleware('auth:admin')->group(function () {
         ->parameters(['content-model-relations' => 'contentModelRelation'])
         ->only(['index', 'store', 'update', 'destroy'])
         ->names('admin.json.content-model-relations');
+
+    // ページビルダーのエディタが使う JSON。対象はトップ(admin/json/builder/top)と固定ページ(admin/json/builder/single-pages/{singlePage})
+    Route::post('admin/json/builder/images', [PageBuilderJsonController::class, 'storeImage'])
+        ->name('admin.json.builder.images');
+
+    Route::get('admin/json/builder/top', [PageBuilderJsonController::class, 'show'])
+        ->name('admin.json.builder.top.show');
+    Route::put('admin/json/builder/top', [PageBuilderJsonController::class, 'update'])
+        ->name('admin.json.builder.top.update');
+    Route::post('admin/json/builder/top/publish', [PageBuilderJsonController::class, 'publish'])
+        ->name('admin.json.builder.top.publish');
+    Route::post('admin/json/builder/top/discard', [PageBuilderJsonController::class, 'discard'])
+        ->name('admin.json.builder.top.discard');
+    Route::get('admin/json/builder/top/preview-url', [PageBuilderJsonController::class, 'previewUrl'])
+        ->name('admin.json.builder.top.preview-url');
+
+    Route::get('admin/json/builder/single-pages/{singlePage}', [PageBuilderJsonController::class, 'show'])
+        ->name('admin.json.builder.single-pages.show');
+    Route::put('admin/json/builder/single-pages/{singlePage}', [PageBuilderJsonController::class, 'update'])
+        ->name('admin.json.builder.single-pages.update');
+    Route::post('admin/json/builder/single-pages/{singlePage}/publish', [PageBuilderJsonController::class, 'publish'])
+        ->name('admin.json.builder.single-pages.publish');
+    Route::post('admin/json/builder/single-pages/{singlePage}/discard', [PageBuilderJsonController::class, 'discard'])
+        ->name('admin.json.builder.single-pages.discard');
+    Route::get('admin/json/builder/single-pages/{singlePage}/preview-url', [PageBuilderJsonController::class, 'previewUrl'])
+        ->name('admin.json.builder.single-pages.preview-url');
 
     Route::post('admin/articles/content-images', [ArticleController::class, 'uploadContentImage'])
         ->name('admin.articles.content-images');

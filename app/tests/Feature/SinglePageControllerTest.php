@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Article;
+use App\Models\PageBuilder;
 use App\Models\SinglePage;
 use App\Models\SinglePageDetail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -740,5 +741,67 @@ class SinglePageControllerTest extends TestCase
             'slug' => 'about',
             'publication_start_datetime' => now()->format('Y-m-d H:i'),
         ], $overrides);
+    }
+
+    public function test_use_builder_can_be_turned_on_only_after_the_builder_is_published(): void
+    {
+        $this->actingAsAdmin();
+        $target = SinglePage::factory()->create(['use_builder' => false]);
+        $input = [
+            'slug' => $target->slug,
+            'title' => $target->title,
+            'short_sentences' => $target->short_sentences,
+            'use_builder' => '1',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+        ];
+
+        $this->put(route('admin.single-pages.update', $target), $input)->assertSessionHasErrors('use_builder');
+
+        $builder = PageBuilder::factory()->create(['single_page_id' => $target->id]);
+        $this->put(route('admin.single-pages.update', $target), $input)->assertSessionHasErrors('use_builder');
+
+        $builder->publish();
+        $builder->save();
+        $this->put(route('admin.single-pages.update', $target), $input)->assertSessionHasNoErrors();
+        $this->assertTrue($target->fresh()->use_builder);
+
+        $this->put(route('admin.single-pages.update', $target), [...$input, 'use_builder' => '0'])->assertSessionHasNoErrors();
+        $this->assertFalse($target->fresh()->use_builder);
+    }
+
+    public function test_store_cannot_use_the_builder_before_it_exists(): void
+    {
+        $this->actingAsAdmin();
+
+        $this->post(route('admin.single-pages.store'), [
+            'slug' => 'new-page',
+            'title' => '新しいページ',
+            'short_sentences' => '概要',
+            'use_builder' => '1',
+            'publication_start_datetime' => now()->format('Y-m-d H:i'),
+        ])->assertSessionHasErrors('use_builder');
+    }
+
+    public function test_edit_screen_shows_the_page_content_switch(): void
+    {
+        $this->actingAsAdmin();
+        $target = SinglePage::factory()->create(['use_builder' => true]);
+
+        $this->get(route('admin.single-pages.edit', $target))
+            ->assertOk()
+            ->assertSee('name="use_builder"', false)
+            ->assertSee('<option value="1" selected>ページビルダーで表示する</option>', false);
+    }
+
+    public function test_destroy_also_soft_deletes_the_builder(): void
+    {
+        $this->actingAsAdmin();
+        $builder = PageBuilder::factory()->create();
+
+        $this->delete(route('admin.single-pages.destroy', $builder->single_page_id))
+            ->assertRedirect(route('admin.single-pages.index'));
+
+        $this->assertSoftDeleted($builder->singlePage()->withTrashed()->first());
+        $this->assertSoftDeleted($builder);
     }
 }

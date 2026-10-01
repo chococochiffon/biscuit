@@ -511,5 +511,18 @@
     "「:block」に「:name」というスタイルは使えません。": "The style \":name\" cannot be used for the :block.",
     "「:block」のスタイル「:name」の値が正しくありません。": "The value of the style \":name\" in the :block is invalid.",
     "端末「:device」の設定はありません。": "There are no settings for the device \":device\".",
-    "「:block」の中には何も置けません。": "Nothing can be placed inside the :block."
+    "「:block」の中には何も置けません。": "Nothing can be placed inside the :block.",
+    "変更の破棄": "Discard changes",
+    "ページビルダーの画像": "Page builder image",
+    "公開中の内容がないため、元に戻せません。": "There is no published content to revert to.",
+    "ほかの管理者が先に保存しました。画面を読み込み直してください。": "Another administrator saved first. Please reload the page.",
+    "ページビルダーの内容を公開してから、ページビルダーで表示するようにしてください。": "Publish the page builder content before showing the page with the page builder.",
+    "ページの中身": "Page content",
+    "詳細を表示する": "Show details",
+    "ページビルダーで表示する": "Show with the page builder",
+    "ページビルダーで表示すると、公開側には詳細の代わりにページビルダーで公開した内容を表示します。ページビルダーを公開してから選べます。": "When shown with the page builder, the public site displays the published page builder content instead of the details. Available after publishing the page builder content.",
+    "トップでページビルダーを使う": "Use the page builder on the top page",
+    "使わない": "Do not use",
+    "使う": "Use",
+    "使うと、公開側トップのスライダーの下に、トップのページビルダーで公開した内容を表示します。ページビルダーを公開してから選べます。": "When used, the published content of the top page builder is shown below the slider on the public top page. Available after publishing the page builder content."
 }

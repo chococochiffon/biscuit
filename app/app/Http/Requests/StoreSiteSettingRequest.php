@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use App\Enums\SocialService;
+use App\Models\PageBuilder;
+use App\Rules\PublishedPageBuilder;
 use App\Rules\ValidCallContentCombination;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -36,6 +38,8 @@ class StoreSiteSettingRequest extends FormRequest
             'api_url' => ['nullable', 'url:http,https', 'max:255'],
             'site_icon' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'site_image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
+            // トップでページビルダーを使うのは、トップのページビルダーを公開してから
+            'top_use_builder' => ['nullable', 'boolean', new PublishedPageBuilder(PageBuilder::top())],
 
             'call_contents' => ['nullable', 'array'],
             'call_contents.*.id' => ['nullable', 'integer', Rule::exists('call_contents', 'id')->withoutTrashed()],
