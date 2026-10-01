@@ -88,7 +88,18 @@ export interface EditorConfig {
     discard: string
     previewUrl: string
     images: string
+    // テンプレートの一覧・保存(削除は末尾に /{id} を付ける)
+    templates: string
   }
+}
+
+// ページビルダーのテンプレート(PageBuilderTemplateJsonController)
+export interface BuilderTemplate {
+  id: number
+  name: string
+  description: string | null
+  node_count: number
+  content: BuilderContent
 }
 
 // ドラッグ中のもの(パレットの新しいブロック、または置いてあるブロック)

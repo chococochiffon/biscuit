@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TopSliderImageSeeder::class);
         $this->call(SinglePageSeeder::class);
         $this->call(PageBuilderSeeder::class);
+        $this->call(PageBuilderTemplateSeeder::class);
         $this->call(ArticleSeeder::class);
         $this->call(ArticlePathOptionSeeder::class);
         $this->call(GallerySeeder::class);

@@ -25,6 +25,8 @@ class SinglePageFactory extends Factory
             'slug' => fake()->unique()->slug(),
             'top_page_view' => fake()->boolean(),
             'link_list_view' => fake()->boolean(),
+            // DB の既定値(現在時刻)はテストの時間の移動(travelTo)に従わないため、アプリの現在時刻で入れる
+            'publication_start_datetime' => now(),
         ];
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\CallContent;
 use App\Models\GalleryImage;
 use App\Models\PageBuilder;
+use App\Models\PageBuilderTemplate;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Models\TopSliderImage;
@@ -50,6 +51,7 @@ class DatabaseSeederTest extends TestCase
         // ページビルダーのサンプルの固定ページは公開済み、トップのビルダーは下書きだけ(トップの表示は変わらない)
         $this->assertTrue(SinglePage::query()->where('slug', 'builder-sample')->sole()->builder->isPublished());
         $this->assertFalse(PageBuilder::top()->isPublished());
+        $this->assertSame(3, PageBuilderTemplate::query()->count());
         $this->assertSame(3, Article::query()->whereNotNull('path')->count());
 
         $this->getJson(route('api.resolve', ['path' => '/news/biscuit-v1-0-release']))

@@ -34,6 +34,7 @@ class PageBuilderController extends Controller
                     'discard' => route($routePrefix.'discard', $routeParameters),
                     'previewUrl' => route($routePrefix.'preview-url', $routeParameters),
                     'images' => route('admin.json.builder.images'),
+                    'templates' => route('admin.json.builder-templates.index'),
                 ],
             ],
         ]);

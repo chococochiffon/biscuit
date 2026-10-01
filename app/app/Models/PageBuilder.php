@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BuilderPageType;
 use App\Models\Concerns\HasPublicImages;
+use App\Models\Concerns\StoresReadableJson;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\SchemaMigrator;
 use Database\Factories\PageBuilderFactory;
@@ -27,7 +28,7 @@ use Illuminate\Support\Str;
 class PageBuilder extends Model
 {
     /** @use HasFactory<PageBuilderFactory> */
-    use HasFactory, HasPublicImages, SoftDeletes;
+    use HasFactory, HasPublicImages, SoftDeletes, StoresReadableJson;
 
     /**
      * ビルダーの画像の保存先ディレクトリ(公開ディスク基準)。
@@ -53,17 +54,6 @@ class PageBuilder extends Model
             'published_content' => 'array',
             'published_at' => 'datetime',
         ];
-    }
-
-    /**
-     * 内容の JSON は、日本語と画像のパスを読めるまま保存する(メディア状況の未使用の画像の判定は、行の値の「image/…」を拾うため)。
-     *
-     * @param  mixed  $value
-     * @param  int  $flags
-     */
-    protected function asJson($value, $flags = 0): string|false
-    {
-        return parent::asJson($value, $flags | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     /**

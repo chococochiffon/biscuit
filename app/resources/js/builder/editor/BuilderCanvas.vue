@@ -15,6 +15,11 @@ const width = computed(() => DEVICE_WIDTHS[store.state.device])
 <template>
   <main class="builder-canvas-area" @click="store.select(null)" @mouseleave="store.state.hoveredId = null">
     <div class="builder-canvas" :style="{ maxWidth: width }">
+      <div v-if="store.state.content.children.length === 0" class="builder-canvas-start">
+        <button type="button" class="btn btn-outline-primary" @click.stop="store.state.templatesOpen = true">
+          <i class="bi bi-files" /> {{ t('テンプレートから始める') }}
+        </button>
+      </div>
       <DropList
         :parent-id="null"
         :children="store.state.content.children"

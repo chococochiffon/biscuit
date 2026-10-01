@@ -25,6 +25,8 @@ class ArticleFactory extends Factory
             'thumbnail' => null,
             'user_id' => User::factory(),
             'approval' => ArticleApprovalStatus::Draft,
+            // DB の既定値(現在時刻)はテストの時間の移動(travelTo)に従わないため、アプリの現在時刻で入れる
+            'publication_start_datetime' => now(),
         ];
     }
 
