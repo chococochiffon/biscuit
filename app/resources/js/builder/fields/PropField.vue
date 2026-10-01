@@ -30,6 +30,16 @@ const OPTION_LABELS: Record<string, string> = {
   'oldest': t('古い順'),
   'card': t('カード'),
   'list': t('リスト'),
+  'site': t('サイトのナビメニューと同じ'),
+  'pages': t('固定ページ(リンクリストに表示するもの)'),
+  'horizontal': t('横に並べる'),
+  'vertical': t('縦に並べる'),
+  'links': t('リンク'),
+  'pills': t('ピル'),
+  'underline': t('下線'),
+  'start': t('左揃え'),
+  'center': t('中央揃え'),
+  'end': t('右揃え'),
 }
 
 // 範囲の狭い整数(見出しのレベル・カラムの幅・余白の段階)は選択肢にする

@@ -31,7 +31,7 @@ final class BlockRegistry
      *
      * @var list<string>
      */
-    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list'];
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'article-list', 'navigation'];
 
     /**
      * 余白のスタイル。
@@ -172,6 +172,21 @@ final class BlockRegistry
                     'showDate' => ['label' => '公開日を表示する', 'type' => 'bool', 'default' => true],
                 ],
                 'styles' => [...self::MARGIN_STYLES],
+            ],
+            // ナビゲーション: 保存するのは項目の出どころと見た目だけで、公開側に返すときに項目を入れる(BlockDataResolver)
+            'navigation' => [
+                'label' => 'ナビゲーション',
+                'category' => 'cms',
+                'icon' => 'menu-button-wide',
+                'children' => [],
+                'props' => [
+                    // site: サイトのナビメニュー(レイアウト管理と同じ項目)、pages: 固定ページ(リンクリストに表示するもの)
+                    'source' => ['label' => 'メニューの項目', 'type' => 'enum', 'default' => 'site', 'options' => ['site', 'pages']],
+                    'direction' => ['label' => '並べ方', 'type' => 'enum', 'default' => 'horizontal', 'options' => ['horizontal', 'vertical']],
+                    'variant' => ['label' => '見た目', 'type' => 'enum', 'default' => 'links', 'options' => ['links', 'pills', 'underline']],
+                    'align' => ['label' => '揃え', 'type' => 'enum', 'default' => 'start', 'options' => ['start', 'center', 'end']],
+                ],
+                'styles' => [...self::MARGIN_STYLES, 'fontSize'],
             ],
             'divider' => [
                 'label' => '区切り線',

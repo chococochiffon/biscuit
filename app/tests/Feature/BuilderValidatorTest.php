@@ -44,7 +44,7 @@ class BuilderValidatorTest extends TestCase
 
     public function test_every_block_with_default_props_is_valid_where_it_can_be_placed(): void
     {
-        $leaves = array_map(fn (string $type) => BuilderContent::node($type), ['heading', 'text', 'image', 'button', 'spacer', 'divider', 'article-list']);
+        $leaves = array_map(fn (string $type) => BuilderContent::node($type), ['heading', 'text', 'image', 'button', 'spacer', 'divider', 'article-list', 'navigation']);
         $content = [
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [

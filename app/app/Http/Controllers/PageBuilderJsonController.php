@@ -12,6 +12,7 @@ use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Support\AuditLogger;
 use App\Support\Builder\ArticleListQuery;
+use App\Support\Builder\BlockDataResolver;
 use App\Support\Builder\BlockRegistry;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\BuilderPresenter;
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 /**
- * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・プレビューの URL・画像のアップロード・記事一覧のブロックの見本)。
+ * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・プレビューの URL・画像のアップロード・記事一覧とナビゲーションのブロックの見本)。
  * 対象はトップ(ルートに {singlePage} がない)と固定ページ。ビルダーの行は最初に下書きを保存したときに作る(取得では作らない)。
  */
 class PageBuilderJsonController extends Controller
@@ -178,6 +179,14 @@ class PageBuilderJsonController extends Controller
         ];
 
         return response()->json(['articles' => ArticleResource::collection(ArticleListQuery::articles($props))->resolve()]);
+    }
+
+    /**
+     * ナビゲーションのブロックの Canvas の見本(項目の出どころどおりの項目)。
+     */
+    public function navigation(Request $request): JsonResponse
+    {
+        return response()->json(['items' => BlockDataResolver::navigationItems(['source' => $request->query('source') === 'pages' ? 'pages' : 'site'])]);
     }
 
     /**

@@ -682,5 +682,16 @@
     "古い順": "Oldest first",
     "カード": "Cards",
     "リスト": "List",
-    "条件に合う公開中の記事がありません。": "No published articles match the conditions."
+    "条件に合う公開中の記事がありません。": "No published articles match the conditions.",
+    "ナビゲーション": "Navigation",
+    "並べ方": "Direction",
+    "揃え": "Alignment",
+    "メニューの項目": "Menu items",
+    "サイトのナビメニューと同じ": "Same as the site navigation menu",
+    "固定ページ(リンクリストに表示するもの)": "Pages (shown in the link list)",
+    "横に並べる": "Horizontal",
+    "縦に並べる": "Vertical",
+    "ピル": "Pills",
+    "下線": "Underline",
+    "表示する項目がありません。": "There are no items to show."
 }
