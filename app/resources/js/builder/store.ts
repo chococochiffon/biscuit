@@ -1,7 +1,9 @@
 import { inject, reactive, type InjectionKey } from 'vue'
 import { ApiError, type BuilderApi } from './api'
+import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, containsNode, createNode, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
+import { setNodeStyle } from './styles'
 import type { BuilderContent, BuilderNode, BuilderStatePayload, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
@@ -36,7 +38,52 @@ export function createBuilderStore(api: BuilderApi) {
     // 保存・公開で返ったエラー(ノードの ID → 文言。ノードを特定できないものは content)
     errors: {} as Record<string, string[]>,
     message: null as EditorMessage | null,
+    canUndo: false,
+    canRedo: false,
+    // Undo/Redo で内容を差し替えるたびに増やす(入力欄を作り直して、差し替えた値を出すのに使う)
+    restoreCount: 0,
+    // 最後に保存した日時(自動保存の表示用)
+    lastSavedAt: null as Date | null,
+    // ほかの管理者が先に保存した(読み込み直すまで自動保存を止める)
+    conflict: false,
   })
+
+  const history = createHistory()
+
+  function syncHistory(): void {
+    state.canUndo = history.canUndo()
+    state.canRedo = history.canRedo()
+  }
+
+  /**
+   * 内容を変える操作を、取り消せるように履歴を積んでから行う。key は続けて同じ項目を変える操作をまとめるためのもの。
+   * 操作が何も変えなかった(false を返した)ら履歴は積まない。
+   */
+  function mutate(key: string | null, operation: () => boolean): boolean {
+    const snapshot = JSON.stringify(state.content)
+
+    if (!operation()) {
+      return false
+    }
+
+    history.record(snapshot, key)
+    syncHistory()
+    changed()
+
+    return true
+  }
+
+  function restore(snapshot: string): void {
+    state.content = JSON.parse(snapshot)
+    state.restoreCount++
+
+    if (state.selectedId && !findNode(state.content, state.selectedId)) {
+      state.selectedId = null
+    }
+
+    syncHistory()
+    changed()
+  }
 
   function applyState(payload: BuilderStatePayload, replaceContent: boolean): void {
     state.page = payload.page
@@ -74,6 +121,7 @@ export function createBuilderStore(api: BuilderApi) {
     }
 
     if (error instanceof ApiError && error.status === 409) {
+      state.conflict = true
       state.message = { type: 'danger', text: error.data.message ?? t('ほかの管理者が先に保存しました。画面を読み込み直してください。') }
 
       return
@@ -125,12 +173,11 @@ export function createBuilderStore(api: BuilderApi) {
     add(type: string, parentId: string | null, index: number): boolean {
       const node = createNode(state.registry, type)
 
-      if (!insertNode(state.registry, state.content, parentId, index, node)) {
+      if (!mutate(null, () => insertNode(state.registry, state.content, parentId, index, node))) {
         return false
       }
 
       state.selectedId = node.id
-      changed()
 
       return true
     },
@@ -161,13 +208,7 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     move(id: string, parentId: string | null, index: number): boolean {
-      if (!moveNode(state.registry, state.content, id, parentId, index)) {
-        return false
-      }
-
-      changed()
-
-      return true
+      return mutate(null, () => moveNode(state.registry, state.content, id, parentId, index))
     },
 
     /**
@@ -190,11 +231,8 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     remove(id: string): void {
-      if (removeNode(state.content, id)) {
-        if (state.selectedId && !findNode(state.content, state.selectedId)) {
-          state.selectedId = null
-        }
-        changed()
+      if (mutate(null, () => removeNode(state.content, id) !== null) && state.selectedId && !findNode(state.content, state.selectedId)) {
+        state.selectedId = null
       }
     },
 
@@ -202,9 +240,39 @@ export function createBuilderStore(api: BuilderApi) {
       const node = findNode(state.content, id)
 
       if (node && node.props[name] !== value) {
-        node.props[name] = value
+        mutate(`prop:${id}:${name}`, () => {
+          node.props[name] = value
+
+          return true
+        })
         delete state.errors[`nodes.${id}`]
-        changed()
+      }
+    },
+
+    /**
+     * 選んでいる端末のスタイルを変える(デスクトップは styles、タブレット・スマートフォンは端末の上書き)。null なら指定を外す。
+     */
+    updateStyle(id: string, name: string, value: string | null): void {
+      const node = findNode(state.content, id)
+
+      if (node && mutate(`style:${id}:${state.device}:${name}`, () => setNodeStyle(node, state.device, name, value))) {
+        delete state.errors[`nodes.${id}`]
+      }
+    },
+
+    undo(): void {
+      const previous = history.undo(JSON.stringify(state.content))
+
+      if (previous !== null) {
+        restore(previous)
+      }
+    },
+
+    redo(): void {
+      const next = history.redo(JSON.stringify(state.content))
+
+      if (next !== null) {
+        restore(next)
       }
     },
 
@@ -255,9 +323,10 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     /**
-     * 下書きを保存する。保存中に内容を変えていなければ、biscuit が整えた内容(既定値の補完・HTML の無害化)に置き換える。
+     * 下書きを保存する。手動の保存では、保存中に内容を変えていなければ biscuit が整えた内容(既定値の補完・HTML の無害化)に置き換える。
+     * 自動保存(auto)では、入力中の欄の値が変わらないよう内容は置き換えず、メッセージも出さない(ツールバーに保存した時刻を出す)。
      */
-    async save(): Promise<boolean> {
+    async save(auto = false): Promise<boolean> {
       if (state.busy) {
         return false
       }
@@ -267,9 +336,16 @@ export function createBuilderStore(api: BuilderApi) {
 
       try {
         const payload = await api.save(state.content, state.updatedAt)
-        applyState(payload, revision === state.revision)
+        const unchanged = revision === state.revision
+        applyState(payload, !auto && unchanged)
+        if (unchanged) {
+          state.dirty = false
+        }
+        state.lastSavedAt = new Date()
         state.errors = {}
-        state.message = { type: 'success', text: t('下書きを保存しました。') }
+        if (!auto) {
+          state.message = { type: 'success', text: t('下書きを保存しました。') }
+        }
 
         return true
       }
@@ -320,7 +396,10 @@ export function createBuilderStore(api: BuilderApi) {
       state.busy = true
 
       try {
+        const snapshot = JSON.stringify(state.content)
         applyState(await api.discard(state.updatedAt), true)
+        history.record(snapshot)
+        syncHistory()
         state.errors = {}
         state.message = { type: 'success', text: t('公開中の内容に戻しました。') }
       }
@@ -329,6 +408,24 @@ export function createBuilderStore(api: BuilderApi) {
       }
       finally {
         state.busy = false
+      }
+    },
+
+    /**
+     * 未保存の変更があれば保存してから、下書きのプレビューの URL(chococo の /builder-preview)を返す。
+     */
+    async previewUrl(): Promise<string | null> {
+      if ((state.dirty || state.updatedAt === null) && !(await this.save())) {
+        return null
+      }
+
+      try {
+        return (await api.previewUrl()).url
+      }
+      catch (error) {
+        handleError(error, t('プレビューを開けませんでした。'))
+
+        return null
       }
     },
 
