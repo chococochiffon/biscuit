@@ -32,7 +32,12 @@
                             @endif
                         </x-admin.detail-row>
 
-                        <x-admin.detail-row :label="__('トップでページビルダーを使う')">{{ $siteSetting->top_use_builder ? __('使う') : __('使わない') }}</x-admin.detail-row>
+                        <x-admin.detail-row :label="__('トップでページビルダーを使う')">
+                            {{ $siteSetting->top_use_builder ? __('使う') : __('使わない') }}
+                            <a href="{{ route('admin.builder.top') }}" class="btn btn-sm btn-outline-secondary ms-2">
+                                <i class="bi bi-grid-1x2"></i> {{ __('ページビルダーで編集') }}
+                            </a>
+                        </x-admin.detail-row>
 
                         <x-admin.detail-row :label="__('サイトアイコン')">
                             <img

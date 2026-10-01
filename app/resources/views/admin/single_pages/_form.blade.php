@@ -139,14 +139,21 @@
 
             <div class="mb-3">
                 <label for="use_builder" class="form-label">{{ __('ページの中身') }}</label>
-                <select id="use_builder" name="use_builder" class="form-select form-select-auto @error('use_builder') is-invalid @enderror">
-                    <option value="0" @selected($useBuilder === 0)>{{ __('詳細を表示する') }}</option>
-                    <option value="1" @selected($useBuilder === 1)>{{ __('ページビルダーで表示する') }}</option>
-                </select>
-                <div class="form-text">{{ __('ページビルダーで表示すると、公開側には詳細の代わりにページビルダーで公開した内容を表示します。ページビルダーを公開してから選べます。') }}</div>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <select id="use_builder" name="use_builder" class="form-select form-select-auto @error('use_builder') is-invalid @enderror">
+                        <option value="0" @selected($useBuilder === 0)>{{ __('詳細を表示する') }}</option>
+                        <option value="1" @selected($useBuilder === 1)>{{ __('ページビルダーで表示する') }}</option>
+                    </select>
+                    @if (isset($singlePage) && $singlePage->exists)
+                        <a href="{{ route('admin.builder.single-pages', $singlePage) }}" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-grid-1x2"></i> {{ __('ページビルダーで編集') }}
+                        </a>
+                    @endif
+                </div>
                 @error('use_builder')
-                    <div class="invalid-feedback">{{ $message }}</div>
+                    <div class="invalid-feedback d-block">{{ $message }}</div>
                 @enderror
+                <div class="form-text">{{ __('ページビルダーで表示すると、公開側には詳細の代わりにページビルダーで公開した内容を表示します。ページビルダーを公開してから選べます。') }}</div>
             </div>
 
             <div class="mb-3">

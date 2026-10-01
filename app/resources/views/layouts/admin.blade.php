@@ -82,6 +82,11 @@
                         ><i class="bi bi-gear"></i>{{ __('サイト設定') }}</a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.builder.top') }}" class="nav-link">
+                            <i class="bi bi-grid-1x2"></i>{{ __('トップページ編集') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.layouts.edit') }}" class="nav-link">
                             <i class="bi bi-layout-sidebar-inset"></i>{{ __('レイアウト管理') }}
                         </a>
