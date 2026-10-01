@@ -5,6 +5,7 @@ import { useBuilderStore } from '../store'
 import type { BuilderNode, PropDefinition } from '../types'
 import ImageField from './ImageField.vue'
 import RichTextField from './RichTextField.vue'
+import { videoEmbedUrl } from '../video'
 
 // ブロックの内容(props)の項目 1 つの入力欄。項目の型(BlockRegistry の type)に合わせて入力欄を選ぶ
 const props = defineProps<{
@@ -40,6 +41,10 @@ const OPTION_LABELS: Record<string, string> = {
   'slash': t('スラッシュ( / )'),
   'chevron': t('山かっこ( › )'),
   'arrow': t('矢印( → )'),
+  '16x9': '16:9',
+  '4x3': '4:3',
+  '1x1': '1:1',
+  '21x9': '21:9',
   'start': t('左揃え'),
   'center': t('中央揃え'),
   'end': t('右揃え'),
@@ -55,6 +60,7 @@ const intOptions = computed(() => {
 // リンク先として受け付ける形(biscuit の BuilderValidator と同じ)
 const URL_PATTERN = /^(?:https?:\/\/[^\s\\]+|mailto:[^\s\\]+|tel:[0-9+\-() ]+|\/(?!\/)[^\s\\]*|#[^\s\\]*)$/i
 const isUrlInvalid = computed(() => props.prop.type === 'url' && typeof value.value === 'string' && !URL_PATTERN.test(value.value))
+const isVideoInvalid = computed(() => props.prop.type === 'video' && typeof value.value === 'string' && videoEmbedUrl(value.value) === null)
 
 function update(next: unknown): void {
   store.updateProp(props.node.id, props.name, next)
@@ -158,6 +164,21 @@ function updateInt(raw: string): void {
       >
       <div v-if="isUrlInvalid" class="invalid-feedback">
         {{ t('https:// などで始まる URL か、/ で始まるサイト内のパスを入力してください。') }}
+      </div>
+    </template>
+
+    <template v-else-if="prop.type === 'video'">
+      <input
+        :id="id"
+        type="text"
+        class="form-control form-control-sm"
+        :class="{ 'is-invalid': isVideoInvalid }"
+        placeholder="https://www.youtube.com/watch?v=…"
+        :value="value ?? ''"
+        @input="update(($event.target as HTMLInputElement).value.trim() || null)"
+      >
+      <div v-if="isVideoInvalid" class="invalid-feedback">
+        {{ t('YouTube か Vimeo の動画の URL を入力してください。') }}
       </div>
     </template>
 

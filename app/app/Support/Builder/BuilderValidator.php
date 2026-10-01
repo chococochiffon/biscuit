@@ -226,7 +226,7 @@ final class BuilderValidator
     private function isValidProp(array $definition, mixed $value): bool
     {
         if ($value === null) {
-            return ($definition['nullable'] ?? false) || in_array($definition['type'], ['url', 'image'], true);
+            return ($definition['nullable'] ?? false) || in_array($definition['type'], ['url', 'image', 'video'], true);
         }
 
         return match ($definition['type']) {
@@ -234,6 +234,7 @@ final class BuilderValidator
             'int' => is_int($value) && $value >= $definition['min'] && $value <= $definition['max'],
             'enum' => in_array($value, $definition['options'], true),
             'bool' => is_bool($value),
+            'video' => is_string($value) && VideoUrl::embedUrl($value) !== null,
             'url' => is_string($value) && strlen($value) <= self::URL_MAX_LENGTH && preg_match(self::URL_PATTERN, $value) === 1,
             'image' => is_string($value) && preg_match(BuilderContent::IMAGE_PATH_PATTERN, $value) === 1,
             default => false,

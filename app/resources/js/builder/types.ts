@@ -23,7 +23,7 @@ export interface BuilderContent {
   children: BuilderNode[]
 }
 
-export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image' | 'bool'
+export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image' | 'bool' | 'video'
 
 export interface PropDefinition {
   label: string
