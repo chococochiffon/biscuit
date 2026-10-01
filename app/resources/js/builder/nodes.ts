@@ -38,7 +38,7 @@ export function createNode(registry: Registry, type: string): BuilderNode {
   const props: Record<string, unknown> = {}
 
   for (const [name, prop] of Object.entries(definition.props)) {
-    props[name] = structuredClone(prop.default)
+    props[name] = prop.default === undefined ? null : JSON.parse(JSON.stringify(prop.default))
   }
 
   const node: BuilderNode = { id: newId(type), type, props, styles: {} }
@@ -54,7 +54,8 @@ export function createNode(registry: Registry, type: string): BuilderNode {
  * ノードとその子孫の ID をすべて振り直した写し(複製・貼り付け用)。
  */
 export function cloneWithNewIds(node: BuilderNode): BuilderNode {
-  const copy = structuredClone(node)
+  // エディタの状態(Vue のリアクティブなオブジェクト)は structuredClone できないため、JSON を経由して写す(内容は JSON そのもの)
+  const copy = JSON.parse(JSON.stringify(node)) as BuilderNode
   const renew = (target: BuilderNode) => {
     target.id = newId(target.type)
     target.children?.forEach(renew)

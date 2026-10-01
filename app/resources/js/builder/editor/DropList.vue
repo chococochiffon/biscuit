@@ -26,7 +26,8 @@ const store = useBuilderStore()
 const listElement = ref<HTMLElement | null>(null)
 const indicatorStyle = ref<Record<string, string>>({})
 
-const isTarget = computed(() => store.state.dragging !== null && store.state.dropTarget?.parentId === props.parentId)
+// コンポーネントツリーの上でドラッグしているあいだは、Canvas には線を出さない(位置を計算していないため)
+const isTarget = computed(() => store.state.dragging !== null && store.state.dropTarget?.from !== 'tree' && store.state.dropTarget?.parentId === props.parentId)
 
 function childElements(): HTMLElement[] {
   return Array.from(listElement.value?.children ?? []).filter(
@@ -96,7 +97,7 @@ function onDragOver(event: DragEvent): void {
 
   const elements = childElements()
   const index = dropIndex(event, elements)
-  store.state.dropTarget = { parentId: props.parentId, index }
+  store.state.dropTarget = { parentId: props.parentId, index, from: 'canvas' }
   indicatorStyle.value = indicatorFor(index, elements)
 }
 

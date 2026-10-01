@@ -646,5 +646,11 @@
     "元に戻す・やり直す": "Undo / redo",
     "やり直す": "Redo",
     "端末": "Device",
-    "プレビュー": "Preview"
+    "プレビュー": "Preview",
+    "複製": "Duplicate",
+    "まだブロックがありません。": "No blocks yet.",
+    "開く": "Expand",
+    "畳む": "Collapse",
+    "ブロック": "Blocks",
+    "ツリー": "Tree"
 }

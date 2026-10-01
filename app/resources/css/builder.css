@@ -49,7 +49,7 @@
 }
 
 .builder-palette {
-    width: 220px;
+    width: 260px;
     border-right: 1px solid var(--bs-border-color);
 }
 
@@ -237,4 +237,118 @@
 /* スタイルの色の入力欄は、色見本だけの幅にする(入力グループの中で横に広がらないように) */
 .builder-properties .form-control-color {
     flex: 0 0 2.75rem;
+}
+
+/* コンポーネントツリー */
+.builder-tree {
+    min-height: 100%;
+    padding-bottom: 2rem;
+    font-size: 0.8125rem;
+}
+
+.builder-tree-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding-top: 0.125rem;
+    padding-right: 0.25rem;
+    padding-bottom: 0.125rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.builder-tree-row.is-hovered {
+    background: rgba(13, 110, 253, 0.06);
+}
+
+.builder-tree-row.is-selected {
+    background: rgba(13, 110, 253, 0.14);
+}
+
+.builder-tree-row.has-error {
+    box-shadow: inset 0 0 0 1px #dc3545;
+}
+
+.builder-tree-toggle {
+    flex: 0 0 1rem;
+    padding: 0;
+    font-size: 0.6875rem;
+    color: var(--bs-secondary-color);
+    background: none;
+    border: 0;
+}
+
+.builder-tree-icon {
+    color: var(--bs-secondary-color);
+}
+
+.builder-tree-label {
+    white-space: nowrap;
+}
+
+.builder-tree-summary {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--bs-secondary-color);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 複製・削除は、マウスを乗せた行と選択中の行だけに出す */
+.builder-tree-actions {
+    display: none;
+    flex-shrink: 0;
+}
+
+.builder-tree-row.is-hovered .builder-tree-actions,
+.builder-tree-row.is-selected .builder-tree-actions {
+    display: flex;
+}
+
+.builder-tree-action {
+    padding: 0 0.25rem;
+    color: var(--bs-secondary-color);
+    background: none;
+    border: 0;
+}
+
+.builder-tree-action:hover {
+    color: var(--bs-body-color);
+}
+
+/* ドラッグ中に入れる位置(行の前・後ろは線、中は枠) */
+.builder-tree-row.is-drop-before::before,
+.builder-tree-row.is-drop-after::after,
+.builder-tree-end.is-drop-after::after {
+    position: absolute;
+    right: 0;
+    left: 0;
+    height: 3px;
+    content: '';
+    background: #0d6efd;
+    border-radius: 2px;
+}
+
+.builder-tree-row.is-drop-before::before {
+    top: -2px;
+}
+
+.builder-tree-row.is-drop-after::after {
+    bottom: -2px;
+}
+
+.builder-tree-row.is-drop-inside {
+    box-shadow: inset 0 0 0 2px #0d6efd;
+}
+
+.builder-tree-end {
+    position: relative;
+    height: 1rem;
+}
+
+.builder-tree-end.is-drop-after::after {
+    top: 0;
 }
