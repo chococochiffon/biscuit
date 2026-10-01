@@ -2,6 +2,7 @@
 
 namespace App\Support\Builder;
 
+use App\Http\Resources\ArticleResource;
 use App\Models\PageBuilder;
 use stdClass;
 
@@ -9,7 +10,8 @@ use stdClass;
  * ページビルダーの内容(ノードの木)を、管理画面のエディタ・公開側に返す形に整える。
  * どちらも SchemaMigrator で今の版にそろえ、props・styles・responsive は空でも JSON のオブジェクト({})で返す
  * (PHP では空のオブジェクトが空の配列になり、そのままでは [] で返ってしまうため)。
- * 公開側に返すときは、画像の項目を公開ディスク基準のパスから公開 URL に置き換える。
+ * 公開側に返すときは、画像の項目を公開ディスク基準のパスから公開 URL に置き換え、CMS のデータを表示するブロック(記事一覧)には
+ * 取得の条件どおりのデータを data に入れる(保存する内容には条件だけを持ち、データは返すときに取得する)。
  */
 final class BuilderPresenter
 {
@@ -21,7 +23,7 @@ final class BuilderPresenter
      */
     public static function forEditor(array $content): array
     {
-        return self::present($content, imageUrls: false);
+        return self::present($content, forPublic: false);
     }
 
     /**
@@ -32,20 +34,20 @@ final class BuilderPresenter
      */
     public static function forPublic(array $content): array
     {
-        return self::present($content, imageUrls: true);
+        return self::present($content, forPublic: true);
     }
 
     /**
      * @param  array<string, mixed>  $content
      * @return array<string, mixed>
      */
-    private static function present(array $content, bool $imageUrls): array
+    private static function present(array $content, bool $forPublic): array
     {
         $content = (new SchemaMigrator)->migrate($content);
 
         return [
             'version' => $content['version'],
-            'children' => array_map(fn (array $node) => self::presentNode($node, $imageUrls), $content['children'] ?? []),
+            'children' => array_map(fn (array $node) => self::presentNode($node, $forPublic), $content['children'] ?? []),
         ];
     }
 
@@ -53,11 +55,11 @@ final class BuilderPresenter
      * @param  array<string, mixed>  $node
      * @return array<string, mixed>
      */
-    private static function presentNode(array $node, bool $imageUrls): array
+    private static function presentNode(array $node, bool $forPublic): array
     {
         $props = $node['props'] ?? [];
 
-        if ($imageUrls) {
+        if ($forPublic) {
             foreach (BlockRegistry::get($node['type'])['props'] ?? [] as $name => $prop) {
                 if ($prop['type'] === 'image' && is_string($props[$name] ?? null)) {
                     $props[$name] = PageBuilder::publicImageUrl($props[$name]);
@@ -76,8 +78,12 @@ final class BuilderPresenter
             $presented['responsive'] = self::object(array_map(self::object(...), $node['responsive']));
         }
 
+        if ($forPublic && $node['type'] === 'article-list') {
+            $presented['data'] = ['articles' => ArticleResource::collection(ArticleListQuery::articles($props))->resolve()];
+        }
+
         if (array_key_exists('children', $node)) {
-            $presented['children'] = array_map(fn (array $child) => self::presentNode($child, $imageUrls), $node['children']);
+            $presented['children'] = array_map(fn (array $child) => self::presentNode($child, $forPublic), $node['children']);
         }
 
         return $presented;

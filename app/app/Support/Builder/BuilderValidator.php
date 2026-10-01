@@ -233,6 +233,7 @@ final class BuilderValidator
             'string', 'richtext' => is_string($value) && mb_strlen($value) <= $definition['max'],
             'int' => is_int($value) && $value >= $definition['min'] && $value <= $definition['max'],
             'enum' => in_array($value, $definition['options'], true),
+            'bool' => is_bool($value),
             'url' => is_string($value) && strlen($value) <= self::URL_MAX_LENGTH && preg_match(self::URL_PATTERN, $value) === 1,
             'image' => is_string($value) && preg_match(BuilderContent::IMAGE_PATH_PATTERN, $value) === 1,
             default => false,

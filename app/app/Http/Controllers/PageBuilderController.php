@@ -35,6 +35,7 @@ class PageBuilderController extends Controller
                     'previewUrl' => route($routePrefix.'preview-url', $routeParameters),
                     'images' => route('admin.json.builder.images'),
                     'templates' => route('admin.json.builder-templates.index'),
+                    'articleList' => route('admin.json.builder.article-list'),
                 ],
             ],
         ]);

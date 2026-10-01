@@ -118,6 +118,13 @@ class PageBuilderSeeder extends Seeder
                         BuilderContent::node('text', ['html' => '<p>編集した内容は下書きとして保存され、「公開」を押すまで公開中のページは変わりません。</p>'], ['textAlign' => 'center']),
                     ]),
                 ]),
+                BuilderContent::node('section', styles: ['paddingTop' => '48px', 'paddingBottom' => '64px', 'backgroundColor' => '#f8f9fa'], children: [
+                    BuilderContent::node('container', children: [
+                        BuilderContent::node('heading', ['text' => '新着記事', 'level' => 2], ['textAlign' => 'center']),
+                        BuilderContent::node('spacer', ['height' => 16]),
+                        BuilderContent::node('article-list', ['limit' => 3]),
+                    ]),
+                ]),
             ],
         ];
     }

@@ -93,6 +93,8 @@ Route::middleware('auth:admin')->group(function () {
     // ページビルダーのエディタが使う JSON。対象はトップ(admin/json/builder/top)と固定ページ(admin/json/builder/single-pages/{singlePage})
     Route::post('admin/json/builder/images', [PageBuilderJsonController::class, 'storeImage'])
         ->name('admin.json.builder.images');
+    Route::get('admin/json/builder/article-list', [PageBuilderJsonController::class, 'articleList'])
+        ->name('admin.json.builder.article-list');
 
     Route::get('admin/json/builder/top', [PageBuilderJsonController::class, 'show'])
         ->name('admin.json.builder.top.show');
