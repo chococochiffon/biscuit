@@ -14,6 +14,7 @@ use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PageBuilderController;
 use App\Http\Controllers\PageBuilderJsonController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\QuestionAnswerController;
@@ -75,6 +76,12 @@ Route::middleware('auth:admin')->group(function () {
         ->parameters(['content-model-relations' => 'contentModelRelation'])
         ->only(['index', 'store', 'update', 'destroy'])
         ->names('admin.json.content-model-relations');
+
+    // ページビルダーのエディタの画面。対象はトップと固定ページ
+    Route::get('admin/builder/top', [PageBuilderController::class, 'edit'])
+        ->name('admin.builder.top');
+    Route::get('admin/builder/single-pages/{singlePage}', [PageBuilderController::class, 'edit'])
+        ->name('admin.builder.single-pages');
 
     // ページビルダーのエディタが使う JSON。対象はトップ(admin/json/builder/top)と固定ページ(admin/json/builder/single-pages/{singlePage})
     Route::post('admin/json/builder/images', [PageBuilderJsonController::class, 'storeImage'])

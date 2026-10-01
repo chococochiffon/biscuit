@@ -7,7 +7,7 @@ namespace App\Support\Builder;
  * 保存時の検証(BuilderValidator)と管理画面のエディタ(toArray() を JSON で渡す)のどちらもここを元にする。
  * 置ける親(allowedParents)は allowedChildren を逆に引いて作り、定義は片側だけに書く。
  *
- * props の各項目は type(string・richtext・int・enum・url・image)と default を持ち、
+ * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image)と default を持ち、
  * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image は常に null 可)。
  */
 final class BlockRegistry
@@ -54,7 +54,7 @@ final class BlockRegistry
                 'icon' => 'square',
                 'children' => ['container', 'row', ...self::BASIC_BLOCKS],
                 'props' => [
-                    'backgroundImage' => ['type' => 'image', 'default' => null],
+                    'backgroundImage' => ['label' => '背景画像', 'type' => 'image', 'default' => null],
                 ],
                 'styles' => [...self::SPACING_STYLES, 'minHeight', 'backgroundColor', 'color', 'textAlign'],
             ],
@@ -73,7 +73,7 @@ final class BlockRegistry
                 'children' => ['column'],
                 'props' => [
                     // カラムの間の余白(Bootstrap の gutter と同じ 0〜5 の段階)
-                    'gap' => ['type' => 'int', 'default' => 3, 'min' => 0, 'max' => 5],
+                    'gap' => ['label' => 'カラムの間の余白', 'type' => 'int', 'default' => 3, 'min' => 0, 'max' => 5],
                 ],
                 'styles' => self::MARGIN_STYLES,
             ],
@@ -84,9 +84,9 @@ final class BlockRegistry
                 'children' => self::BASIC_BLOCKS,
                 'props' => [
                     // 12 分割の幅。タブレット・スマートフォンは未指定(null)なら、タブレットはデスクトップと同じ・スマートフォンは 12
-                    'span' => ['type' => 'int', 'default' => 12, 'min' => 1, 'max' => 12],
-                    'spanTablet' => ['type' => 'int', 'default' => null, 'min' => 1, 'max' => 12, 'nullable' => true],
-                    'spanMobile' => ['type' => 'int', 'default' => null, 'min' => 1, 'max' => 12, 'nullable' => true],
+                    'span' => ['label' => '幅(デスクトップ)', 'type' => 'int', 'default' => 12, 'min' => 1, 'max' => 12],
+                    'spanTablet' => ['label' => '幅(タブレット)', 'type' => 'int', 'default' => null, 'min' => 1, 'max' => 12, 'nullable' => true],
+                    'spanMobile' => ['label' => '幅(スマートフォン)', 'type' => 'int', 'default' => null, 'min' => 1, 'max' => 12, 'nullable' => true],
                 ],
                 'styles' => [...self::SPACING_STYLES, 'backgroundColor', 'textAlign', 'borderRadius'],
             ],
@@ -96,8 +96,8 @@ final class BlockRegistry
                 'icon' => 'type-h1',
                 'children' => [],
                 'props' => [
-                    'text' => ['type' => 'string', 'default' => '見出し', 'max' => 200],
-                    'level' => ['type' => 'int', 'default' => 2, 'min' => 1, 'max' => 6],
+                    'text' => ['label' => '文字', 'type' => 'string', 'default' => '見出し', 'max' => 200],
+                    'level' => ['label' => '見出しのレベル', 'type' => 'int', 'default' => 2, 'min' => 1, 'max' => 6],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'color', 'fontSize', 'fontWeight', 'lineHeight', 'textAlign'],
             ],
@@ -108,7 +108,7 @@ final class BlockRegistry
                 'children' => [],
                 'props' => [
                     // Quill で入力した HTML(保存時に HtmlSanitizer::clean() で無害化する)
-                    'html' => ['type' => 'richtext', 'default' => '<p>テキスト</p>', 'max' => 20000],
+                    'html' => ['label' => '本文', 'type' => 'richtext', 'default' => '<p>テキスト</p>', 'max' => 20000],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'color', 'fontSize', 'lineHeight', 'textAlign'],
             ],
@@ -118,9 +118,9 @@ final class BlockRegistry
                 'icon' => 'image',
                 'children' => [],
                 'props' => [
-                    'src' => ['type' => 'image', 'default' => null],
-                    'alt' => ['type' => 'string', 'default' => '', 'max' => 200],
-                    'href' => ['type' => 'url', 'default' => null],
+                    'src' => ['label' => '画像', 'type' => 'image', 'default' => null],
+                    'alt' => ['label' => '代替テキスト', 'type' => 'string', 'default' => '', 'max' => 200],
+                    'href' => ['label' => 'リンク先', 'type' => 'url', 'default' => null],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'width', 'maxWidth', 'borderRadius', 'textAlign'],
             ],
@@ -130,10 +130,10 @@ final class BlockRegistry
                 'icon' => 'hand-index',
                 'children' => [],
                 'props' => [
-                    'text' => ['type' => 'string', 'default' => 'ボタン', 'max' => 100],
-                    'href' => ['type' => 'url', 'default' => '#'],
-                    'target' => ['type' => 'enum', 'default' => '_self', 'options' => ['_self', '_blank']],
-                    'variant' => ['type' => 'enum', 'default' => 'primary', 'options' => ['primary', 'secondary', 'outline-primary', 'outline-secondary', 'link']],
+                    'text' => ['label' => 'ボタンの文字', 'type' => 'string', 'default' => 'ボタン', 'max' => 100],
+                    'href' => ['label' => 'リンク先', 'type' => 'url', 'default' => '#'],
+                    'target' => ['label' => '開き方', 'type' => 'enum', 'default' => '_self', 'options' => ['_self', '_blank']],
+                    'variant' => ['label' => '見た目', 'type' => 'enum', 'default' => 'primary', 'options' => ['primary', 'secondary', 'outline-primary', 'outline-secondary', 'link']],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'textAlign', 'color', 'backgroundColor', 'borderRadius', 'fontSize'],
             ],
@@ -144,7 +144,7 @@ final class BlockRegistry
                 'children' => [],
                 'props' => [
                     // 高さ(px)
-                    'height' => ['type' => 'int', 'default' => 32, 'min' => 0, 'max' => 400],
+                    'height' => ['label' => '高さ(px)', 'type' => 'int', 'default' => 32, 'min' => 0, 'max' => 400],
                 ],
                 'styles' => [],
             ],
@@ -217,6 +217,7 @@ final class BlockRegistry
             $blocks[$type] = [
                 ...$definition,
                 'label' => __($definition['label']),
+                'props' => array_map(fn (array $prop) => [...$prop, 'label' => __($prop['label'])], $definition['props']),
                 'allowedParents' => $parents,
             ];
         }

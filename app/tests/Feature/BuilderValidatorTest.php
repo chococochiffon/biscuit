@@ -255,6 +255,7 @@ class BuilderValidatorTest extends TestCase
         $this->assertSame(['row'], $registry['blocks']['column']['allowedParents']);
         $this->assertSame('見出し', $registry['blocks']['heading']['label']);
         $this->assertSame('length', $registry['styles']['paddingTop']);
+        $this->assertSame('見出しのレベル', $registry['blocks']['heading']['props']['level']['label']);
 
         // 置ける子の定義は、定義済みのブロックだけを指す
         foreach (BlockRegistry::definitions() as $definition) {

@@ -135,13 +135,18 @@
 
         <div class="mb-3">
             <label for="top_use_builder" class="form-label">{{ __('トップでページビルダーを使う') }}</label>
-            <select id="top_use_builder" name="top_use_builder" class="form-select form-select-auto @error('top_use_builder') is-invalid @enderror">
-                <option value="0" @selected($topUseBuilder === 0)>{{ __('使わない') }}</option>
-                <option value="1" @selected($topUseBuilder === 1)>{{ __('使う') }}</option>
-            </select>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <select id="top_use_builder" name="top_use_builder" class="form-select form-select-auto @error('top_use_builder') is-invalid @enderror">
+                    <option value="0" @selected($topUseBuilder === 0)>{{ __('使わない') }}</option>
+                    <option value="1" @selected($topUseBuilder === 1)>{{ __('使う') }}</option>
+                </select>
+                <a href="{{ route('admin.builder.top') }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-grid-1x2"></i> {{ __('ページビルダーで編集') }}
+                </a>
+            </div>
             <div class="form-text">{{ __('使うと、公開側トップのスライダーの下に、トップのページビルダーで公開した内容を表示します。ページビルダーを公開してから選べます。') }}</div>
             @error('top_use_builder')
-                <div class="invalid-feedback">{{ $message }}</div>
+                <div class="invalid-feedback d-block">{{ $message }}</div>
             @enderror
         </div>
 

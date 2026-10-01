@@ -92,6 +92,9 @@
                         <td>{{ $singlePage->link_list_view ? __('表示する') : __('表示しない') }}</td>
                         <td class="text-end">
                             <a href="{{ route('admin.single-pages.edit', $singlePage) }}" class="btn btn-sm btn-outline-secondary">{{ __('編集') }}</a>
+                            <a href="{{ route('admin.builder.single-pages', $singlePage) }}" class="btn btn-sm btn-outline-secondary" title="{{ __('ページビルダーで編集') }}">
+                                <i class="bi bi-grid-1x2"></i><span class="visually-hidden">{{ __('ページビルダーで編集') }}</span>
+                            </a>
 
                             <x-admin.delete-button :action="route('admin.single-pages.destroy', $singlePage)" />
                         </td>
