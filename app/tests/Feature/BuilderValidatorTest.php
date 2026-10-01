@@ -264,7 +264,7 @@ class BuilderValidatorTest extends TestCase
     {
         $registry = BlockRegistry::toArray();
 
-        $this->assertSame(['section'], $registry['rootChildren']);
+        $this->assertSame(['section', 'global'], $registry['rootChildren']);
         $this->assertSame([null], $registry['blocks']['section']['allowedParents']);
         $this->assertSame(['section', 'container', 'column'], $registry['blocks']['heading']['allowedParents']);
         $this->assertSame(['row'], $registry['blocks']['column']['allowedParents']);

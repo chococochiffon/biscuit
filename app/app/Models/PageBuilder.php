@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\BuilderPageType;
+use App\Models\Concerns\HasBuilderContent;
 use App\Models\Concerns\HasPublicImages;
 use App\Models\Concerns\StoresReadableJson;
 use App\Support\Builder\BuilderContent;
@@ -15,7 +16,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
 /**
@@ -28,7 +28,7 @@ use Illuminate\Support\Str;
 class PageBuilder extends Model
 {
     /** @use HasFactory<PageBuilderFactory> */
-    use HasFactory, HasPublicImages, SoftDeletes, StoresReadableJson;
+    use HasBuilderContent, HasFactory, HasPublicImages, SoftDeletes, StoresReadableJson;
 
     /**
      * ビルダーの画像の保存先ディレクトリ(公開ディスク基準)。
@@ -92,33 +92,6 @@ class PageBuilder extends Model
             max(1, (int) round($width * $scale)),
             max(1, (int) round($height * $scale)),
         );
-    }
-
-    /**
-     * 編集中の内容を公開中の内容にし、公開した日時を記録する(保存はしない)。内容は検証済みであること。
-     */
-    public function publish(): void
-    {
-        $this->published_content = $this->draft_content;
-        $this->published_at = Date::now();
-    }
-
-    /**
-     * 公開中の内容があるか。
-     */
-    public function isPublished(): bool
-    {
-        return $this->published_content !== null;
-    }
-
-    /**
-     * 編集中の内容に、まだ公開していない変更があるか(未公開なら、何か置いてあれば変更ありとする)。
-     */
-    public function hasUnpublishedChanges(): bool
-    {
-        return $this->isPublished()
-            ? $this->draft_content != $this->published_content
-            : ($this->draft_content['children'] ?? []) !== [];
     }
 
     /**

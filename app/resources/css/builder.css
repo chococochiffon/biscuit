@@ -458,3 +458,10 @@
     position: absolute;
     inset: 0;
 }
+
+/* グローバルコンポーネントのブロックの見本(共通のパーツであることが分かるよう、薄い枠で囲む) */
+.builder-global-preview {
+    position: relative;
+    outline: 1px dashed #6f42c1;
+    outline-offset: -1px;
+}

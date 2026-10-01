@@ -6,6 +6,7 @@ use App\Http\Resources\ArticleResource;
 use App\Http\Resources\GalleryImageResource;
 use App\Models\GalleryImage;
 use App\Models\LayoutBlock;
+use App\Models\PageBuilderComponent;
 use App\Models\SinglePage;
 use App\Support\CallContent\SinglePageContentSource;
 use Illuminate\Database\Eloquent\Collection;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Collection;
  * - navigation: items(label・path・prefix。サイトのナビメニューか、リンクリストに表示する固定ページ)
  * - gallery: images(条件どおりの公開中のギャラリー画像。並び順)
  * - video: embed_url(動画の URL から組み立てた埋め込み用の URL。VideoUrl)
+ * - global: children(参照するグローバルコンポーネントの公開中の内容のノード。未公開・削除済みなら空)
  */
 final class BlockDataResolver
 {
@@ -33,8 +35,40 @@ final class BlockDataResolver
             'navigation' => ['items' => self::navigationItems($props)],
             'gallery' => ['images' => GalleryImageResource::collection(self::galleryImages($props))->resolve()],
             'video' => ['embed_url' => is_string($props['url'] ?? null) ? VideoUrl::embedUrl($props['url']) : null],
+            'global' => ['children' => self::globalComponentChildren($props)],
             default => null,
         };
+    }
+
+    /**
+     * 解決中のグローバルコンポーネントの id(コンポーネントの中にコンポーネントがあっても、入れ子を終わらせるため)。
+     *
+     * @var array<int, true>
+     */
+    private static array $resolvingComponents = [];
+
+    /**
+     * グローバルコンポーネントの公開中の内容のノード(公開側の形)。未公開・削除済み・解決中(入れ子)なら空。
+     *
+     * @param  array<string, mixed>  $props
+     * @return list<array<string, mixed>>
+     */
+    public static function globalComponentChildren(array $props): array
+    {
+        $id = is_int($props['component'] ?? null) ? $props['component'] : null;
+        $component = $id === null || isset(self::$resolvingComponents[$id]) ? null : PageBuilderComponent::query()->find($id);
+
+        if ($component?->published_content === null) {
+            return [];
+        }
+
+        self::$resolvingComponents[$id] = true;
+
+        try {
+            return BuilderPresenter::forPublic($component->published_content)['children'];
+        } finally {
+            unset(self::$resolvingComponents[$id]);
+        }
     }
 
     /**

@@ -8,6 +8,8 @@ import type { Device } from '../types'
 // テンプレート・プレビュー・下書き保存・公開・変更の破棄
 defineProps<{
   backUrl: string
+  // プレビューを開けるか(グローバルコンポーネントのエディタにはない)
+  canPreview: boolean
 }>()
 
 const store = useBuilderStore()
@@ -49,7 +51,11 @@ async function openPreview(): Promise<void> {
 }
 
 function publish(): void {
-  if (window.confirm(t('今の内容を公開します。よろしいですか?'))) {
+  const message = state.page?.type === 'component'
+    ? t('今の内容を公開すると、このコンポーネントを使っているすべてのページに反映されます。よろしいですか?')
+    : t('今の内容を公開します。よろしいですか?')
+
+  if (window.confirm(message)) {
     store.publish()
   }
 }
@@ -107,7 +113,7 @@ function discard(): void {
       <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.templatesOpen = true">
         <i class="bi bi-files" /> {{ t('テンプレート') }}
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="state.busy || !state.loaded" @click="openPreview">
+      <button v-if="canPreview" type="button" class="btn btn-sm btn-outline-secondary" :disabled="state.busy || !state.loaded" @click="openPreview">
         <i class="bi bi-eye" /> {{ t('プレビュー') }}
       </button>
       <button

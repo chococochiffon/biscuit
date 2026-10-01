@@ -14,6 +14,8 @@ use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PageBuilderComponentController;
+use App\Http\Controllers\PageBuilderComponentJsonController;
 use App\Http\Controllers\PageBuilderController;
 use App\Http\Controllers\PageBuilderJsonController;
 use App\Http\Controllers\PageBuilderTemplateJsonController;
@@ -83,6 +85,26 @@ Route::middleware('auth:admin')->group(function () {
         ->name('admin.builder.top');
     Route::get('admin/builder/single-pages/{singlePage}', [PageBuilderController::class, 'edit'])
         ->name('admin.builder.single-pages');
+    Route::get('admin/builder/components/{pageBuilderComponent}', [PageBuilderController::class, 'editComponent'])
+        ->name('admin.builder.components');
+
+    // グローバルコンポーネント(一覧・登録・名前の変更・削除。中身はエディタで編集する)
+    Route::resource('admin/builder-components', PageBuilderComponentController::class)
+        ->parameters(['builder-components' => 'pageBuilderComponent'])
+        ->except(['show'])
+        ->names('admin.builder-components');
+
+    // グローバルコンポーネントの JSON(一覧はページのエディタのブロックの選択肢と見本、ほかはコンポーネントのエディタが使う)
+    Route::get('admin/json/builder-components', [PageBuilderComponentJsonController::class, 'index'])
+        ->name('admin.json.builder-components.index');
+    Route::get('admin/json/builder/components/{pageBuilderComponent}', [PageBuilderComponentJsonController::class, 'show'])
+        ->name('admin.json.builder.components.show');
+    Route::put('admin/json/builder/components/{pageBuilderComponent}', [PageBuilderComponentJsonController::class, 'update'])
+        ->name('admin.json.builder.components.update');
+    Route::post('admin/json/builder/components/{pageBuilderComponent}/publish', [PageBuilderComponentJsonController::class, 'publish'])
+        ->name('admin.json.builder.components.publish');
+    Route::post('admin/json/builder/components/{pageBuilderComponent}/discard', [PageBuilderComponentJsonController::class, 'discard'])
+        ->name('admin.json.builder.components.discard');
 
     // ページビルダーのテンプレート(エディタが一覧・保存・削除に使う JSON)
     Route::resource('admin/json/builder-templates', PageBuilderTemplateJsonController::class)

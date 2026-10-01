@@ -111,7 +111,7 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="builder-app">
-    <BuilderToolbar :back-url="config.backUrl" />
+    <BuilderToolbar :back-url="config.backUrl" :can-preview="config.endpoints.previewUrl !== null" />
     <div v-if="store.state.loadError" class="p-4 text-danger">
       {{ t('ページビルダーを読み込めませんでした。画面を読み込み直してください。') }}
     </div>

@@ -58,10 +58,11 @@ export interface Registry {
 }
 
 export interface PageInfo {
-  type: 'top' | 'single_page'
+  // component はグローバルコンポーネント(ページではないため path は null)
+  type: 'top' | 'single_page' | 'component'
   id: number | null
   title: string
-  path: string
+  path: string | null
   // 公開側にページビルダーの内容を出す設定になっているか(固定ページの use_builder・サイト設定の top_use_builder)
   use_builder: boolean
 }
@@ -91,6 +92,14 @@ export interface ShowPayload extends BuilderStatePayload {
   gallery_categories: { id: number, name: string }[]
 }
 
+// グローバルコンポーネント(PageBuilderComponentJsonController::index())。content は公開中の内容(未公開なら null)
+export interface ComponentSummary {
+  id: number
+  name: string
+  published: boolean
+  content: BuilderContent | null
+}
+
 // ギャラリーのブロックの見本の画像(biscuit の GalleryImageResource のうち、エディタで使うもの)
 export interface GalleryImageSummary {
   id: number
@@ -106,7 +115,8 @@ export interface EditorConfig {
     update: string
     publish: string
     discard: string
-    previewUrl: string
+    // グローバルコンポーネントのエディタにはプレビューがない(null)
+    previewUrl: string | null
     images: string
     // テンプレートの一覧・保存(削除は末尾に /{id} を付ける)
     templates: string
@@ -114,6 +124,8 @@ export interface EditorConfig {
     articleList: string
     navigation: string
     gallery: string
+    // グローバルコンポーネントの一覧(ブロックの選択肢と見本)
+    components: string
   }
 }
 
