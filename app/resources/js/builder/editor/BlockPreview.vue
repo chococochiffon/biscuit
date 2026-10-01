@@ -2,19 +2,22 @@
 import { computed } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
-import { blockStyle } from '../styles'
+import { blockStyle, columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
 import ArticleListPreview from './ArticleListPreview.vue'
 import BreadcrumbPreview from './BreadcrumbPreview.vue'
 import DropList from './DropList.vue'
+import GlobalPreview from './GlobalPreview.vue'
 import { videoEmbedUrl } from '../video'
 import GalleryPreview from './GalleryPreview.vue'
 import NavigationPreview from './NavigationPreview.vue'
 
 // Canvas に描くブロックの中身。公開側(chococo の components/builder/blocks)と同じ Bootstrap の要素で近い見た目にする。
-// 中にブロックを置ける種類(セクション・コンテナ・行・カラム)は、子の並びを DropList で描く
+// 中にブロックを置ける種類(セクション・コンテナ・行・カラム)は、子の並びを DropList で描く。
+// readonly のときは選択・ドラッグを受けずに描くだけにする(グローバルコンポーネントの中身の見本)
 const props = defineProps<{
   node: BuilderNode
+  readonly?: boolean
 }>()
 
 const store = useBuilderStore()
@@ -34,13 +37,37 @@ const sectionStyle = computed(() => {
     : style.value
 })
 const imageUrl = computed(() => store.imageUrl(props.node.props.src))
+const isContainer = computed(() => ['section', 'container', 'row', 'column'].includes(props.node.type))
+
+// 読み取り専用で描くときの、中にブロックを置ける種類の要素のクラス(行の直下のカラムは幅のクラスをこの要素に付ける)
+const readonlyClass = computed(() => {
+  switch (props.node.type) {
+    case 'section':
+      return 'builder-preview-section'
+    case 'container':
+      return 'container'
+    case 'row':
+      return ['row', `g-${int('gap', 3)}`]
+    default:
+      return ['builder-preview-column', `col-${columnSpan(props.node, store.state.device)}`]
+  }
+})
+
 const videoUrl = computed(() => videoEmbedUrl(props.node.props.url))
 const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}`)
 </script>
 
 <template>
+  <component
+    :is="node.type === 'section' ? 'section' : 'div'"
+    v-if="readonly && isContainer"
+    :class="readonlyClass"
+    :style="node.type === 'section' ? sectionStyle : style"
+  >
+    <BlockPreview v-for="child in children" :key="child.id" :node="child" readonly />
+  </component>
   <DropList
-    v-if="node.type === 'section'"
+    v-else-if="node.type === 'section'"
     tag="section"
     :parent-id="node.id"
     :children="children"
@@ -101,6 +128,7 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
   <NavigationPreview v-else-if="node.type === 'navigation'" :node="node" :style="style" />
   <BreadcrumbPreview v-else-if="node.type === 'breadcrumb'" :node="node" :style="style" />
   <GalleryPreview v-else-if="node.type === 'gallery'" :node="node" :style="style" />
+  <GlobalPreview v-else-if="node.type === 'global'" :node="node" />
   <div v-else class="builder-preview-placeholder">
     {{ t('この種類のブロックは表示できません。') }}
   </div>

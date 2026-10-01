@@ -15,6 +15,12 @@ const props = defineProps<{
 }>()
 
 const store = useBuilderStore()
+
+// グローバルコンポーネントの選択肢は、入力欄を出したときに読み込む
+if (props.prop.source === 'global-components') {
+  store.loadComponents()
+}
+
 const id = computed(() => `prop-${props.node.id}-${props.name}`)
 const value = computed(() => props.node.props[props.name])
 
@@ -115,6 +121,23 @@ function updateInt(raw: string): void {
       <option v-for="category in store.state.galleryCategories" :key="category.id" :value="category.id">{{ category.name }}</option>
       <option v-if="typeof value === 'number' && !store.state.galleryCategories.some(category => category.id === value)" :value="value">
         {{ t('(削除された分類)') }}
+      </option>
+    </select>
+
+    <select
+      v-else-if="prop.source === 'global-components'"
+      :id="id"
+      class="form-select form-select-sm form-select-auto"
+      :value="value ?? ''"
+      @focus="store.loadComponents()"
+      @change="updateInt(($event.target as HTMLSelectElement).value)"
+    >
+      <option value="">{{ t('選んでください') }}</option>
+      <option v-for="component in store.state.components ?? []" :key="component.id" :value="component.id">
+        {{ component.published ? component.name : `${component.name} ${t('(未公開)')}` }}
+      </option>
+      <option v-if="typeof value === 'number' && store.state.components !== null && !store.state.components.some(component => component.id === value)" :value="value">
+        {{ t('(削除されたコンポーネント)') }}
       </option>
     </select>
 

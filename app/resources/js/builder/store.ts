@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
-import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -24,6 +24,8 @@ export function createBuilderStore(api: BuilderApi) {
     breadcrumbs: [] as Breadcrumb[],
     // ギャラリーの分類(ギャラリーのブロックの選択肢)
     galleryCategories: [] as { id: number, name: string }[],
+    // グローバルコンポーネント(グローバルコンポーネントのブロックの選択肢と見本。使うときに読み込む)
+    components: null as ComponentSummary[] | null,
     content: { version: 1, children: [] } as BuilderContent,
     device: 'desktop' as Device,
     selectedId: null as string | null,
@@ -443,7 +445,9 @@ export function createBuilderStore(api: BuilderApi) {
         state.errors = {}
         state.message = {
           type: 'success',
-          text: state.page?.use_builder
+          text: state.page?.type === 'component'
+            ? t('公開しました。このコンポーネントを使っているページに反映しました。')
+            : state.page?.use_builder
             ? t('公開しました。')
             : state.page?.type === 'top'
               ? t('公開しました。公開側に表示するには、サイト設定の「トップでページビルダーを使う」を「使う」にしてください。')
@@ -608,6 +612,18 @@ export function createBuilderStore(api: BuilderApi) {
       }
 
       return galleryCache.get(key)!
+    },
+
+    /**
+     * グローバルコンポーネントの一覧を読み込む(一度だけ。失敗したら空)。
+     */
+    async loadComponents(): Promise<void> {
+      if (state.components !== null) {
+        return
+      }
+
+      state.components = []
+      state.components = await api.components().catch(() => [])
     },
 
     async uploadImage(file: File): Promise<string | null> {

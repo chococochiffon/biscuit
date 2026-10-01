@@ -87,6 +87,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.builder-components.index') }}" class="nav-link">
+                            <i class="bi bi-puzzle"></i>{{ __('グローバルコンポーネント') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.layouts.edit') }}" class="nav-link">
                             <i class="bi bi-layout-sidebar-inset"></i>{{ __('レイアウト管理') }}
                         </a>

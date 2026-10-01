@@ -49,11 +49,19 @@ class SavePageBuilderRequest extends FormRequest
                     return;
                 }
 
-                foreach (app(BuilderValidator::class)->errors($this->input('content')) as $error) {
+                foreach (app(BuilderValidator::class)->errors($this->input('content'), $this->allowsGlobalComponents()) as $error) {
                     $validator->errors()->add($error['node'] === null ? 'content' : 'nodes.'.$error['node'], $error['message']);
                 }
             },
         ];
+    }
+
+    /**
+     * 内容にグローバルコンポーネントのブロックを置けるか(グローバルコンポーネントの内容の保存では置けない)。
+     */
+    protected function allowsGlobalComponents(): bool
+    {
+        return true;
     }
 
     /**

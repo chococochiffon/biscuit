@@ -46,15 +46,22 @@ final class BuilderValidator
     private int $nodeCount = 0;
 
     /**
-     * 内容を検証し、エラーの一覧を返す(空なら正しい)。
+     * グローバルコンポーネントのブロックを置けるか(コンポーネントの内容では置けない)。
+     */
+    private bool $allowsGlobal = true;
+
+    /**
+     * 内容を検証し、エラーの一覧を返す(空なら正しい)。グローバルコンポーネントの内容は allowsGlobal を false にして検証する
+     * (コンポーネントの中にコンポーネントを置くと、入れ子が終わらなくなるおそれがあるため)。
      *
      * @return list<array{node: string|null, message: string}>
      */
-    public function errors(mixed $content): array
+    public function errors(mixed $content, bool $allowsGlobal = true): array
     {
         $this->errors = [];
         $this->ids = [];
         $this->nodeCount = 0;
+        $this->allowsGlobal = $allowsGlobal;
 
         if (! self::isObject($content) || array_diff(array_keys($content), ['version', 'children']) !== []) {
             return [$this->error(null, __('ビルダーの内容の形式が正しくありません。'))];
@@ -168,6 +175,12 @@ final class BuilderValidator
             $this->errors[] = $this->error($id, __('「:block」の ID が重複しています。', ['block' => $label]));
         } else {
             $this->ids[$id] = true;
+        }
+
+        if ($type === 'global' && ! $this->allowsGlobal) {
+            $this->errors[] = $this->error($id, __('グローバルコンポーネントの中には、グローバルコンポーネントを置けません。'));
+
+            return;
         }
 
         if (! BlockRegistry::allowsChild($parentType, $type)) {

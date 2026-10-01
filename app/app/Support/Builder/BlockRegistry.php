@@ -10,16 +10,16 @@ namespace App\Support\Builder;
  * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool・video)と default を持ち、
  * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image・video は常に null 可)。
  * video は YouTube・Vimeo の動画の URL だけを受け付ける(VideoUrl)。
- * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類)。
+ * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類、global-components: グローバルコンポーネント)。
  */
 final class BlockRegistry
 {
     /**
-     * ページの直下(ルート)に置けるブロック。
+     * ページの直下(ルート)に置けるブロック(セクションと、セクションの並びを差し込むグローバルコンポーネント)。
      *
      * @var list<string>
      */
-    public const ROOT_CHILDREN = ['section'];
+    public const ROOT_CHILDREN = ['section', 'global'];
 
     /**
      * 中に何も置けない基本のブロック。
@@ -230,6 +230,18 @@ final class BlockRegistry
                     'showCaption' => ['label' => '名前を表示する', 'type' => 'bool', 'default' => true],
                 ],
                 'styles' => self::MARGIN_STYLES,
+            ],
+            // グローバルコンポーネント: 保存するのは参照するコンポーネントの id だけで、公開側に返すときにコンポーネントの公開中の内容を入れる
+            // (BlockDataResolver)。ページの直下にだけ置け、コンポーネントの中には置けない
+            'global' => [
+                'label' => 'グローバルコンポーネント',
+                'category' => 'cms',
+                'icon' => 'puzzle',
+                'children' => [],
+                'props' => [
+                    'component' => ['label' => '使うコンポーネント', 'type' => 'int', 'default' => null, 'min' => 1, 'max' => 2147483647, 'nullable' => true, 'source' => 'global-components'],
+                ],
+                'styles' => [],
             ],
             'divider' => [
                 'label' => '区切り線',

@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Enums\AuditAction;
 use App\Enums\BuilderPageType;
+use App\Http\Controllers\Concerns\EditsBuilderContent;
 use App\Http\Requests\SavePageBuilderRequest;
 use App\Http\Resources\ArticleResource;
 use App\Http\Resources\GalleryImageResource;
-use App\Models\AuditLog;
 use App\Models\GalleryCategory;
 use App\Models\PageBuilder;
 use App\Models\SinglePage;
@@ -17,15 +17,10 @@ use App\Support\Breadcrumbs;
 use App\Support\Builder\ArticleListQuery;
 use App\Support\Builder\BlockDataResolver;
 use App\Support\Builder\BlockRegistry;
-use App\Support\Builder\BuilderContent;
-use App\Support\Builder\BuilderPresenter;
 use App\Support\Builder\BuilderValidator;
-use App\Support\Builder\SchemaMigrator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
@@ -35,11 +30,7 @@ use Illuminate\Support\Facades\URL;
  */
 class PageBuilderJsonController extends Controller
 {
-    /**
-     * 下書きの保存を監査ログに残す間隔(分)。自動保存は数秒ごとに走るため、同じ管理者・同じビルダーの保存は
-     * この間に 1 件だけ残す。公開・変更の破棄は毎回残す。
-     */
-    public const DRAFT_LOG_INTERVAL_MINUTES = 30;
+    use EditsBuilderContent;
 
     /**
      * プレビューの URL の有効期限(分)。
@@ -73,18 +64,8 @@ class PageBuilderJsonController extends Controller
             return $this->conflictResponse($builder);
         }
 
-        DB::transaction(function () use ($request, $builder, $singlePage) {
-            $builder->draft_content = $request->content();
-            $builder->schema_version = SchemaMigrator::CURRENT_VERSION;
-            $builder->save();
-
-            // ダッシュボードの「最近編集したコンテンツ」に出るよう、固定ページの更新日時も進める
-            $singlePage?->touch();
-
-            if ($this->shouldLogDraftSave($builder)) {
-                AuditLogger::record(AuditAction::Updated, $builder, $this->label($singlePage), metadata: ['nodes' => $this->countNodes($builder->draft_content)]);
-            }
-        });
+        // ダッシュボードの「最近編集したコンテンツ」に出るよう、固定ページの更新日時も進める
+        $this->saveDraft($builder, $request->content(), $this->label($singlePage), fn () => $singlePage?->touch());
 
         return response()->json($this->state($builder, $singlePage));
     }
@@ -100,30 +81,8 @@ class PageBuilderJsonController extends Controller
             return $this->conflictResponse($builder);
         }
 
-        $draft = (new SchemaMigrator)->migrate($builder->draft_content);
-        $errors = $validator->errors($draft);
-
-        if ($errors !== []) {
-            return response()->json([
-                'message' => $errors[0]['message'],
-                'errors' => collect($errors)->groupBy(fn (array $error) => $error['node'] === null ? 'content' : 'nodes.'.$error['node'])->map->pluck('message'),
-            ], 422);
-        }
-
-        DB::transaction(function () use ($builder, $draft, $validator, $singlePage) {
-            $publishedNodes = $builder->isPublished() ? $this->countNodes($builder->published_content) : null;
-
-            $builder->draft_content = $validator->normalize($draft);
-            $builder->schema_version = SchemaMigrator::CURRENT_VERSION;
-            $builder->publish();
-            $builder->save();
-
-            AuditLogger::record(AuditAction::Published, $builder, $this->label($singlePage), metadata: [
-                'nodes' => [$publishedNodes, $this->countNodes($builder->published_content)],
-            ]);
-        });
-
-        return response()->json($this->state($builder, $singlePage));
+        return $this->publishDraft($builder, $validator, $this->label($singlePage))
+            ?? response()->json($this->state($builder, $singlePage));
     }
 
     /**
@@ -141,16 +100,7 @@ class PageBuilderJsonController extends Controller
             return $this->conflictResponse($builder);
         }
 
-        DB::transaction(function () use ($builder, $singlePage) {
-            $draftNodes = $this->countNodes($builder->draft_content);
-
-            $builder->draft_content = $builder->published_content;
-            $builder->save();
-
-            AuditLogger::record(AuditAction::DraftDiscarded, $builder, $this->label($singlePage), metadata: [
-                'nodes' => [$draftNodes, $this->countNodes($builder->draft_content)],
-            ]);
-        });
+        $this->discardDraft($builder, $this->label($singlePage));
 
         return response()->json($this->state($builder, $singlePage));
     }
@@ -239,37 +189,6 @@ class PageBuilderJsonController extends Controller
     }
 
     /**
-     * エディタが知っている更新日時(画面を開いた・最後に保存したとき)と、今の更新日時が食い違うか(ほかの管理者が先に保存した)。
-     */
-    private function conflicts(PageBuilder $builder, mixed $knownUpdatedAt): bool
-    {
-        return $knownUpdatedAt !== $this->updatedAt($builder);
-    }
-
-    private function conflictResponse(PageBuilder $builder): JsonResponse
-    {
-        return response()->json([
-            'message' => __('ほかの管理者が先に保存しました。画面を読み込み直してください。'),
-            'updated_at' => $this->updatedAt($builder),
-        ], 409);
-    }
-
-    /**
-     * 同じ管理者が同じビルダーの下書きの保存を、DRAFT_LOG_INTERVAL_MINUTES 分以内に記録していなければ記録する。
-     */
-    private function shouldLogDraftSave(PageBuilder $builder): bool
-    {
-        return ! AuditLog::query()
-            ->where('subject_type', AuditLogger::subjectType($builder))
-            ->where('subject_id', $builder->id)
-            ->where('action', AuditAction::Updated)
-            ->where('actor_type', 'administrator')
-            ->where('actor_id', Auth::guard('admin')->id())
-            ->where('created_at', '>=', Date::now()->subMinutes(self::DRAFT_LOG_INTERVAL_MINUTES))
-            ->exists();
-    }
-
-    /**
      * エディタに返すビルダーの状態。
      *
      * @return array<string, mixed>
@@ -284,17 +203,8 @@ class PageBuilderJsonController extends Controller
                 'path' => $singlePage?->path ?? '/',
                 'use_builder' => $singlePage === null ? (bool) SiteSetting::current()?->top_use_builder : $singlePage->use_builder,
             ],
-            'content' => BuilderPresenter::forEditor($builder->draft_content),
-            'published' => $builder->isPublished(),
-            'published_at' => $builder->published_at?->toIso8601String(),
-            'has_unpublished_changes' => $builder->hasUnpublishedChanges(),
-            'updated_at' => $this->updatedAt($builder),
+            ...$this->contentState($builder),
         ];
-    }
-
-    private function updatedAt(PageBuilder $builder): ?string
-    {
-        return $builder->exists ? $builder->updated_at?->toIso8601String() : null;
     }
 
     /**
@@ -303,13 +213,5 @@ class PageBuilderJsonController extends Controller
     private function label(?SinglePage $singlePage): string
     {
         return $singlePage?->title ?? BuilderPageType::Top->label();
-    }
-
-    /**
-     * @param  array<string, mixed>|null  $content
-     */
-    private function countNodes(?array $content): int
-    {
-        return iterator_count(BuilderContent::nodes($content ?? []));
     }
 }

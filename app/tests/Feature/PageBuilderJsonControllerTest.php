@@ -56,7 +56,7 @@ class PageBuilderJsonControllerTest extends TestCase
             ->assertJsonPath('content', ['version' => 1, 'children' => []])
             ->assertJsonPath('published', false)
             ->assertJsonPath('updated_at', null)
-            ->assertJsonPath('registry.rootChildren', ['section'])
+            ->assertJsonPath('registry.rootChildren', ['section', 'global'])
             ->assertJsonPath('registry.blocks.heading.label', '見出し');
 
         $this->assertSame(0, PageBuilder::query()->count());
