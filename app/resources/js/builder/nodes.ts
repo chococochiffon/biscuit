@@ -204,3 +204,47 @@ export function removeNode(content: BuilderContent, id: string): BuilderNode | n
 export function countNodes(nodes: BuilderNode[]): number {
   return nodes.reduce((count, node) => count + 1 + countNodes(node.children ?? []), 0)
 }
+
+/**
+ * 12 分割を count 個のカラムでできるだけ均等に分けた幅(割り切れない分は前のカラムから 1 ずつ足す。例: 5 個 → 3・3・2・2・2)。
+ * 13 個以上は 1 ずつ(合計が 12 を超えて折り返す)。
+ */
+export function evenSpans(count: number): number[] {
+  if (count <= 0) {
+    return []
+  }
+
+  const base = Math.max(1, Math.floor(12 / count))
+  const remainder = count <= 12 ? 12 - base * count : 0
+
+  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0))
+}
+
+function spanOf(column: BuilderNode): number {
+  const span = column.props.span
+
+  return typeof span === 'number' && span >= 1 && span <= 12 ? span : 12
+}
+
+/**
+ * 行にカラム(addedId)を入れたあと、行のカラムのデスクトップの幅を均等にそろえる。
+ * それまでのカラムが均等に分かれていた(またはすべて 12 だった)行だけをそろえ、幅を自分で変えた行(例: 8・4)は変えない。
+ * タブレット・スマートフォンの幅(spanTablet・spanMobile)は変えない。そろえたら true。
+ */
+export function equalizeColumns(row: BuilderNode, addedId: string): boolean {
+  const columns = (row.children ?? []).filter(child => child.type === 'column')
+  const others = columns.filter(column => column.id !== addedId).map(spanOf)
+  const evenBefore = evenSpans(others.length)
+  const wasEven = others.every(span => span === 12) || others.every((span, index) => span === evenBefore[index])
+
+  if (columns.length === 0 || !wasEven) {
+    return false
+  }
+
+  const spans = evenSpans(columns.length)
+  columns.forEach((column, index) => {
+    column.props.span = spans[index]
+  })
+
+  return true
+}

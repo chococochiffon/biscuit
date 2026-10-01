@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ancestorsOf, canPlace, cloneWithNewIds, countNodes, createNode, findNode, insertNode, moveNode, newId, removeNode } from './nodes'
+import { ancestorsOf, canPlace, cloneWithNewIds, countNodes, createNode, equalizeColumns, evenSpans, findNode, insertNode, moveNode, newId, removeNode } from './nodes'
 import { blockStyle, columnSpan } from './styles'
 import type { BlockDefinition, BuilderContent, BuilderNode, Registry } from './types'
 
@@ -176,5 +176,47 @@ describe('Canvas のスタイル', () => {
     expect(columnSpan(column, 'tablet')).toBe(6)
     expect(columnSpan(column, 'mobile')).toBe(12)
     expect(columnSpan({ ...column, props: { span: 6, spanTablet: 4, spanMobile: 6 } }, 'mobile')).toBe(6)
+  })
+})
+
+describe('カラムの幅をそろえる', () => {
+  it('12 分割をできるだけ均等に分ける', () => {
+    expect(evenSpans(1)).toEqual([12])
+    expect(evenSpans(2)).toEqual([6, 6])
+    expect(evenSpans(3)).toEqual([4, 4, 4])
+    expect(evenSpans(4)).toEqual([3, 3, 3, 3])
+    expect(evenSpans(5)).toEqual([3, 3, 2, 2, 2])
+    expect(evenSpans(0)).toEqual([])
+  })
+
+  it('均等だった行にカラムを足すと、すべてのカラムをそろえる', () => {
+    const first = node('column', [], { span: 12 })
+    const second = node('column', [], { span: 12 })
+    const row = node('row', [first, second])
+
+    expect(equalizeColumns(row, second.id)).toBe(true)
+    expect(row.children?.map(column => column.props.span)).toEqual([6, 6])
+
+    const third = node('column', [], { span: 12 })
+    row.children?.push(third)
+    expect(equalizeColumns(row, third.id)).toBe(true)
+    expect(row.children?.map(column => column.props.span)).toEqual([4, 4, 4])
+  })
+
+  it('幅を自分で変えた行は変えない', () => {
+    const added = node('column', [], { span: 12 })
+    const row = node('row', [node('column', [], { span: 8 }), node('column', [], { span: 4 }), added])
+
+    expect(equalizeColumns(row, added.id)).toBe(false)
+    expect(row.children?.map(column => column.props.span)).toEqual([8, 4, 12])
+  })
+
+  it('タブレット・スマートフォンの幅は変えない', () => {
+    const first = node('column', [], { span: 12, spanMobile: 6 })
+    const added = node('column', [], { span: 12 })
+    const row = node('row', [first, added])
+
+    equalizeColumns(row, added.id)
+    expect(first.props).toMatchObject({ span: 6, spanMobile: 6 })
   })
 })
