@@ -6,7 +6,9 @@ use App\Enums\AuditAction;
 use App\Enums\BuilderPageType;
 use App\Http\Requests\SavePageBuilderRequest;
 use App\Http\Resources\ArticleResource;
+use App\Http\Resources\GalleryImageResource;
 use App\Models\AuditLog;
+use App\Models\GalleryCategory;
 use App\Models\PageBuilder;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
@@ -28,7 +30,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 /**
- * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・プレビューの URL・画像のアップロード・記事一覧とナビゲーションのブロックの見本)。
+ * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・プレビューの URL・画像のアップロード・記事一覧・ナビゲーション・ギャラリーのブロックの見本)。
  * 対象はトップ(ルートに {singlePage} がない)と固定ページ。ビルダーの行は最初に下書きを保存したときに作る(取得では作らない)。
  */
 class PageBuilderJsonController extends Controller
@@ -45,7 +47,7 @@ class PageBuilderJsonController extends Controller
     public const PREVIEW_EXPIRE_MINUTES = 30;
 
     /**
-     * エディタを開くときの内容(ページの情報・下書き・公開の状態・ブロックの定義・画像の URL の先頭・パンくず)。
+     * エディタを開くときの内容(ページの情報・下書き・公開の状態・ブロックの定義・画像の URL の先頭・ギャラリーの分類・パンくず)。
      */
     public function show(?SinglePage $singlePage = null): JsonResponse
     {
@@ -53,6 +55,8 @@ class PageBuilderJsonController extends Controller
             ...$this->state($this->builderOrNew($singlePage), $singlePage),
             'registry' => BlockRegistry::toArray(),
             'image_base_url' => Storage::disk('public')->url(''),
+            // ギャラリーのブロックの分類の選択肢
+            'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             // パンくずのブロックの Canvas の見本(公開側と同じ組み立て。トップは空)
             'breadcrumbs' => $singlePage === null ? [] : Breadcrumbs::forPage($singlePage->path, $singlePage->title),
         ]);
@@ -190,6 +194,19 @@ class PageBuilderJsonController extends Controller
     public function navigation(Request $request): JsonResponse
     {
         return response()->json(['items' => BlockDataResolver::navigationItems(['source' => $request->query('source') === 'pages' ? 'pages' : 'site'])]);
+    }
+
+    /**
+     * ギャラリーのブロックの Canvas の見本(条件どおりの公開中の画像)。
+     */
+    public function gallery(Request $request): JsonResponse
+    {
+        $props = [
+            'category' => $request->filled('category') ? $request->integer('category') : null,
+            'limit' => $request->integer('limit', 8),
+        ];
+
+        return response()->json(['images' => GalleryImageResource::collection(BlockDataResolver::galleryImages($props))->resolve()]);
     }
 
     /**

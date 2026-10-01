@@ -33,6 +33,8 @@ export interface PropDefinition {
   min?: number
   options?: string[]
   nullable?: boolean
+  // 選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類)
+  source?: string
 }
 
 export interface BlockDefinition {
@@ -85,6 +87,15 @@ export interface ShowPayload extends BuilderStatePayload {
   image_base_url: string
   // 編集しているページのパンくず(トップは空)
   breadcrumbs: Breadcrumb[]
+  // ギャラリーの分類(ギャラリーのブロックの選択肢)
+  gallery_categories: { id: number, name: string }[]
+}
+
+// ギャラリーのブロックの見本の画像(biscuit の GalleryImageResource のうち、エディタで使うもの)
+export interface GalleryImageSummary {
+  id: number
+  name: string
+  image_url: string
 }
 
 // 画面(resources/views/admin/builder/edit.blade.php)が渡す設定
@@ -102,6 +113,7 @@ export interface EditorConfig {
     // 記事一覧・ナビゲーションのブロックの Canvas の見本
     articleList: string
     navigation: string
+    gallery: string
   }
 }
 

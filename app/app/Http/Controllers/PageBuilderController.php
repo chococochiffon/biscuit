@@ -37,6 +37,7 @@ class PageBuilderController extends Controller
                     'templates' => route('admin.json.builder-templates.index'),
                     'articleList' => route('admin.json.builder.article-list'),
                     'navigation' => route('admin.json.builder.navigation'),
+                    'gallery' => route('admin.json.builder.gallery'),
                 ],
             ],
         ]);
