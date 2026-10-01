@@ -2,7 +2,7 @@ import { inject, reactive, type InjectionKey } from 'vue'
 import { ApiError, type BuilderApi } from './api'
 import { createHistory } from './history'
 import { t } from './i18n'
-import { canPlace, containsNode, createNode, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
+import { canPlace, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
 import { setNodeStyle } from './styles'
 import type { BuilderContent, BuilderNode, BuilderStatePayload, Device, Dragging, DropTarget, PageInfo, Registry } from './types'
 
@@ -71,6 +71,17 @@ export function createBuilderStore(api: BuilderApi) {
     changed()
 
     return true
+  }
+
+  /**
+   * 行(row)にカラムを入れたら、行のカラムの幅をそろえる(ほかの操作と同じ 1 回の操作として元に戻せる)。
+   */
+  function equalizeIfAddedToRow(columnId: string, parentId: string | null): void {
+    const parent = parentId === null ? null : findNode(state.content, parentId)
+
+    if (parent?.type === 'row' && findNode(state.content, columnId)?.type === 'column') {
+      equalizeColumns(parent, columnId)
+    }
   }
 
   function restore(snapshot: string): void {
@@ -173,7 +184,16 @@ export function createBuilderStore(api: BuilderApi) {
     add(type: string, parentId: string | null, index: number): boolean {
       const node = createNode(state.registry, type)
 
-      if (!mutate(null, () => insertNode(state.registry, state.content, parentId, index, node))) {
+      const inserted = () => {
+        if (!insertNode(state.registry, state.content, parentId, index, node)) {
+          return false
+        }
+        equalizeIfAddedToRow(node.id, parentId)
+
+        return true
+      }
+
+      if (!mutate(null, inserted)) {
         return false
       }
 
@@ -208,7 +228,19 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     move(id: string, parentId: string | null, index: number): boolean {
-      return mutate(null, () => moveNode(state.registry, state.content, id, parentId, index))
+      const fromParentId = findLocation(state.content, id)?.parent?.id ?? null
+
+      return mutate(null, () => {
+        if (!moveNode(state.registry, state.content, id, parentId, index)) {
+          return false
+        }
+        // 別の行へ移したカラムは、移した先の行で幅をそろえる(同じ行の中の並び替えでは変えない)
+        if (fromParentId !== parentId) {
+          equalizeIfAddedToRow(id, parentId)
+        }
+
+        return true
+      })
     },
 
     /**
