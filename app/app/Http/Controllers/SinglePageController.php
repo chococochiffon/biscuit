@@ -63,6 +63,7 @@ class SinglePageController extends Controller
                 'slug' => $request->validated('slug'),
                 'top_page_view' => $request->boolean('top_page_view'),
                 'link_list_view' => $request->boolean('link_list_view'),
+                'use_builder' => $request->boolean('use_builder'),
                 'sort_order' => SinglePage::nextSortOrder(),
                 'publication_start_datetime' => $request->validated('publication_start_datetime'),
                 'publication_end_datetime' => $request->validated('publication_end_datetime'),
@@ -105,6 +106,7 @@ class SinglePageController extends Controller
                 'slug' => $request->validated('slug'),
                 'top_page_view' => $request->boolean('top_page_view'),
                 'link_list_view' => $request->boolean('link_list_view'),
+                'use_builder' => $request->boolean('use_builder'),
                 'publication_start_datetime' => $request->validated('publication_start_datetime'),
                 'publication_end_datetime' => $request->validated('publication_end_datetime'),
             ]);
@@ -128,7 +130,11 @@ class SinglePageController extends Controller
      */
     public function destroy(SinglePage $singlePage): RedirectResponse
     {
-        AuditLogger::deleteWithLog($singlePage);
+        // ページビルダーの内容も、固定ページと一緒に論理削除する
+        AuditLogger::deleteWithLog($singlePage, function () use ($singlePage) {
+            $singlePage->builder?->delete();
+            $singlePage->delete();
+        });
 
         return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを削除しました。'));
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Http\Requests\Concerns\ValidatesPath;
+use App\Rules\PublishedPageBuilder;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -41,6 +42,8 @@ class StoreSinglePageRequest extends FormRequest
             ...$this->pathRules(slugRequired: true, ignore: $this->route('singlePage')),
             'top_page_view' => ['nullable', 'boolean'],
             'link_list_view' => ['nullable', 'boolean'],
+            // ページビルダーで表示するのは、ページビルダーを公開してから(新規登録時はまだページビルダーがないため選べない)
+            'use_builder' => ['nullable', 'boolean', new PublishedPageBuilder($this->route('singlePage')?->builder)],
             'header_image' => ['nullable', 'image', 'max:'.config('limits.image_max_kilobytes')],
             'publication_start_datetime' => ['required', 'date_format:Y-m-d H:i'],
             'publication_end_datetime' => ['nullable', 'date_format:Y-m-d H:i', 'after:publication_start_datetime'],

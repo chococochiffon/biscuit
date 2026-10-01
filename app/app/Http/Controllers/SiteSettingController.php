@@ -47,6 +47,7 @@ class SiteSettingController extends Controller
                 'description' => $request->validated('description'),
                 'front_url' => $request->validated('front_url'),
                 'api_url' => $request->validated('api_url'),
+                'top_use_builder' => $request->boolean('top_use_builder'),
             ]);
 
             if ($request->hasFile('site_icon')) {
@@ -104,6 +105,7 @@ class SiteSettingController extends Controller
                 'description' => $request->validated('description'),
                 'front_url' => $request->validated('front_url'),
                 'api_url' => $request->validated('api_url'),
+                'top_use_builder' => $request->boolean('top_use_builder'),
             ]);
 
             if ($request->hasFile('site_icon')) {

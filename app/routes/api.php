@@ -3,6 +3,7 @@
 use App\Http\Controllers\API\ArticleController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\AuthorController;
+use App\Http\Controllers\API\BuilderPreviewController;
 use App\Http\Controllers\API\CallContentController;
 use App\Http\Controllers\API\CustomPageController;
 use App\Http\Controllers\API\CustomPageTypeController;
@@ -39,6 +40,12 @@ Route::apiResource('gallery-images', GalleryImageController::class)->only(['inde
 Route::apiResource('gallery-categories', GalleryCategoryController::class)->only(['index']);
 
 Route::get('resolve', ResolveController::class)->name('api.resolve');
+
+// ページビルダーのプレビュー(管理画面のエディタが発行した、期限付きの署名付き URL でだけ開ける。
+// chococo のサーバーは biscuit を別のホスト名で呼ぶことがあるため、署名はパスとクエリだけで確かめる)
+Route::get('builder-previews/{pageBuilder}', [BuilderPreviewController::class, 'show'])
+    ->middleware('signed:relative')
+    ->name('api.builder-previews.show');
 
 Route::get('custom-page-types', [CustomPageTypeController::class, 'index'])->name('api.custom-page-types.index');
 

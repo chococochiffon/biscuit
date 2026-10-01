@@ -116,6 +116,7 @@
             @php
                 $topPageView = (int) old('top_page_view', (int) ($singlePage->top_page_view ?? false));
                 $linkListView = (int) old('link_list_view', (int) ($singlePage->link_list_view ?? false));
+                $useBuilder = (int) old('use_builder', (int) ($singlePage->use_builder ?? false));
             @endphp
 
             <div class="row">
@@ -134,6 +135,18 @@
                         <option value="1" @selected($linkListView === 1)>{{ __('表示する') }}</option>
                     </select>
                 </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="use_builder" class="form-label">{{ __('ページの中身') }}</label>
+                <select id="use_builder" name="use_builder" class="form-select form-select-auto @error('use_builder') is-invalid @enderror">
+                    <option value="0" @selected($useBuilder === 0)>{{ __('詳細を表示する') }}</option>
+                    <option value="1" @selected($useBuilder === 1)>{{ __('ページビルダーで表示する') }}</option>
+                </select>
+                <div class="form-text">{{ __('ページビルダーで表示すると、公開側には詳細の代わりにページビルダーで公開した内容を表示します。ページビルダーを公開してから選べます。') }}</div>
+                @error('use_builder')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
             </div>
 
             <div class="mb-3">

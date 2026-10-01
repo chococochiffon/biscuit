@@ -32,6 +32,8 @@
                             @endif
                         </x-admin.detail-row>
 
+                        <x-admin.detail-row :label="__('トップでページビルダーを使う')">{{ $siteSetting->top_use_builder ? __('使う') : __('使わない') }}</x-admin.detail-row>
+
                         <x-admin.detail-row :label="__('サイトアイコン')">
                             <img
                                 src="{{ $siteSetting->site_icon_url }}"

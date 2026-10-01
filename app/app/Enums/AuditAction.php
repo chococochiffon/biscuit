@@ -21,6 +21,8 @@ enum AuditAction: string
     case Invited = 'invited';
     case InvitationAccepted = 'invitation_accepted';
     case LoginCodeSent = 'login_code_sent';
+    case Published = 'published';
+    case DraftDiscarded = 'draft_discarded';
 
     /**
      * 表示用のラベルを取得する(現在の言語設定に応じて翻訳される)。
@@ -42,6 +44,8 @@ enum AuditAction: string
             self::Invited => __('招待'),
             self::InvitationAccepted => __('招待の受諾'),
             self::LoginCodeSent => __('確認コードの送信'),
+            self::Published => __('公開'),
+            self::DraftDiscarded => __('変更の破棄'),
         };
     }
 
@@ -51,10 +55,10 @@ enum AuditAction: string
     public function badgeColor(): string
     {
         return match ($this) {
-            self::Created, self::Login, self::Invited => 'success',
+            self::Created, self::Login, self::Invited, self::Published => 'success',
             self::Updated, self::StatusChanged, self::Reordered, self::Uploaded, self::PasswordReset, self::InvitationAccepted => 'primary',
             self::Deleted, self::LoginFailed => 'danger',
-            self::Logout, self::PasswordResetRequested, self::LoginCodeSent => 'secondary',
+            self::Logout, self::PasswordResetRequested, self::LoginCodeSent, self::DraftDiscarded => 'secondary',
         };
     }
 }
