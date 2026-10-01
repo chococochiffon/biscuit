@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Http\UploadedFile;
 
-#[Fillable(['site_title', 'description', 'front_url', 'api_url', 'site_icon', 'site_image'])]
+#[Fillable(['site_title', 'description', 'front_url', 'api_url', 'site_icon', 'site_image', 'top_use_builder'])]
 class SiteSetting extends Model
 {
     /** @use HasFactory<SiteSettingFactory> */
@@ -36,6 +36,19 @@ class SiteSetting extends Model
      * サイト画像未設定の場合に使用するデフォルト画像の(公開ディスク基準の)パス。
      */
     public const DEFAULT_SITE_IMAGE_PATH = 'image/biscuit-og-image-1200x630.png';
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            // true ならトップのスライダーの下に、トップのページビルダーの公開中の内容を出す
+            'top_use_builder' => 'boolean',
+        ];
+    }
 
     /**
      * 現在のサイト設定を取得する(サイト設定は 1 件だけ登録する前提。未登録なら null)。
