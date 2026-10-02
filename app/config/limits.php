@@ -36,6 +36,9 @@ return [
     // ページビルダーのエディタの「版の履歴」に出す版の数(新しい順。古い版も消さずに残す)
     'builder_versions' => (int) env('LIMIT_BUILDER_VERSIONS', 50),
 
+    // ページビルダーで読み込めるファイル(書き出した JSON。画像を含む)の最大サイズ(KB)。php.ini の upload_max_filesize・post_max_size もこれ以上にしておく
+    'builder_import_kilobytes' => (int) env('LIMIT_BUILDER_IMPORT_KILOBYTES', 10240),
+
     /*
     |--------------------------------------------------------------------------
     | アップロードできる画像のサイズ

@@ -9,6 +9,7 @@ import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
 import TemplateDialog from './TemplateDialog.vue'
+import TransferDialog from './TransferDialog.vue'
 import VersionDialog from './VersionDialog.vue'
 
 // ページビルダーのエディタ全体(上にツールバー、左にパレットとコンポーネントツリー、中央に Canvas、右にプロパティ)
@@ -50,7 +51,7 @@ function confirmLeave(event: BeforeUnloadEvent): void {
 }
 
 function dialogOpen(): boolean {
-  return store.state.templatesOpen || store.state.versionsOpen
+  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen
 }
 
 // キーボードの操作: Ctrl+S で下書き保存。入力欄の外では Ctrl+Z/Ctrl+Shift+Z(Ctrl+Y)で元に戻す/やり直す、
@@ -60,11 +61,12 @@ function handleKeydown(event: KeyboardEvent): void {
   const withModifier = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
 
-  // テンプレート・版の履歴の画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
+  // テンプレート・版の履歴・書き出しと読み込みの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
   if (dialogOpen()) {
     if (event.key === 'Escape') {
       store.state.templatesOpen = false
       store.state.versionsOpen = false
+      store.state.transferOpen = false
     }
 
     return
@@ -177,5 +179,6 @@ onBeforeUnmount(() => {
     </div>
     <TemplateDialog v-if="store.state.templatesOpen" />
     <VersionDialog v-if="store.state.versionsOpen" />
+    <TransferDialog v-if="store.state.transferOpen" />
   </div>
 </template>

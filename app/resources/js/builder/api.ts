@@ -1,4 +1,4 @@
-import type { ArticleSummary, BuilderContent, BuilderStatePayload, BuilderTemplate, BuilderVersion, BuilderVersionSummary, ComponentSummary, EditorConfig, GalleryImageSummary, NavigationItem, ShowPayload } from './types'
+import type { ArticleSummary, BuilderContent, BuilderImportResult, BuilderStatePayload, BuilderTemplate, BuilderVersion, BuilderVersionSummary, ComponentSummary, EditorConfig, GalleryImageSummary, NavigationItem, ShowPayload } from './types'
 
 // PageBuilderJsonController を呼ぶ。セッションで認証するため、CSRF トークンを付けて同じオリジンへ送る
 
@@ -54,6 +54,15 @@ export function createApi(config: EditorConfig) {
     deleteTemplate: (id: number) => request<unknown>(`${endpoints.templates}/${id}`, 'DELETE'),
     versions: () => request<BuilderVersionSummary[]>(endpoints.versions, 'GET'),
     version: (id: number) => request<BuilderVersion>(`${endpoints.versions}/${id}`, 'GET'),
+    exportContent: (content: BuilderContent, title: string) =>
+      request<Record<string, unknown>>(endpoints.export, 'POST', { content, title }),
+    importFile: (file: File, allowsGlobal: boolean) => {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('allows_global', allowsGlobal ? '1' : '0')
+
+      return request<BuilderImportResult>(endpoints.import, 'POST', form)
+    },
     articleList: (query: Record<string, string>) =>
       request<{ articles: ArticleSummary[] }>(`${endpoints.articleList}?${new URLSearchParams(query)}`, 'GET'),
     navigation: (source: string) =>

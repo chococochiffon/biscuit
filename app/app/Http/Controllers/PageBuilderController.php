@@ -78,6 +78,8 @@ class PageBuilderController extends Controller
             'navigation' => route('admin.json.builder.navigation'),
             'gallery' => route('admin.json.builder.gallery'),
             'components' => route('admin.json.builder-components.index'),
+            'export' => route('admin.json.builder.export'),
+            'import' => route('admin.json.builder.import'),
         ];
     }
 }
