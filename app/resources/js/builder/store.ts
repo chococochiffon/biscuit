@@ -4,7 +4,8 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from './nodes'
 import { setNodeStyle } from './styles'
-import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
+import { formatDateTime, setVisibility } from './visibility'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, BuilderVisibility, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -24,6 +25,8 @@ export function createBuilderStore(api: BuilderApi) {
     breadcrumbs: [] as Breadcrumb[],
     // ギャラリーの分類(ギャラリーのブロックの選択肢)
     galleryCategories: [] as { id: number, name: string }[],
+    // サイトのタイムゾーン(表示条件の期間の判定に使う)
+    timezone: 'Asia/Tokyo',
     // グローバルコンポーネント(グローバルコンポーネントのブロックの選択肢と見本。使うときに読み込む)
     components: null as ComponentSummary[] | null,
     content: { version: 1, children: [] } as BuilderContent,
@@ -168,6 +171,7 @@ export function createBuilderStore(api: BuilderApi) {
         state.imageBaseUrl = payload.image_base_url
         state.breadcrumbs = payload.breadcrumbs
         state.galleryCategories = payload.gallery_categories
+        state.timezone = payload.timezone
         applyState(payload, true)
         state.loaded = true
       }
@@ -387,6 +391,28 @@ export function createBuilderStore(api: BuilderApi) {
       if (node && mutate(`style:${id}:${state.device}:${name}`, () => setNodeStyle(node, state.device, name, value))) {
         delete state.errors[`nodes.${id}`]
       }
+    },
+
+    /**
+     * 表示条件の一部を変える(すべての端末で表示しない・開始が終了より後になる変更はしない)。変えたら true。
+     */
+    updateVisibility(id: string, patch: Partial<BuilderVisibility>): boolean {
+      const node = findNode(state.content, id)
+
+      if (!node || !mutate(`visibility:${id}:${Object.keys(patch).join(',')}`, () => setVisibility(node, patch))) {
+        return false
+      }
+
+      delete state.errors[`nodes.${id}`]
+
+      return true
+    },
+
+    /**
+     * 今の日時(サイトのタイムゾーン。表示条件の期間と同じ形)。
+     */
+    now(): string {
+      return formatDateTime(state.timezone)
     },
 
     undo(): void {

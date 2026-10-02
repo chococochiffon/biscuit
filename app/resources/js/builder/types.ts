@@ -14,8 +14,19 @@ export interface BuilderNode {
   props: Record<string, unknown>
   styles: BuilderStyles
   responsive?: Partial<Record<ResponsiveDevice, BuilderStyles>>
+  // 表示条件(書かなければ常に表示)
+  visibility?: BuilderVisibility
   // 中にブロックを置ける種類だけが持つ
   children?: BuilderNode[]
+}
+
+// ブロックの表示条件(biscuit の Support\Builder\Visibility)。日時はサイトのタイムゾーンの YYYY-MM-DDTHH:mm
+export interface BuilderVisibility {
+  // 表示しない端末(すべては選べない)
+  hideOn?: Device[]
+  // 表示する期間(開始は含み、終了は含まない。期間の外は公開側に出さない)
+  startAt?: string | null
+  endAt?: string | null
 }
 
 export interface BuilderContent {
@@ -90,6 +101,8 @@ export interface ShowPayload extends BuilderStatePayload {
   breadcrumbs: Breadcrumb[]
   // ギャラリーの分類(ギャラリーのブロックの選択肢)
   gallery_categories: { id: number, name: string }[]
+  // サイトのタイムゾーン(表示条件の期間の判定に使う)
+  timezone: string
 }
 
 // グローバルコンポーネント(PageBuilderComponentJsonController::index())。content は公開中の内容(未公開なら null)

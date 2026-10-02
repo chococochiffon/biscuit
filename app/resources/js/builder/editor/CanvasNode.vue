@@ -4,10 +4,12 @@ import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import { columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
+import { isHiddenOn, periodState } from '../visibility'
 import BlockPreview from './BlockPreview.vue'
 
 // Canvas のブロック 1 つ。クリックで選択し、マウスを乗せる・選択すると枠と名前を出す。
 // 名前の部分をつかんでドラッグすると別の場所へ移せ、選択中は前後への移動・複製・コピー・削除のボタンも出す。
+// 表示条件の付いたブロックには右上に印を出し、選んでいる端末で表示しない・表示期間の外のブロックは薄く描く。
 // カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける
 const props = defineProps<{
   node: BuilderNode
@@ -20,6 +22,15 @@ const isSelected = computed(() => store.state.selectedId === props.node.id)
 const isHovered = computed(() => store.state.hoveredId === props.node.id)
 const isDragging = computed(() => store.state.dragging?.kind === 'move' && store.state.dragging.id === props.node.id)
 const hasError = computed(() => `nodes.${props.node.id}` in store.state.errors)
+// 表示条件: 選んでいる端末で表示しないブロックは薄く描き、条件の付いたブロックには右上に印を出す
+const hiddenHere = computed(() => isHiddenOn(props.node, store.state.device))
+const period = computed(() => periodState(props.node, store.now()))
+const PERIOD_TITLES = {
+  always: '',
+  scheduled: t('表示期間の前です(公開側にはまだ出ません)。'),
+  active: t('表示する期間を指定しています。'),
+  ended: t('表示期間を過ぎています(公開側には出ません)。'),
+}
 const columnClass = computed(() => (props.node.type === 'column' ? `col-${columnSpan(props.node, store.state.device)}` : ''))
 
 function startDrag(event: DragEvent): void {
@@ -53,7 +64,7 @@ async function copy(): Promise<void> {
 <template>
   <div
     class="builder-node"
-    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'has-error': hasError }]"
+    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
     :data-node-id="node.id"
     @click.stop="store.select(node.id)"
     @mouseover.stop="store.state.hoveredId = node.id"
@@ -86,6 +97,10 @@ async function copy(): Promise<void> {
           <i class="bi bi-trash" />
         </button>
       </template>
+    </div>
+    <div v-if="node.visibility" class="builder-node-flags">
+      <i v-if="node.visibility.hideOn?.length" class="bi bi-eye-slash" :title="hiddenHere ? t('この端末では表示しません。') : t('表示しない端末を指定しています。')" />
+      <i v-if="period !== 'always'" class="bi bi-clock" :class="`is-${period}`" :title="PERIOD_TITLES[period]" />
     </div>
     <BlockPreview :node="node" />
   </div>
