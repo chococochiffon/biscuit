@@ -13,7 +13,7 @@ import GalleryPreview from './GalleryPreview.vue'
 import NavigationPreview from './NavigationPreview.vue'
 
 // Canvas に描くブロックの中身。公開側(chococo の components/builder/blocks)と同じ Bootstrap の要素で近い見た目にする。
-// 中にブロックを置ける種類(セクション・コンテナ・行・カラム)は、子の並びを DropList で描く。
+// 中にブロックを置ける種類(セクション・コンテナ・行・カラム・スライダー)は、子の並びを DropList で描く。
 // readonly のときは選択・ドラッグを受けずに描くだけにする(グローバルコンポーネントの中身の見本)
 const props = defineProps<{
   node: BuilderNode
@@ -54,6 +54,10 @@ const readonlyClass = computed(() => {
 })
 
 const videoUrl = computed(() => videoEmbedUrl(props.node.props.url))
+
+// スライダーの縦横比(16x9 → 16 / 9)と、読み取り専用で描くときに出す最初のスライドの画像
+const sliderAspect = computed(() => text('aspect') || '16x9')
+const firstSlideUrl = computed(() => store.imageUrl(children.value[0]?.props.src))
 const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}`)
 </script>
 
@@ -66,6 +70,11 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
   >
     <BlockPreview v-for="child in children" :key="child.id" :node="child" readonly />
   </component>
+  <div v-else-if="readonly && node.type === 'slider'" :style="style">
+    <div class="ratio" :class="`ratio-${sliderAspect}`">
+      <img v-if="firstSlideUrl" :src="firstSlideUrl" alt="" class="builder-preview-slide-image">
+    </div>
+  </div>
   <DropList
     v-else-if="node.type === 'section'"
     tag="section"
@@ -98,6 +107,22 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
     class="builder-preview-column"
     :style="style"
   />
+  <!-- スライダーは、中のスライドを横に並べて描く(切り替えの見た目はプレビュー・公開側で確かめる) -->
+  <DropList
+    v-else-if="node.type === 'slider'"
+    :parent-id="node.id"
+    :children="children"
+    direction="horizontal"
+    class="builder-preview-slider"
+    :style="{ ...style, '--builder-slide-aspect': sliderAspect.replace('x', ' / ') }"
+    :empty-label="t('ここにスライドをドラッグ')"
+  />
+  <div v-else-if="node.type === 'slide'" class="builder-preview-slide">
+    <img v-if="imageUrl" :src="imageUrl" :alt="text('alt')" class="builder-preview-slide-image">
+    <div v-else class="builder-preview-slide-empty">
+      <i class="bi bi-image" /> {{ t('画像を選んでください') }}
+    </div>
+  </div>
   <component :is="headingTag" v-else-if="node.type === 'heading'" :style="style">
     {{ text('text') || t('(空の見出し)') }}
   </component>

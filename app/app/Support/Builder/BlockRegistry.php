@@ -29,11 +29,12 @@ final class BlockRegistry
     private const BASIC_BLOCKS = ['heading', 'text', 'image', 'button', 'spacer', 'divider'];
 
     /**
-     * セクション・コンテナ・カラムの中に置ける、中に何も置けないブロック(基本のブロックと、CMS のデータを表示するブロック)。
+     * セクション・コンテナ・カラムの中に置けるブロック(基本のブロック・スライダーと、CMS のデータを表示するブロック)。
+     * スライダーの中にはスライドだけを置け、ほかは中に何も置けない。
      *
      * @var list<string>
      */
-    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'video', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
 
     /**
      * 余白のスタイル。
@@ -169,6 +170,33 @@ final class BlockRegistry
                     'aspect' => ['label' => '縦横比', 'type' => 'enum', 'default' => '16x9', 'options' => ['16x9', '4x3', '1x1', '21x9']],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'maxWidth'],
+            ],
+            // スライダー: 中に置いたスライド(画像)を順に切り替えて表示する。スライドはスライダーの中にだけ置ける
+            'slider' => [
+                'label' => 'スライダー',
+                'category' => 'basic',
+                'icon' => 'collection',
+                'children' => ['slide'],
+                'props' => [
+                    'aspect' => ['label' => '縦横比', 'type' => 'enum', 'default' => '16x9', 'options' => ['16x9', '21x9', '4x3', '1x1']],
+                    'autoplay' => ['label' => '自動で切り替える', 'type' => 'bool', 'default' => true],
+                    'interval' => ['label' => '切り替える間隔(秒)', 'type' => 'int', 'default' => 5, 'min' => 2, 'max' => 30],
+                    'showControls' => ['label' => '前後のボタンを表示する', 'type' => 'bool', 'default' => true],
+                    'showIndicators' => ['label' => 'インジケーターを表示する', 'type' => 'bool', 'default' => true],
+                ],
+                'styles' => [...self::MARGIN_STYLES, 'maxWidth', 'borderRadius'],
+            ],
+            'slide' => [
+                'label' => 'スライド',
+                'category' => 'basic',
+                'icon' => 'card-image',
+                'children' => [],
+                'props' => [
+                    'src' => ['label' => '画像', 'type' => 'image', 'default' => null],
+                    'alt' => ['label' => '代替テキスト', 'type' => 'string', 'default' => '', 'max' => 200],
+                    'href' => ['label' => 'リンク先', 'type' => 'url', 'default' => null],
+                ],
+                'styles' => [],
             ],
             // 記事一覧: 保存するのは取得の条件だけで、公開側に返すときに条件どおりの公開中の記事を入れる(ArticleListQuery)
             'article-list' => [
