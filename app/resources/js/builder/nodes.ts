@@ -249,3 +249,93 @@ export function equalizeColumns(row: BuilderNode, addedId: string): boolean {
 
   return true
 }
+
+// コピーしたブロックをクリップボード(text/plain)に入れるときの目印。ほかの文字列と見分けるのに使う
+const CLIPBOARD_FORMAT = 'biscuit-page-builder'
+
+/**
+ * ブロックをクリップボードに入れる文字列にする(内容の版も入れ、新しい版の内容は古いエディタで貼り付けない)。
+ */
+export function serializeClipboard(node: BuilderNode, version: number): string {
+  return JSON.stringify({ format: CLIPBOARD_FORMAT, version, node })
+}
+
+/**
+ * クリップボードの文字列から、貼り付けるブロック(子孫まで新しい ID を振ったもの)を取り出す。
+ * ページビルダーのブロックでない・今のエディタで使えない種類や入れ子を含む・版が新しいときは null。
+ */
+export function parseClipboard(registry: Registry, text: string, version: number): BuilderNode | null {
+  let data: unknown
+
+  try {
+    data = JSON.parse(text)
+  }
+  catch {
+    return null
+  }
+
+  if (!isRecord(data) || data.format !== CLIPBOARD_FORMAT || typeof data.version !== 'number' || data.version > version) {
+    return null
+  }
+
+  return isValidNode(registry, data.node) ? cloneWithNewIds(data.node) : null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+/**
+ * ノードの形と、種類・子の置き方が registry に合っているか(値の中身は保存するときに biscuit が検証する)。
+ */
+function isValidNode(registry: Registry, value: unknown): value is BuilderNode {
+  if (!isRecord(value) || typeof value.type !== 'string' || !(value.type in registry.blocks) || !isRecord(value.props) || !isRecord(value.styles)) {
+    return false
+  }
+
+  const type = value.type
+  const definition = registry.blocks[type]
+
+  if (definition.children.length === 0) {
+    return value.children === undefined
+  }
+
+  return Array.isArray(value.children)
+    && value.children.every(child => isValidNode(registry, child) && canPlace(registry, type, child.type))
+}
+
+export interface PastePosition {
+  // 親(null はページの直下)
+  parentId: string | null
+  index: number
+}
+
+/**
+ * 種類 type のブロックを貼り付ける場所。選択中のブロック(selectedId)の後ろ、中(末尾)、置ける祖先の後ろ、ページの末尾の順に探す。
+ * 選択していなければページの末尾。どこにも置けなければ null。
+ */
+export function findPastePosition(registry: Registry, content: BuilderContent, selectedId: string | null, type: string): PastePosition | null {
+  const selected = selectedId ? findNode(content, selectedId) : null
+
+  if (selected) {
+    const location = findLocation(content, selected.id)!
+
+    if (canPlace(registry, location.parent?.type ?? null, type)) {
+      return { parentId: location.parent?.id ?? null, index: location.index + 1 }
+    }
+
+    if (selected.children && canPlace(registry, selected.type, type)) {
+      return { parentId: selected.id, index: selected.children.length }
+    }
+
+    for (const ancestor of ancestorsOf(content, selected.id).reverse()) {
+      const ancestorLocation = findLocation(content, ancestor.id)!
+
+      if (canPlace(registry, ancestorLocation.parent?.type ?? null, type)) {
+        return { parentId: ancestorLocation.parent?.id ?? null, index: ancestorLocation.index + 1 }
+      }
+    }
+  }
+
+  return canPlace(registry, null, type) ? { parentId: null, index: content.children.length } : null
+}

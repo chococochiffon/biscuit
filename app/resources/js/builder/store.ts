@@ -2,7 +2,7 @@ import { inject, reactive, type InjectionKey } from 'vue'
 import { ApiError, type BuilderApi } from './api'
 import { createHistory } from './history'
 import { t } from './i18n'
-import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, insertNode, moveNode, removeNode } from './nodes'
+import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from './nodes'
 import { setNodeStyle } from './styles'
 import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
@@ -305,6 +305,62 @@ export function createBuilderStore(api: BuilderApi) {
         return true
       })
       state.selectedId = copy.id
+    },
+
+    /**
+     * 選択中のブロックを(子ごと)クリップボードに入れる文字列にする。選択していなければ null。
+     * cut なら、あわせてブロックを削除する(元に戻せる)。
+     */
+    copySelected(cut = false): string | null {
+      const node = this.selectedNode()
+
+      if (!node) {
+        return null
+      }
+
+      const text = serializeClipboard(node, state.content.version)
+      const label = this.definition(node.type)?.label ?? node.type
+
+      if (cut) {
+        this.remove(node.id)
+      }
+      state.message = { type: 'success', text: cut ? t('「:block」を切り取りました。', { block: label }) : t('「:block」をコピーしました。', { block: label }) }
+
+      return text
+    },
+
+    /**
+     * クリップボードのブロックを、選択中のブロックの近く(findPastePosition)に貼り付けて選択する。
+     * ページビルダーのブロックでない・置ける場所がないときは、理由を出して false を返す。
+     */
+    paste(text: string): boolean {
+      const node = parseClipboard(state.registry, text, state.content.version)
+
+      if (!node) {
+        state.message = { type: 'warning', text: t('貼り付けられるブロックがありません。ページビルダーのブロックをコピーしてください。') }
+
+        return false
+      }
+
+      const position = findPastePosition(state.registry, state.content, state.selectedId, node.type)
+
+      if (!position) {
+        state.message = { type: 'warning', text: t('「:block」は、選んでいるブロックの中や後ろには置けません。', { block: this.definition(node.type).label }) }
+
+        return false
+      }
+
+      mutate(null, () => {
+        if (!insertNode(state.registry, state.content, position.parentId, position.index, node)) {
+          return false
+        }
+        equalizeIfAddedToRow(node.id, position.parentId)
+
+        return true
+      })
+      state.selectedId = node.id
+
+      return true
     },
 
     updateProp(id: string, name: string, value: unknown): void {
