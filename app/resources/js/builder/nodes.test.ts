@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ancestorsOf, canPlace, cloneWithNewIds, countNodes, createNode, equalizeColumns, evenSpans, findNode, insertNode, moveNode, newId, removeNode } from './nodes'
+import { ancestorsOf, canPlace, cloneWithNewIds, countNodes, createNode, equalizeColumns, evenSpans, findNode, findPastePosition, insertNode, moveNode, newId, parseClipboard, removeNode, serializeClipboard } from './nodes'
 import { blockStyle, columnSpan } from './styles'
 import type { BlockDefinition, BuilderContent, BuilderNode, Registry } from './types'
 
@@ -218,5 +218,57 @@ describe('カラムの幅をそろえる', () => {
 
     equalizeColumns(row, added.id)
     expect(first.props).toMatchObject({ span: 6, spanMobile: 6 })
+  })
+})
+
+describe('コピー・貼り付け', () => {
+  it('コピーした文字列から、子孫まで新しい ID を振ったブロックを取り出す', () => {
+    const { content: tree } = content()
+    const pasted = parseClipboard(registry, serializeClipboard(tree.children[1], 1), 1)
+
+    expect(pasted?.type).toBe('section')
+    expect(pasted?.id).not.toBe(tree.children[1].id)
+    expect(pasted?.children?.[0].children?.[0].id).not.toBe(tree.children[1].children?.[0].children?.[0].id)
+    expect(pasted?.children?.[0].children?.[0].type).toBe('column')
+  })
+
+  it('ページビルダーのブロックでない文字列・新しい版・知らない種類・置けない入れ子は取り出さない', () => {
+    const heading = node('heading')
+    const badNesting = node('section', [node('column', [])])
+
+    expect(parseClipboard(registry, 'こんにちは', 1)).toBeNull()
+    expect(parseClipboard(registry, JSON.stringify({ node: heading }), 1)).toBeNull()
+    expect(parseClipboard(registry, serializeClipboard(heading, 2), 1)).toBeNull()
+    expect(parseClipboard(registry, serializeClipboard({ ...heading, type: 'unknown' }, 1), 1)).toBeNull()
+    expect(parseClipboard(registry, serializeClipboard(badNesting, 1), 1)).toBeNull()
+    expect(parseClipboard(registry, serializeClipboard({ ...heading, children: [] }, 1), 1)).toBeNull()
+  })
+
+  it('選択中のブロックの後ろに貼り付ける', () => {
+    const { content: tree, ids } = content()
+
+    expect(findPastePosition(registry, tree, ids.heading1, 'heading')).toEqual({ parentId: ids.section1, index: 1 })
+  })
+
+  it('後ろに置けなければ選択中のブロックの中(末尾)に貼り付ける', () => {
+    const { content: tree, ids } = content()
+
+    expect(findPastePosition(registry, tree, ids.column1, 'heading')).toEqual({ parentId: ids.column1, index: 0 })
+    expect(findPastePosition(registry, tree, ids.section1, 'heading')).toEqual({ parentId: ids.section1, index: 2 })
+  })
+
+  it('中にも置けなければ、置ける祖先の後ろに貼り付ける', () => {
+    const { content: tree, ids } = content()
+
+    expect(findPastePosition(registry, tree, ids.column1, 'row')).toEqual({ parentId: ids.section2, index: 1 })
+    expect(findPastePosition(registry, tree, ids.heading2, 'section')).toEqual({ parentId: null, index: 1 })
+  })
+
+  it('選択していなければページの末尾、どこにも置けなければ null', () => {
+    const { content: tree, ids } = content()
+
+    expect(findPastePosition(registry, tree, null, 'section')).toEqual({ parentId: null, index: 2 })
+    expect(findPastePosition(registry, tree, null, 'heading')).toBeNull()
+    expect(findPastePosition(registry, tree, ids.heading1, 'column')).toBeNull()
   })
 })

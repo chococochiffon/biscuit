@@ -96,16 +96,62 @@ function handleKeydown(event: KeyboardEvent): void {
   }
 }
 
+// コピー・切り取り・貼り付け(Ctrl+C/Ctrl+X/Ctrl+V): 入力欄の外では、選択中のブロックを(子ごと)システムのクリップボードに入れ、
+// クリップボードのブロックを選択中のブロックの近くに貼り付ける(別のタブ・別のページのエディタへも貼り付けられる)。
+// 入力欄の中と、Canvas の文字を選んでいるときのコピーは、ブラウザの動きのままにする
+function isClipboardForEditor(event: ClipboardEvent): boolean {
+  const target = event.target as HTMLElement | null
+
+  return !store.state.templatesOpen && event.clipboardData !== null && !target?.closest?.('input, textarea, select, [contenteditable="true"]')
+}
+
+function handleCopy(event: ClipboardEvent, cut: boolean): void {
+  const selection = window.getSelection()
+
+  if (!isClipboardForEditor(event) || !store.state.selectedId || (selection && !selection.isCollapsed && selection.toString() !== '')) {
+    return
+  }
+
+  const text = store.copySelected(cut)
+
+  if (text !== null) {
+    event.clipboardData!.setData('text/plain', text)
+    event.preventDefault()
+  }
+}
+
+const handleCopyEvent = (event: ClipboardEvent) => handleCopy(event, false)
+const handleCutEvent = (event: ClipboardEvent) => handleCopy(event, true)
+
+function handlePaste(event: ClipboardEvent): void {
+  if (!isClipboardForEditor(event) || !store.state.loaded) {
+    return
+  }
+
+  const text = event.clipboardData!.getData('text/plain')
+
+  if (text !== '') {
+    event.preventDefault()
+    store.paste(text)
+  }
+}
+
 onMounted(() => {
   store.load()
   window.addEventListener('beforeunload', confirmLeave)
   window.addEventListener('keydown', handleKeydown)
+  window.addEventListener('copy', handleCopyEvent)
+  window.addEventListener('cut', handleCutEvent)
+  window.addEventListener('paste', handlePaste)
 })
 
 onBeforeUnmount(() => {
   clearTimeout(autoSaveTimer)
   window.removeEventListener('beforeunload', confirmLeave)
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('copy', handleCopyEvent)
+  window.removeEventListener('cut', handleCutEvent)
+  window.removeEventListener('paste', handlePaste)
 })
 </script>
 

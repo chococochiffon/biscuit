@@ -7,7 +7,7 @@ import type { BuilderNode } from '../types'
 import BlockPreview from './BlockPreview.vue'
 
 // Canvas のブロック 1 つ。クリックで選択し、マウスを乗せる・選択すると枠と名前を出す。
-// 名前の部分をつかんでドラッグすると別の場所へ移せ、選択中は前後への移動・複製・削除のボタンも出す。
+// 名前の部分をつかんでドラッグすると別の場所へ移せ、選択中は前後への移動・複製・コピー・削除のボタンも出す。
 // カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける
 const props = defineProps<{
   node: BuilderNode
@@ -32,6 +32,21 @@ function startDrag(event: DragEvent): void {
   // ドラッグ中に別のブロックへマウスが乗っても名前の部分(ドラッグ元)が消えないよう、選択しておく
   // (ドラッグ元の要素が消えると、ブラウザがドラッグを取りやめる)
   store.select(props.node.id)
+}
+
+/**
+ * ブロックをシステムのクリップボードにコピーする(Ctrl+C と同じ。貼り付けは Ctrl+V)。
+ */
+async function copy(): Promise<void> {
+  store.select(props.node.id)
+  const text = store.copySelected()
+
+  try {
+    await navigator.clipboard.writeText(text!)
+  }
+  catch {
+    store.state.message = { type: 'danger', text: t('クリップボードにコピーできませんでした。Ctrl+C でコピーしてください。') }
+  }
 }
 </script>
 
@@ -63,6 +78,9 @@ function startDrag(event: DragEvent): void {
         </button>
         <button type="button" class="builder-node-button" :title="t('複製')" @click="store.duplicate(node.id)">
           <i class="bi bi-copy" />
+        </button>
+        <button type="button" class="builder-node-button" :title="t('コピー') + ' (Ctrl+C)'" @click="copy">
+          <i class="bi bi-clipboard" />
         </button>
         <button type="button" class="builder-node-button text-danger" :title="t('削除')" @click="store.remove(node.id)">
           <i class="bi bi-trash" />
