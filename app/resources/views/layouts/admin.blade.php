@@ -88,7 +88,7 @@
                     </li>
                     <li class="nav-item">
                         <a href="{{ route('admin.builder-components.index') }}" class="nav-link">
-                            <i class="bi bi-puzzle"></i>{{ __('グローバルコンポーネント') }}
+                            <i class="bi bi-puzzle"></i>{{ __('コンポーネント') }}
                         </a>
                     </li>
                     <li class="nav-item">

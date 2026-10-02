@@ -1,9 +1,9 @@
 @extends('layouts.admin')
 
-@section('title', __('グローバルコンポーネントの編集'))
+@section('title', __('コンポーネントの編集'))
 
 @section('content')
-    <h1 class="h5 mb-4 mx-auto" style="max-width: 32rem;">{{ __('グローバルコンポーネントの編集') }}</h1>
+    <h1 class="h5 mb-4 mx-auto" style="max-width: 32rem;">{{ __('コンポーネントの編集') }}</h1>
 
     <form method="POST" action="{{ route('admin.builder-components.update', $builderComponent) }}" class="mx-auto" style="max-width: 32rem;">
         @csrf

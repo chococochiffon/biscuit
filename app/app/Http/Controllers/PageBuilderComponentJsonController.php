@@ -25,12 +25,14 @@ class PageBuilderComponentJsonController extends Controller
     use EditsBuilderContent;
 
     /**
-     * グローバルコンポーネントの一覧(名前順)と、公開中の内容(エディタの形。未公開なら null)。
+     * コンポーネント(グローバル・独自)の一覧(名前順)と、公開中の内容(エディタの形。未公開なら null)。ページのエディタの
+     * グローバルコンポーネントのブロックの選択肢、パレットの独自コンポーネント、Canvas の見本と差し替えられる項目に使う。
      */
     public function index(): JsonResponse
     {
         return response()->json(PageBuilderComponent::query()->orderBy('name')->orderBy('id')->get()->map(fn (PageBuilderComponent $component) => [
             'id' => $component->id,
+            'kind' => $component->kind->value,
             'name' => $component->name,
             'published' => $component->isPublished(),
             'content' => $component->isPublished() ? BuilderPresenter::forEditor($component->published_content) : null,
@@ -42,13 +44,9 @@ class PageBuilderComponentJsonController extends Controller
      */
     public function show(PageBuilderComponent $pageBuilderComponent): JsonResponse
     {
-        $registry = BlockRegistry::toArray();
-        unset($registry['blocks']['global']);
-        $registry['rootChildren'] = array_values(array_diff($registry['rootChildren'], ['global']));
-
         return response()->json([
             ...$this->state($pageBuilderComponent),
-            'registry' => $registry,
+            'registry' => BlockRegistry::toArray($pageBuilderComponent->kind->context()),
             'image_base_url' => Storage::disk('public')->url(''),
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             'timezone' => config('app.timezone'),
@@ -81,7 +79,7 @@ class PageBuilderComponentJsonController extends Controller
             return $this->conflictResponse($pageBuilderComponent);
         }
 
-        return $this->publishDraft($pageBuilderComponent, $validator, $pageBuilderComponent->name, allowsGlobal: false)
+        return $this->publishDraft($pageBuilderComponent, $validator, $pageBuilderComponent->name, $pageBuilderComponent->kind->context())
             ?? response()->json($this->state($pageBuilderComponent));
     }
 
@@ -129,6 +127,8 @@ class PageBuilderComponentJsonController extends Controller
         return [
             'page' => [
                 'type' => 'component',
+                // コンポーネントの種類(global・custom。独自コンポーネントのエディタでは差し替えられる項目を選べる)
+                'kind' => $component->kind->value,
                 'id' => $component->id,
                 'title' => $component->name,
                 'path' => null,

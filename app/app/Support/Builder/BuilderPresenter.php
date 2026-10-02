@@ -75,18 +75,23 @@ final class BuilderPresenter
     {
         $props = $node['props'] ?? [];
 
-        if ($forPublic) {
-            foreach (BlockRegistry::get($node['type'])['props'] ?? [] as $name => $prop) {
-                if ($prop['type'] === 'image' && is_string($props[$name] ?? null)) {
-                    $props[$name] = PageBuilder::publicImageUrl($props[$name]);
-                }
+        $presentedProps = $props;
+
+        foreach (BlockRegistry::get($node['type'])['props'] ?? [] as $name => $prop) {
+            if ($forPublic && $prop['type'] === 'image' && is_string($props[$name] ?? null)) {
+                $presentedProps[$name] = PageBuilder::publicImageUrl($props[$name]);
+            }
+
+            // 独自コンポーネントの差し替えた値は、空でも JSON のオブジェクトで返す(data の取得には配列のまま渡す)
+            if ($prop['type'] === 'overrides' && is_array($props[$name] ?? null)) {
+                $presentedProps[$name] = self::object($props[$name]);
             }
         }
 
         $presented = [
             'id' => $node['id'],
             'type' => $node['type'],
-            'props' => self::object($props),
+            'props' => self::object($presentedProps),
             'styles' => self::object($node['styles'] ?? []),
         ];
 
@@ -101,6 +106,11 @@ final class BuilderPresenter
             $presented['visibility'] = ['hideOn' => $visibility['hideOn']];
         } elseif (! $forPublic && $visibility !== []) {
             $presented['visibility'] = self::object($visibility);
+        }
+
+        // 独自コンポーネントの差し替えられる項目(エディタだけ。公開側は差し替えた値を当てはめて返すため要らない)
+        if (! $forPublic && ($node['exposed'] ?? []) !== []) {
+            $presented['exposed'] = self::object($node['exposed']);
         }
 
         if ($forPublic && ($data = BlockDataResolver::dataFor($node['type'], $props)) !== null) {

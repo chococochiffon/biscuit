@@ -1,17 +1,17 @@
 @extends('layouts.admin')
 
-@section('title', __('グローバルコンポーネント一覧'))
+@section('title', __('コンポーネント一覧'))
 
 @section('content')
     <div class="mb-2 d-flex align-items-center justify-content-between">
-        <h1 class="h5 mb-0">{{ __('グローバルコンポーネント一覧') }}</h1>
+        <h1 class="h5 mb-0">{{ __('コンポーネント一覧') }}</h1>
 
         <a href="{{ route('admin.builder-components.create') }}" class="btn btn-primary">
             {{ __('新規登録') }}
         </a>
     </div>
     <p class="small text-secondary mb-4">
-        {{ __('ヘッダー・お問い合わせへの案内など、複数のページで使う共通のパーツです。ページビルダーの「グローバルコンポーネント」のブロックで選んで置き、公開すると使っているページすべてに反映されます。') }}
+        {{ __('複数のページで使うパーツです。グローバルコンポーネントはどのページでも同じ中身で、ページの一番外側に「グローバルコンポーネント」のブロックで置きます。独自コンポーネントは使うたびに一部の項目を差し替えられる部品で、パレットから置きます。どちらも公開すると使っているページすべてに反映されます。') }}
     </p>
 
     <div class="card">
@@ -19,9 +19,10 @@
             <thead>
                 <tr>
                     <th>{{ __('名前') }}</th>
+                    <th>{{ __('種類') }}</th>
                     <th>{{ __('説明') }}</th>
                     <th>{{ __('状態') }}</th>
-                    <th>{{ __('使っているページ') }}</th>
+                    <th>{{ __('使っているところ') }}</th>
                     <th>{{ __('更新日時') }}</th>
                     <th></th>
                 </tr>
@@ -30,6 +31,7 @@
                 @forelse ($components as $builderComponent)
                     <tr>
                         <td><a href="{{ route('admin.builder.components', $builderComponent) }}">{{ $builderComponent->name }}</a></td>
+                        <td class="text-nowrap">{{ $builderComponent->kind->label() }}</td>
                         <td class="small text-secondary">{{ $builderComponent->description }}</td>
                         <td>
                             @if (! $builderComponent->isPublished())
@@ -40,7 +42,7 @@
                                 <span class="badge text-bg-success">{{ __('公開中') }}</span>
                             @endif
                         </td>
-                        <td>{{ __(':count ページ', ['count' => $usages[$builderComponent->id] ?? 0]) }}</td>
+                        <td>{{ __(':count か所', ['count' => $usages[$builderComponent->id] ?? 0]) }}</td>
                         <td>{{ $builderComponent->updated_at?->format('Y/m/d H:i') }}</td>
                         <td class="text-end text-nowrap">
                             <a href="{{ route('admin.builder.components', $builderComponent) }}" class="btn btn-sm btn-outline-secondary" title="{{ __('ページビルダーで編集') }}">
@@ -52,7 +54,7 @@
                         </td>
                     </tr>
                 @empty
-                    <x-admin.empty-row colspan="6">{{ __('グローバルコンポーネントが登録されていません。') }}</x-admin.empty-row>
+                    <x-admin.empty-row colspan="7">{{ __('コンポーネントが登録されていません。') }}</x-admin.empty-row>
                 @endforelse
             </tbody>
         </table>

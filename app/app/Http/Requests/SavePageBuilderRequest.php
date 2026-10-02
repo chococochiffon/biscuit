@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Enums\BuilderContext;
 use App\Support\Builder\BuilderValidator;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -49,7 +50,7 @@ class SavePageBuilderRequest extends FormRequest
                     return;
                 }
 
-                foreach (app(BuilderValidator::class)->errors($this->input('content'), $this->allowsGlobalComponents()) as $error) {
+                foreach (app(BuilderValidator::class)->errors($this->input('content'), $this->context()) as $error) {
                     $validator->errors()->add($error['node'] === null ? 'content' : 'nodes.'.$error['node'], $error['message']);
                 }
             },
@@ -57,11 +58,11 @@ class SavePageBuilderRequest extends FormRequest
     }
 
     /**
-     * 内容にグローバルコンポーネントのブロックを置けるか(グローバルコンポーネントの内容の保存では置けない)。
+     * 内容を検証する文脈(コンポーネントの内容の保存では、そのコンポーネントの種類の文脈)。
      */
-    protected function allowsGlobalComponents(): bool
+    protected function context(): BuilderContext
     {
-        return true;
+        return BuilderContext::Page;
     }
 
     /**

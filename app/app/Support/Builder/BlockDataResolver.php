@@ -2,6 +2,7 @@
 
 namespace App\Support\Builder;
 
+use App\Enums\BuilderComponentKind;
 use App\Http\Resources\ArticleResource;
 use App\Http\Resources\GalleryImageResource;
 use App\Models\GalleryImage;
@@ -9,6 +10,7 @@ use App\Models\LayoutBlock;
 use App\Models\PageBuilderComponent;
 use App\Models\SinglePage;
 use App\Support\CallContent\SinglePageContentSource;
+use App\Support\HtmlSanitizer;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -19,6 +21,7 @@ use Illuminate\Database\Eloquent\Collection;
  * - gallery: images(条件どおりの公開中のギャラリー画像。並び順)
  * - video: embed_url(動画の URL から組み立てた埋め込み用の URL。VideoUrl)
  * - global: children(参照するグローバルコンポーネントの公開中の内容のノード。未公開・削除済みなら空)
+ * - custom: children(参照する独自コンポーネントの公開中の内容に、差し替えた値を当てはめたノード。未公開・削除済みなら空)
  */
 final class BlockDataResolver
 {
@@ -36,6 +39,7 @@ final class BlockDataResolver
             'gallery' => ['images' => GalleryImageResource::collection(self::galleryImages($props))->resolve()],
             'video' => ['embed_url' => is_string($props['url'] ?? null) ? VideoUrl::embedUrl($props['url']) : null],
             'global' => ['children' => self::globalComponentChildren($props)],
+            'custom' => ['children' => self::customComponentChildren($props)],
             default => null,
         };
     }
@@ -69,6 +73,60 @@ final class BlockDataResolver
         } finally {
             unset(self::$resolvingComponents[$id]);
         }
+    }
+
+    /**
+     * 独自コンポーネントの公開中の内容に差し替えた値(values)を当てはめたノード(公開側の形)。未公開・削除済み・種類が違うなら空。
+     * 値は部品の差し替えられる項目(exposed)にだけ当てはめ、項目の定義に合わない値・空の値は部品の値のまま。テキストの HTML は無害化する。
+     *
+     * @param  array<string, mixed>  $props
+     * @return list<array<string, mixed>>
+     */
+    public static function customComponentChildren(array $props): array
+    {
+        $id = is_int($props['component'] ?? null) ? $props['component'] : null;
+        $component = $id === null ? null : PageBuilderComponent::query()->where('kind', BuilderComponentKind::Custom)->find($id);
+
+        if ($component?->published_content === null) {
+            return [];
+        }
+
+        $values = is_array($props['values'] ?? null) ? $props['values'] : [];
+        $content = $component->published_content;
+        $content['children'] = self::applyOverrides($content['children'] ?? [], $values);
+
+        return BuilderPresenter::forPublic($content)['children'];
+    }
+
+    /**
+     * ノードの木に、差し替えた値(「ノードの ID.項目名」→ 値)を当てはめる。
+     *
+     * @param  list<array<string, mixed>>  $nodes
+     * @param  array<string, mixed>  $values
+     * @return list<array<string, mixed>>
+     */
+    private static function applyOverrides(array $nodes, array $values): array
+    {
+        return array_map(function (array $node) use ($values) {
+            $definitions = BlockRegistry::get($node['type'])['props'] ?? [];
+
+            foreach (array_keys($node['exposed'] ?? []) as $name) {
+                $value = $values[$node['id'].'.'.$name] ?? null;
+                $definition = $definitions[$name] ?? null;
+
+                if ($definition === null || $value === null || $value === '' || ! BuilderValidator::isValidPropValue($definition, $value)) {
+                    continue;
+                }
+
+                $node['props'][$name] = $definition['type'] === 'richtext' ? (HtmlSanitizer::clean($value) ?? '') : $value;
+            }
+
+            if (isset($node['children'])) {
+                $node['children'] = self::applyOverrides($node['children'], $values);
+            }
+
+            return $node;
+        }, $nodes);
     }
 
     /**

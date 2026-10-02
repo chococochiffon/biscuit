@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Enums\AuditAction;
+use App\Enums\BuilderContext;
 use App\Models\AuditLog;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderComponent;
@@ -50,7 +51,7 @@ class GlobalComponentTest extends TestCase
         $this->assertSame([], $validator->errors($this->content([BuilderContent::node('global', ['component' => 1])])));
         $this->assertNotEmpty($validator->errors($this->content([BuilderContent::node('section', children: [BuilderContent::node('global')])])));
         // コンポーネントの内容には置けない
-        $this->assertNotEmpty($validator->errors($this->content([BuilderContent::node('global')]), allowsGlobal: false));
+        $this->assertNotEmpty($validator->errors($this->content([BuilderContent::node('global')]), BuilderContext::GlobalComponent));
     }
 
     public function test_public_page_shows_the_published_content_of_the_component(): void
@@ -95,14 +96,14 @@ class GlobalComponentTest extends TestCase
     {
         $this->actingAsAdmin();
 
-        $response = $this->post(route('admin.builder-components.store'), ['name' => 'お問い合わせへの案内', 'description' => '']);
+        $response = $this->post(route('admin.builder-components.store'), ['kind' => 'global', 'name' => 'お問い合わせへの案内', 'description' => '']);
 
         $component = PageBuilderComponent::query()->sole();
         $response->assertRedirect(route('admin.builder.components', $component));
         $this->assertSame(BuilderContent::empty(), $component->draft_content);
         $this->assertFalse($component->isPublished());
 
-        $this->get(route('admin.builder-components.index'))->assertOk()->assertSee('お問い合わせへの案内')->assertSee('0 ページ');
+        $this->get(route('admin.builder-components.index'))->assertOk()->assertSee('お問い合わせへの案内')->assertSee('0 か所');
 
         $this->put(route('admin.builder-components.update', $component), ['name' => 'CTA', 'description' => '共通の案内'])
             ->assertRedirect(route('admin.builder-components.index'));
@@ -120,11 +121,11 @@ class GlobalComponentTest extends TestCase
         $component = PageBuilderComponent::factory()->published()->create(['name' => 'CTA']);
         $this->pageUsing($component);
 
-        $this->get(route('admin.builder-components.index'))->assertSee('1 ページ');
+        $this->get(route('admin.builder-components.index'))->assertSee('1 か所');
 
         $this->delete(route('admin.builder-components.destroy', $component))
             ->assertRedirect(route('admin.builder-components.index'))
-            ->assertSessionHas('error', '「CTA」は次のページで使っているため削除できません: 会社概要');
+            ->assertSessionHas('error', '「CTA」は次の場所で使っているため削除できません: 会社概要');
 
         $this->assertNotSoftDeleted($component);
     }

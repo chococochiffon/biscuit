@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Concerns;
 
 use App\Enums\AuditAction;
+use App\Enums\BuilderContext;
 use App\Models\AuditLog;
 use App\Models\PageBuilderVersion;
 use App\Support\AuditLogger;
@@ -56,10 +57,10 @@ trait EditsBuilderContent
     /**
      * 下書きを検証し直してから、公開中の内容にする。検証で引っかかったら 422 の応答を返す(公開できたら null)。
      */
-    protected function publishDraft(Model $builder, BuilderValidator $validator, string $label, bool $allowsGlobal = true): ?JsonResponse
+    protected function publishDraft(Model $builder, BuilderValidator $validator, string $label, BuilderContext $context = BuilderContext::Page): ?JsonResponse
     {
         $draft = (new SchemaMigrator)->migrate($builder->draft_content);
-        $errors = $validator->errors($draft, $allowsGlobal);
+        $errors = $validator->errors($draft, $context);
 
         if ($errors !== []) {
             return response()->json([

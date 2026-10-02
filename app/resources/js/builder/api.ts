@@ -56,10 +56,11 @@ export function createApi(config: EditorConfig) {
     version: (id: number) => request<BuilderVersion>(`${endpoints.versions}/${id}`, 'GET'),
     exportContent: (content: BuilderContent, title: string) =>
       request<Record<string, unknown>>(endpoints.export, 'POST', { content, title }),
-    importFile: (file: File, allowsGlobal: boolean) => {
+    // context は読み込む先のエディタの文脈(page・global・custom)
+    importFile: (file: File, context: 'page' | 'global' | 'custom') => {
       const form = new FormData()
       form.append('file', file)
-      form.append('allows_global', allowsGlobal ? '1' : '0')
+      form.append('context', context)
 
       return request<BuilderImportResult>(endpoints.import, 'POST', form)
     },

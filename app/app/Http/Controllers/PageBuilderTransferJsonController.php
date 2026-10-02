@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AuditAction;
+use App\Enums\BuilderContext;
 use App\Http\Requests\SavePageBuilderRequest;
 use App\Support\AuditLogger;
 use App\Support\Builder\BuilderContent;
@@ -11,6 +12,7 @@ use App\Support\Builder\BuilderTransfer;
 use App\Support\Builder\BuilderValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
 /**
@@ -37,20 +39,20 @@ class PageBuilderTransferJsonController extends Controller
 
     /**
      * 書き出したファイルを読み込み、今のサイトに合わせた内容(エディタの形)と知らせることを返す。
-     * グローバルコンポーネントのエディタ(allows_global が false)では、コンポーネントのブロックを常に展開する。
+     * context は読み込む先のエディタの文脈(page・global・custom。BuilderContext)。コンポーネントのエディタでは、グローバルコンポーネントのブロックを常に展開する。
      */
     public function import(Request $request, BuilderTransfer $transfer, BuilderValidator $validator): JsonResponse
     {
         $request->validate([
             'file' => ['required', 'file', 'max:'.config('limits.builder_import_kilobytes')],
-            'allows_global' => ['boolean'],
+            'context' => ['nullable', Rule::enum(BuilderContext::class)],
         ]);
 
         try {
             $result = $transfer->import(
                 json_decode((string) file_get_contents($request->file('file')->getRealPath()), true),
                 $validator,
-                $request->boolean('allows_global', true),
+                BuilderContext::tryFrom((string) $request->input('context')) ?? BuilderContext::Page,
             );
         } catch (InvalidArgumentException $exception) {
             return response()->json(['message' => $exception->getMessage(), 'errors' => ['file' => [$exception->getMessage()]]], 422);
