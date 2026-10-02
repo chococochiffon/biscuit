@@ -23,6 +23,8 @@ enum AuditAction: string
     case LoginCodeSent = 'login_code_sent';
     case Published = 'published';
     case DraftDiscarded = 'draft_discarded';
+    case Exported = 'exported';
+    case Imported = 'imported';
 
     /**
      * 表示用のラベルを取得する(現在の言語設定に応じて翻訳される)。
@@ -46,6 +48,8 @@ enum AuditAction: string
             self::LoginCodeSent => __('確認コードの送信'),
             self::Published => __('公開'),
             self::DraftDiscarded => __('変更の破棄'),
+            self::Exported => __('書き出し'),
+            self::Imported => __('読み込み'),
         };
     }
 
@@ -56,9 +60,9 @@ enum AuditAction: string
     {
         return match ($this) {
             self::Created, self::Login, self::Invited, self::Published => 'success',
-            self::Updated, self::StatusChanged, self::Reordered, self::Uploaded, self::PasswordReset, self::InvitationAccepted => 'primary',
+            self::Updated, self::StatusChanged, self::Reordered, self::Uploaded, self::PasswordReset, self::InvitationAccepted, self::Imported => 'primary',
             self::Deleted, self::LoginFailed => 'danger',
-            self::Logout, self::PasswordResetRequested, self::LoginCodeSent, self::DraftDiscarded => 'secondary',
+            self::Logout, self::PasswordResetRequested, self::LoginCodeSent, self::DraftDiscarded, self::Exported => 'secondary',
         };
     }
 }

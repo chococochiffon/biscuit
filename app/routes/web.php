@@ -19,6 +19,7 @@ use App\Http\Controllers\PageBuilderComponentJsonController;
 use App\Http\Controllers\PageBuilderController;
 use App\Http\Controllers\PageBuilderJsonController;
 use App\Http\Controllers\PageBuilderTemplateJsonController;
+use App\Http\Controllers\PageBuilderTransferJsonController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\QuestionAnswerController;
 use App\Http\Controllers\SinglePageController;
@@ -119,6 +120,10 @@ Route::middleware('auth:admin')->group(function () {
     // ページビルダーのエディタが使う JSON。対象はトップ(admin/json/builder/top)と固定ページ(admin/json/builder/single-pages/{singlePage})
     Route::post('admin/json/builder/images', [PageBuilderJsonController::class, 'storeImage'])
         ->name('admin.json.builder.images');
+    Route::post('admin/json/builder/export', [PageBuilderTransferJsonController::class, 'export'])
+        ->name('admin.json.builder.export');
+    Route::post('admin/json/builder/import', [PageBuilderTransferJsonController::class, 'import'])
+        ->name('admin.json.builder.import');
     Route::get('admin/json/builder/article-list', [PageBuilderJsonController::class, 'articleList'])
         ->name('admin.json.builder.article-list');
     Route::get('admin/json/builder/navigation', [PageBuilderJsonController::class, 'navigation'])

@@ -141,6 +141,9 @@ export interface EditorConfig {
     components: string
     // 版の履歴の一覧(版の内容は末尾に /{id} を付ける)
     versions: string
+    // 書き出し・読み込み
+    export: string
+    import: string
   }
 }
 
@@ -197,4 +200,13 @@ export interface BuilderVersion {
   id: number
   published_at: string
   content: BuilderContent
+}
+
+// 書き出したファイルを読み込んだ結果(PageBuilderTransferJsonController::import())
+export interface BuilderImportResult {
+  content: BuilderContent
+  // 知らせること(展開したグローバルコンポーネント・外した画像など)
+  warnings: string[]
+  // 登録し直した画像の数
+  images: number
 }

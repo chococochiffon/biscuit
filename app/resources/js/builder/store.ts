@@ -5,7 +5,7 @@ import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from './nodes'
 import { setNodeStyle } from './styles'
 import { formatDateTime, setVisibility } from './visibility'
-import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, BuilderVisibility, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderImportResult, BuilderNode, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, BuilderVisibility, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -59,6 +59,8 @@ export function createBuilderStore(api: BuilderApi) {
     templatesOpen: false,
     // 版の履歴の画面を開いているか
     versionsOpen: false,
+    // 書き出し・読み込みの画面を開いているか
+    transferOpen: false,
   })
 
   const history = createHistory()
@@ -632,6 +634,52 @@ export function createBuilderStore(api: BuilderApi) {
 
         return false
       }
+    },
+
+    /**
+     * 今の内容(保存していない変更を含む)を、画像・グローバルコンポーネントの中身と一緒にファイルに書き出す(ブラウザでダウンロードする)。
+     * 書き出せなければ、理由の文言を返す。
+     */
+    async exportFile(): Promise<string | null> {
+      try {
+        const file = await api.exportContent(state.content, state.page?.title ?? '')
+        const title = (state.page?.title ?? 'page').replace(/[\\/:*?"<>|\s]+/g, '-')
+        const stamp = formatDateTime(state.timezone).replace(/[-:]/g, '').replace('T', '-')
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' }))
+        link.download = `builder-${title}-${stamp}.json`
+        link.click()
+        URL.revokeObjectURL(link.href)
+
+        return null
+      }
+      catch (error) {
+        return error instanceof ApiError && error.data.message ? error.data.message : t('書き出しに失敗しました。')
+      }
+    },
+
+    /**
+     * 書き出したファイルを読み込み、今の内容を置き換える(元に戻せる)。読み込めなければ、理由の文言を投げる。
+     */
+    async importFile(file: File): Promise<BuilderImportResult> {
+      let result: BuilderImportResult
+
+      try {
+        result = await api.importFile(file, state.page?.type !== 'component')
+      }
+      catch (error) {
+        throw new Error(error instanceof ApiError && error.data.message ? error.data.message : t('読み込みに失敗しました。'))
+      }
+
+      mutate(null, () => {
+        state.content.children = result.content.children
+
+        return true
+      })
+      state.selectedId = null
+      state.message = { type: 'success', text: t('ファイル「:name」を読み込みました。', { name: file.name }) }
+
+      return result
     },
 
     async loadTemplates(): Promise<BuilderTemplate[] | null> {
