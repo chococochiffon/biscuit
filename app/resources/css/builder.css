@@ -505,3 +505,44 @@
     outline: 1px dashed #6f42c1;
     outline-offset: -1px;
 }
+
+/* 表示条件の付いたブロックの印(右上)。選んでいる端末で表示しない・表示期間の外のブロックは薄く描く */
+.builder-node-flags {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    z-index: 3;
+    display: flex;
+    gap: 2px;
+    pointer-events: auto;
+}
+
+.builder-node-flags .bi {
+    padding: 0 3px;
+    font-size: 0.75rem;
+    line-height: 1.4;
+    color: #fff;
+    background: var(--bs-secondary);
+    border-radius: 3px;
+}
+
+.builder-node-flags .bi-clock.is-scheduled {
+    background: var(--bs-warning);
+    color: var(--bs-dark);
+}
+
+.builder-node-flags .bi-clock.is-active {
+    background: var(--bs-success);
+}
+
+.builder-node.is-hidden-here > :not(.builder-node-bar):not(.builder-node-flags),
+.builder-node.is-out-of-period > :not(.builder-node-bar):not(.builder-node-flags) {
+    opacity: 0.4;
+}
+
+.builder-tree-flag {
+    flex-shrink: 0;
+    margin-left: 2px;
+    font-size: 0.75rem;
+    color: var(--bs-secondary-color);
+}

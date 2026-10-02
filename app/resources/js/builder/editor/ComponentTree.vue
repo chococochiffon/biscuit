@@ -154,6 +154,8 @@ function onDrop(event: DragEvent): void {
       <i class="bi builder-tree-icon" :class="`bi-${store.definition(row.node.type)?.icon ?? 'square'}`" />
       <span class="builder-tree-label">{{ label(row.node) }}</span>
       <span class="builder-tree-summary">{{ summaryOf(row.node) }}</span>
+      <i v-if="row.node.visibility?.hideOn?.length" class="bi bi-eye-slash builder-tree-flag" :title="t('表示しない端末を指定しています。')" />
+      <i v-if="row.node.visibility?.startAt || row.node.visibility?.endAt" class="bi bi-clock builder-tree-flag" :title="t('表示する期間を指定しています。')" />
       <span class="builder-tree-actions">
         <button type="button" class="builder-tree-action" :title="t('複製')" @click.stop="store.duplicate(row.node.id)">
           <i class="bi bi-copy" />

@@ -5,9 +5,10 @@ import { ancestorsOf } from '../nodes'
 import { useBuilderStore } from '../store'
 import PropField from '../fields/PropField.vue'
 import StyleField from '../fields/StyleField.vue'
+import VisibilityFields from '../fields/VisibilityFields.vue'
 import { styleGroups } from '../fields/styleLabels'
 
-// 右のプロパティ: 選択中のブロックの内容(props)とスタイルを、ブロックの定義から作った入力欄で編集する。
+// 右のプロパティ: 選択中のブロックの内容(props)・スタイル・表示条件を、ブロックの定義から作った入力欄で編集する。
 // スタイルは選んでいる端末の値を編集する(タブレット・スマートフォンは、その端末だけの上書き)。
 // 上には選択中のブロックまでの階層を出し、クリックで親のブロックを選べる
 const store = useBuilderStore()
@@ -15,7 +16,7 @@ const store = useBuilderStore()
 const node = computed(() => store.selectedNode())
 const definition = computed(() => (node.value ? store.definition(node.value.type) : null))
 const ancestors = computed(() => (node.value ? ancestorsOf(store.state.content, node.value.id) : []))
-const tab = ref<'content' | 'style'>('content')
+const tab = ref<'content' | 'style' | 'visibility'>('content')
 
 // ブロックで使えるスタイルを、まとまりごとに並べる
 const groups = computed(() =>
@@ -56,6 +57,11 @@ const errors = computed(() => (node.value ? store.state.errors[`nodes.${node.val
         <li class="nav-item">
           <button type="button" class="nav-link" :class="{ active: tab === 'style' }" @click="tab = 'style'">{{ t('スタイル') }}</button>
         </li>
+        <li class="nav-item">
+          <button type="button" class="nav-link" :class="{ active: tab === 'visibility' }" @click="tab = 'visibility'">
+            {{ t('表示') }}<i v-if="node.visibility" class="bi bi-dot" />
+          </button>
+        </li>
       </ul>
 
       <template v-if="tab === 'content'">
@@ -70,6 +76,8 @@ const errors = computed(() => (node.value ? store.state.errors[`nodes.${node.val
           {{ t('このブロックには入力する内容がありません。') }}
         </p>
       </template>
+
+      <VisibilityFields v-else-if="tab === 'visibility'" :key="fieldKey('visibility')" :node="node" />
 
       <template v-else>
         <p class="small text-secondary">

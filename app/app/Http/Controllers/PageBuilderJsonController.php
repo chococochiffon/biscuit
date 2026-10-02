@@ -49,6 +49,8 @@ class PageBuilderJsonController extends Controller
             'image_base_url' => Storage::disk('public')->url(''),
             // ギャラリーのブロックの分類の選択肢
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
+            // 表示条件の期間の判定に使うサイトのタイムゾーン(期間の日時はこのタイムゾーンで持つ)
+            'timezone' => config('app.timezone'),
             // パンくずのブロックの Canvas の見本(公開側と同じ組み立て。トップは空)
             'breadcrumbs' => $singlePage === null ? [] : Breadcrumbs::forPage($singlePage->path, $singlePage->title),
         ]);

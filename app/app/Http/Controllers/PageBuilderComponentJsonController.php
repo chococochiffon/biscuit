@@ -50,6 +50,7 @@ class PageBuilderComponentJsonController extends Controller
             'registry' => $registry,
             'image_base_url' => Storage::disk('public')->url(''),
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
+            'timezone' => config('app.timezone'),
             'breadcrumbs' => [],
         ]);
     }

@@ -9,7 +9,8 @@ use App\Support\HtmlSanitizer;
  * 管理画面のエディタも同じ定義で入力を制限するが、送られてきた JSON は信用せずここで必ず確かめる。
  *
  * errors() はエラーの一覧(空なら正しい)を返し、各エラーには対象のノードの ID(分からなければ null)を含める
- * (エディタがそのノードを選択して知らせる)。normalize() は正しい内容の props に既定値を補い、テキストの HTML を無害化する。
+ * (エディタがそのノードを選択して知らせる)。normalize() は正しい内容の props に既定値を補い、テキストの HTML を無害化し、
+ * 表示条件(Visibility)は指定した項目だけにする。
  */
 final class BuilderValidator
 {
@@ -18,7 +19,7 @@ final class BuilderValidator
      *
      * @var list<string>
      */
-    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'children'];
+    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'children'];
 
     /**
      * URL の項目に入れられるリンク先(http(s)・mailto・tel・サイト内の / 始まり・ページ内の #)。
@@ -125,6 +126,12 @@ final class BuilderValidator
             $normalized['responsive'] = $responsive;
         }
 
+        $visibility = Visibility::normalize($node['visibility'] ?? null);
+
+        if ($visibility !== null) {
+            $normalized['visibility'] = $visibility;
+        }
+
         if ($definition['children'] !== []) {
             $normalized['children'] = array_map($this->normalizeNode(...), $node['children'] ?? []);
         }
@@ -201,6 +208,10 @@ final class BuilderValidator
         $this->validateProps($node['props'] ?? [], $definition['props'], $id, $label);
         $this->validateStyles($node['styles'] ?? [], $definition['styles'], $id, $label);
         $this->validateResponsive($node['responsive'] ?? [], $definition['styles'], $id, $label);
+
+        foreach (Visibility::errors($node['visibility'] ?? [], $label) as $message) {
+            $this->errors[] = $this->error($id, $message);
+        }
 
         if ($definition['children'] === []) {
             if (($node['children'] ?? []) !== []) {
