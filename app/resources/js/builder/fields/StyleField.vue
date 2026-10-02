@@ -3,11 +3,12 @@ import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import { isValidStyleValue, styleValueFor } from '../styles'
+import { themeColorLabel, themeColors } from '../theme'
 import type { BuilderNode } from '../types'
 import { styleLabel, styleOptionLabel } from './styleLabels'
 
 // スタイル 1 つの入力欄。選んでいる端末の値を編集する(タブレット・スマートフォンでは、その端末だけの上書き)。
-// 長さ・色・数値は許した形の値だけを反映し、それ以外は入力欄に印を付けて反映しない
+// 長さ・色・数値は許した形の値だけを反映し、それ以外は入力欄に印を付けて反映しない。色はテーマの色(theme:名前)も選べる
 const props = defineProps<{
   node: BuilderNode
   name: string
@@ -31,6 +32,13 @@ const PLACEHOLDERS: Record<string, string> = {
 const placeholder = computed(() =>
   current.value.source === 'inherited' ? `${current.value.value}(${t('引き継ぎ')})` : PLACEHOLDERS[String(props.kind)] ?? '',
 )
+
+// 色の入力欄に出す色(テーマの色はテーマの値にする)
+function pickerColor(value: string | null | undefined): string {
+  const color = value?.startsWith('theme:') ? store.state.theme.colors[value.slice('theme:'.length)] : value
+
+  return color && /^#[0-9a-fA-F]{6}/.test(color) ? color.slice(0, 7) : '#000000'
+}
 
 function commit(value: string): void {
   draft.value = value
@@ -66,7 +74,7 @@ function commit(value: string): void {
         v-if="kind === 'color'"
         type="color"
         class="form-control form-control-color"
-        :value="isValidStyleValue('color', draft) && draft.length === 7 ? draft : current.value?.slice(0, 7) ?? '#000000'"
+        :value="pickerColor(isValidStyleValue('color', draft) ? draft : current.value)"
         :aria-label="styleLabel(name)"
         @input="commit(($event.target as HTMLInputElement).value)"
       >
@@ -82,6 +90,20 @@ function commit(value: string): void {
       <button v-if="draft !== ''" type="button" class="btn btn-outline-secondary" :title="t('指定を外す')" @click="commit('')">
         <i class="bi bi-x-lg" />
       </button>
+    </div>
+    <div v-if="kind === 'color'" class="builder-theme-swatches" role="group" :aria-label="t('テーマの色')">
+      <button
+        v-for="color in themeColors()"
+        :key="color.name"
+        type="button"
+        class="builder-theme-swatch"
+        :class="{ active: draft === `theme:${color.name}` }"
+        :style="{ backgroundColor: store.state.theme.colors[color.name] }"
+        :title="t('テーマの色「:name」', { name: color.label })"
+        :aria-pressed="draft === `theme:${color.name}`"
+        @click="commit(`theme:${color.name}`)"
+      />
+      <span v-if="themeColorLabel(draft)" class="small text-secondary">{{ t('テーマの色「:name」', { name: themeColorLabel(draft)! }) }}</span>
     </div>
     <div v-if="isInvalid" class="invalid-feedback d-block">
       {{ kind === 'color' ? t('#336699 のような色を入力してください。') : kind === 'number' ? t('1.8 のような数値を入力してください。') : t('16px・1.5rem・50% のような長さを入力してください。') }}

@@ -19,6 +19,7 @@ use App\Http\Controllers\PageBuilderComponentJsonController;
 use App\Http\Controllers\PageBuilderController;
 use App\Http\Controllers\PageBuilderJsonController;
 use App\Http\Controllers\PageBuilderTemplateJsonController;
+use App\Http\Controllers\PageBuilderThemeController;
 use App\Http\Controllers\PageBuilderTransferJsonController;
 use App\Http\Controllers\PageViewController;
 use App\Http\Controllers\QuestionAnswerController;
@@ -96,6 +97,12 @@ Route::middleware('auth:admin')->group(function () {
         ->names('admin.builder-components');
 
     // グローバルコンポーネントの JSON(一覧はページのエディタのブロックの選択肢と見本、ほかはコンポーネントのエディタが使う)
+    // ページビルダーのテーマ(サイトに 1 つ)
+    Route::get('admin/builder-theme', [PageBuilderThemeController::class, 'edit'])
+        ->name('admin.builder-theme.edit');
+    Route::put('admin/builder-theme', [PageBuilderThemeController::class, 'update'])
+        ->name('admin.builder-theme.update');
+
     Route::get('admin/json/builder-components', [PageBuilderComponentJsonController::class, 'index'])
         ->name('admin.json.builder-components.index');
     Route::get('admin/json/builder/components/{pageBuilderComponent}', [PageBuilderComponentJsonController::class, 'show'])

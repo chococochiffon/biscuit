@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { isValidStyleValue, setNodeStyle, styleValueFor } from './styles'
+import { blockStyle, isValidStyleValue, setNodeStyle, styleValueFor } from './styles'
+import { themeVariables } from './theme'
 import type { BuilderNode } from './types'
 
 function heading(): BuilderNode {
@@ -57,5 +58,23 @@ describe('styleValueFor', () => {
     expect(styleValueFor(node, 'tablet', 'fontSize')).toEqual({ value: '28px', source: 'own' })
     expect(styleValueFor(node, 'mobile', 'fontSize')).toEqual({ value: '28px', source: 'inherited' })
     expect(styleValueFor(node, 'mobile', 'color')).toEqual({ value: null, source: 'none' })
+  })
+})
+
+describe('テーマの色', () => {
+  it('色のスタイルはテーマの色(theme:名前)も受け付け、CSS の変数にする', () => {
+    const node: BuilderNode = { id: 'heading_01K0000000000000000000000A', type: 'heading', props: {}, styles: { color: 'theme:primary', backgroundColor: '#ffffff' } }
+
+    expect(isValidStyleValue('color', 'theme:accent')).toBe(true)
+    expect(isValidStyleValue('color', 'theme:unknown')).toBe(false)
+    expect(isValidStyleValue('length', 'theme:primary')).toBe(false)
+    expect(blockStyle(node, 'desktop')).toEqual({ 'color': 'var(--builder-theme-primary)', 'background-color': '#ffffff' })
+  })
+
+  it('テーマを CSS の変数にする(フォントは選んだものだけ)', () => {
+    expect(themeVariables({ colors: { primary: '#e99540' }, fonts: { heading: { key: 'noto-serif-jp', family: "'Noto Serif JP', serif", href: '' }, body: null } })).toEqual({
+      '--builder-theme-primary': '#e99540',
+      '--builder-theme-heading-font': "'Noto Serif JP', serif",
+    })
   })
 })

@@ -1,3 +1,4 @@
+import { cssValue, THEME_COLOR_PATTERN } from './theme'
 import type { BuilderNode, BuilderStyles, Device } from './types'
 
 // Canvas でブロックに効かせるスタイル。公開側(chococo の utils/builder.ts)はメディアクエリで端末ごとの上書きを効かせるが、
@@ -48,7 +49,7 @@ export function blockStyle(node: BuilderNode, device: Device, part: 'root' | 'in
       continue
     }
     for (const property of PROPERTY_NAMES[node.type]?.[name] ?? [kebab(name)]) {
-      style[property] = value
+      style[property] = cssValue(value)
     }
   }
 
@@ -81,11 +82,15 @@ const STYLE_PATTERNS: Record<string, RegExp> = {
 }
 
 /**
- * スタイルの値が、そのスタイルの種類(length・color・number、または選べる値の一覧)で許した形か。
+ * スタイルの値が、そのスタイルの種類(length・color・number、または選べる値の一覧)で許した形か。色はテーマの色(theme:primary など)も許す。
  */
 export function isValidStyleValue(kind: string | string[] | undefined, value: string): boolean {
   if (kind === undefined) {
     return false
+  }
+
+  if (kind === 'color' && THEME_COLOR_PATTERN.test(value)) {
+    return true
   }
 
   return Array.isArray(kind) ? kind.includes(value) : STYLE_PATTERNS[kind]?.test(value) ?? false

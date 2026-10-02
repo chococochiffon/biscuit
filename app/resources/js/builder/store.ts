@@ -4,8 +4,9 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from './nodes'
 import { setNodeStyle } from './styles'
+import { loadThemeFonts } from './theme'
 import { formatDateTime, setVisibility } from './visibility'
-import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderImportResult, BuilderNode, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, BuilderVisibility, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderImportResult, BuilderNode, BuilderTheme, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, BuilderVisibility, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -27,6 +28,8 @@ export function createBuilderStore(api: BuilderApi) {
     galleryCategories: [] as { id: number, name: string }[],
     // サイトのタイムゾーン(表示条件の期間の判定に使う)
     timezone: 'Asia/Tokyo',
+    // テーマ(色のスタイルの theme:名前・ボタン・フォントの見本)
+    theme: { colors: {}, fonts: { heading: null, body: null } } as BuilderTheme,
     // グローバルコンポーネント(グローバルコンポーネントのブロックの選択肢と見本。使うときに読み込む)
     components: null as ComponentSummary[] | null,
     content: { version: 1, children: [] } as BuilderContent,
@@ -174,6 +177,8 @@ export function createBuilderStore(api: BuilderApi) {
         state.breadcrumbs = payload.breadcrumbs
         state.galleryCategories = payload.gallery_categories
         state.timezone = payload.timezone
+        state.theme = payload.theme
+        loadThemeFonts(payload.theme)
         applyState(payload, true)
         state.loaded = true
       }

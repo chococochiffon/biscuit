@@ -22,7 +22,7 @@ final class StyleRegistry
     private const LENGTH_PATTERN = '/\A(?:0|auto|\d{1,4}(?:\.\d{1,2})?(?:px|rem|em|%|vh|vw))\z/';
 
     /**
-     * 色(#rgb・#rrggbb・#rrggbbaa)。
+     * 色(#rgb・#rrggbb・#rrggbbaa)。テーマの色(theme:primary など。ThemeRegistry)も受け付ける。
      */
     private const COLOR_PATTERN = '/\A#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})\z/';
 
@@ -74,7 +74,7 @@ final class StyleRegistry
 
         return match ($kind) {
             'length' => preg_match(self::LENGTH_PATTERN, $value) === 1,
-            'color' => preg_match(self::COLOR_PATTERN, $value) === 1,
+            'color' => preg_match(self::COLOR_PATTERN, $value) === 1 || preg_match(ThemeRegistry::COLOR_TOKEN_PATTERN, $value) === 1,
             'number' => preg_match(self::NUMBER_PATTERN, $value) === 1,
             default => in_array($value, $kind, true),
         };
