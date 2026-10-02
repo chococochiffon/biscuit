@@ -105,6 +105,10 @@ Route::middleware('auth:admin')->group(function () {
         ->name('admin.json.builder.components.publish');
     Route::post('admin/json/builder/components/{pageBuilderComponent}/discard', [PageBuilderComponentJsonController::class, 'discard'])
         ->name('admin.json.builder.components.discard');
+    Route::get('admin/json/builder/components/{pageBuilderComponent}/versions', [PageBuilderComponentJsonController::class, 'versions'])
+        ->name('admin.json.builder.components.versions.index');
+    Route::get('admin/json/builder/components/{pageBuilderComponent}/versions/{pageBuilderVersion}', [PageBuilderComponentJsonController::class, 'version'])
+        ->name('admin.json.builder.components.versions.show');
 
     // ページビルダーのテンプレート(エディタが一覧・保存・削除に使う JSON)
     Route::resource('admin/json/builder-templates', PageBuilderTemplateJsonController::class)
@@ -132,6 +136,10 @@ Route::middleware('auth:admin')->group(function () {
         ->name('admin.json.builder.top.discard');
     Route::get('admin/json/builder/top/preview-url', [PageBuilderJsonController::class, 'previewUrl'])
         ->name('admin.json.builder.top.preview-url');
+    Route::get('admin/json/builder/top/versions', [PageBuilderJsonController::class, 'versions'])
+        ->name('admin.json.builder.top.versions.index');
+    Route::get('admin/json/builder/top/versions/{pageBuilderVersion}', [PageBuilderJsonController::class, 'topVersion'])
+        ->name('admin.json.builder.top.versions.show');
 
     Route::get('admin/json/builder/single-pages/{singlePage}', [PageBuilderJsonController::class, 'show'])
         ->name('admin.json.builder.single-pages.show');
@@ -143,6 +151,10 @@ Route::middleware('auth:admin')->group(function () {
         ->name('admin.json.builder.single-pages.discard');
     Route::get('admin/json/builder/single-pages/{singlePage}/preview-url', [PageBuilderJsonController::class, 'previewUrl'])
         ->name('admin.json.builder.single-pages.preview-url');
+    Route::get('admin/json/builder/single-pages/{singlePage}/versions', [PageBuilderJsonController::class, 'versions'])
+        ->name('admin.json.builder.single-pages.versions.index');
+    Route::get('admin/json/builder/single-pages/{singlePage}/versions/{pageBuilderVersion}', [PageBuilderJsonController::class, 'singlePageVersion'])
+        ->name('admin.json.builder.single-pages.versions.show');
 
     Route::post('admin/articles/content-images', [ArticleController::class, 'uploadContentImage'])
         ->name('admin.articles.content-images');

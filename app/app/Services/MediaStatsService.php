@@ -49,6 +49,7 @@ class MediaStatsService
         'page_builders',
         'page_builder_templates',
         'page_builder_components',
+        'page_builder_versions',
     ];
 
     /**

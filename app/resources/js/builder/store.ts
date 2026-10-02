@@ -4,7 +4,7 @@ import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from './nodes'
 import { setNodeStyle } from './styles'
-import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
+import type { ArticleSummary, Breadcrumb, BuilderContent, BuilderNode, BuilderStatePayload, BuilderTemplate, BuilderVersionSummary, ComponentSummary, Device, Dragging, DropTarget, GalleryImageSummary, NavigationItem, PageInfo, Registry } from './types'
 
 // エディタ全体の状態と、その操作。部品は木を直接書き換えず、ここの操作だけを呼ぶ
 
@@ -54,6 +54,8 @@ export function createBuilderStore(api: BuilderApi) {
     conflict: false,
     // テンプレートの画面を開いているか
     templatesOpen: false,
+    // 版の履歴の画面を開いているか
+    versionsOpen: false,
   })
 
   const history = createHistory()
@@ -569,6 +571,41 @@ export function createBuilderStore(api: BuilderApi) {
       })
       state.selectedId = null
       state.message = { type: 'success', text: t('テンプレート「:name」を使いました。', { name: template.name }) }
+    },
+
+    async loadVersions(): Promise<BuilderVersionSummary[] | null> {
+      try {
+        return await api.versions()
+      }
+      catch (error) {
+        handleError(error, t('版の履歴を読み込めませんでした。'))
+
+        return null
+      }
+    },
+
+    /**
+     * 版の内容で今の下書きを置き換える(元に戻せる。公開側に出すには改めて公開する)。読み込めたら true。
+     */
+    async restoreVersion(id: number, label: string): Promise<boolean> {
+      try {
+        const version = await api.version(id)
+
+        mutate(null, () => {
+          state.content.children = version.content.children
+
+          return true
+        })
+        state.selectedId = null
+        state.message = { type: 'success', text: t(':date の版を下書きに読み込みました。公開側に出すには「公開」を押してください。', { date: label }) }
+
+        return true
+      }
+      catch (error) {
+        handleError(error, t('版を読み込めませんでした。'))
+
+        return false
+      }
     },
 
     async loadTemplates(): Promise<BuilderTemplate[] | null> {

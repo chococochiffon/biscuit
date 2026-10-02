@@ -198,7 +198,7 @@ class PageBuilderJsonControllerTest extends TestCase
 
         $log = AuditLog::query()->sole();
         $this->assertSame(AuditAction::Published, $log->action);
-        $this->assertSame(['nodes' => [null, 2]], $log->metadata);
+        $this->assertSame(['nodes' => [null, 2], 'version' => $builder->versions()->sole()->id], $log->metadata);
     }
 
     public function test_publish_rejects_a_draft_that_no_longer_matches_the_definitions(): void

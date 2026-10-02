@@ -9,6 +9,7 @@ import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
 import TemplateDialog from './TemplateDialog.vue'
+import VersionDialog from './VersionDialog.vue'
 
 // ページビルダーのエディタ全体(上にツールバー、左にパレットとコンポーネントツリー、中央に Canvas、右にプロパティ)
 const props = defineProps<{
@@ -48,6 +49,10 @@ function confirmLeave(event: BeforeUnloadEvent): void {
   }
 }
 
+function dialogOpen(): boolean {
+  return store.state.templatesOpen || store.state.versionsOpen
+}
+
 // キーボードの操作: Ctrl+S で下書き保存。入力欄の外では Ctrl+Z/Ctrl+Shift+Z(Ctrl+Y)で元に戻す/やり直す、
 // Delete/Backspace で選択中のブロックを削除、Esc で親を選ぶ(入力欄の中では、入力欄の元に戻すなどを使う)
 function handleKeydown(event: KeyboardEvent): void {
@@ -55,10 +60,11 @@ function handleKeydown(event: KeyboardEvent): void {
   const withModifier = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
 
-  // テンプレートの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
-  if (store.state.templatesOpen) {
+  // テンプレート・版の履歴の画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
+  if (dialogOpen()) {
     if (event.key === 'Escape') {
       store.state.templatesOpen = false
+      store.state.versionsOpen = false
     }
 
     return
@@ -102,7 +108,7 @@ function handleKeydown(event: KeyboardEvent): void {
 function isClipboardForEditor(event: ClipboardEvent): boolean {
   const target = event.target as HTMLElement | null
 
-  return !store.state.templatesOpen && event.clipboardData !== null && !target?.closest?.('input, textarea, select, [contenteditable="true"]')
+  return !dialogOpen() && event.clipboardData !== null && !target?.closest?.('input, textarea, select, [contenteditable="true"]')
 }
 
 function handleCopy(event: ClipboardEvent, cut: boolean): void {
@@ -170,5 +176,6 @@ onBeforeUnmount(() => {
       <PropertyPanel />
     </div>
     <TemplateDialog v-if="store.state.templatesOpen" />
+    <VersionDialog v-if="store.state.versionsOpen" />
   </div>
 </template>

@@ -6,6 +6,7 @@ use App\Enums\BuilderPageType;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderComponent;
 use App\Models\PageBuilderTemplate;
+use App\Models\PageBuilderVersion;
 use App\Models\SinglePage;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\BuilderValidator;
@@ -68,6 +69,7 @@ class PageBuilderSeeder extends Seeder
         $builder->draft_content = $this->validated($validator, $this->sampleContent(PageBuilder::storeImage($file)));
         $builder->publish();
         $builder->save();
+        $builder->recordVersion(null);
     }
 
     private function seedTop(BuilderValidator $validator): void
@@ -168,7 +170,7 @@ class PageBuilderSeeder extends Seeder
     }
 
     /**
-     * 保存先ディレクトリの画像のうち、ビルダー(論理削除済みを含む)の編集中・公開中の内容・テンプレート・グローバルコンポーネントから参照されていないものを削除する。
+     * 保存先ディレクトリの画像のうち、ビルダー(論理削除済みを含む)の編集中・公開中の内容・版・テンプレート・グローバルコンポーネントから参照されていないものを削除する。
      */
     private function deleteUnreferencedImages(): void
     {
@@ -178,6 +180,7 @@ class PageBuilderSeeder extends Seeder
                 ...BuilderContent::imagePaths($builder->draft_content),
                 ...BuilderContent::imagePaths($builder->published_content),
             ])
+            ->merge(PageBuilderVersion::withTrashed()->get()->flatMap(fn (PageBuilderVersion $version) => BuilderContent::imagePaths($version->content)))
             ->merge(PageBuilderTemplate::withTrashed()->get()->flatMap(fn (PageBuilderTemplate $template) => BuilderContent::imagePaths($template->content)))
             ->merge(PageBuilderComponent::withTrashed()->get()->flatMap(fn (PageBuilderComponent $component) => [
                 ...BuilderContent::imagePaths($component->draft_content),
