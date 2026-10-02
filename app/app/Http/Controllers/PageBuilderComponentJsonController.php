@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\EditsBuilderContent;
 use App\Http\Requests\SavePageBuilderComponentRequest;
 use App\Models\GalleryCategory;
 use App\Models\PageBuilderComponent;
+use App\Models\PageBuilderVersion;
 use App\Support\Builder\BlockRegistry;
 use App\Support\Builder\BuilderPresenter;
 use App\Support\Builder\BuilderValidator;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * グローバルコンポーネントの JSON。index はページのエディタのブロックの選択肢と Canvas の見本(公開中の内容)に使い、
- * show・update・publish・discard はコンポーネントのエディタ(ページのエディタと同じ画面)が使う(下書き・公開の処理は EditsBuilderContent)。
+ * show・update・publish・discard・versions・version はコンポーネントのエディタ(ページのエディタと同じ画面)が使う(下書き・公開の処理は EditsBuilderContent)。
  * コンポーネントの中にはグローバルコンポーネントのブロックを置けないため、エディタに渡すブロックの定義からも除く。
  */
 class PageBuilderComponentJsonController extends Controller
@@ -96,6 +97,22 @@ class PageBuilderComponentJsonController extends Controller
         $this->discardDraft($pageBuilderComponent, $pageBuilderComponent->name);
 
         return response()->json($this->state($pageBuilderComponent));
+    }
+
+    /**
+     * 版の履歴(公開した内容の一覧。新しい順)。
+     */
+    public function versions(PageBuilderComponent $pageBuilderComponent): JsonResponse
+    {
+        return $this->versionList($pageBuilderComponent);
+    }
+
+    /**
+     * 版の内容(エディタが下書きに読み込む)。
+     */
+    public function version(PageBuilderComponent $pageBuilderComponent, PageBuilderVersion $pageBuilderVersion): JsonResponse
+    {
+        return $this->versionContent($pageBuilderComponent, $pageBuilderVersion);
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Http\Resources\ArticleResource;
 use App\Http\Resources\GalleryImageResource;
 use App\Models\GalleryCategory;
 use App\Models\PageBuilder;
+use App\Models\PageBuilderVersion;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
 use App\Support\AuditLogger;
@@ -25,7 +26,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 /**
- * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・プレビューの URL・画像のアップロード・記事一覧・ナビゲーション・ギャラリーのブロックの見本)。
+ * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・版の履歴・プレビューの URL・画像のアップロード・記事一覧・ナビゲーション・ギャラリーのブロックの見本)。
  * 対象はトップ(ルートに {singlePage} がない)と固定ページ。ビルダーの行は最初に下書きを保存したときに作る(取得では作らない)。
  */
 class PageBuilderJsonController extends Controller
@@ -103,6 +104,30 @@ class PageBuilderJsonController extends Controller
         $this->discardDraft($builder, $this->label($singlePage));
 
         return response()->json($this->state($builder, $singlePage));
+    }
+
+    /**
+     * 版の履歴(公開した内容の一覧。新しい順)。
+     */
+    public function versions(?SinglePage $singlePage = null): JsonResponse
+    {
+        return $this->versionList($this->existingBuilder($singlePage));
+    }
+
+    /**
+     * トップの版の内容(エディタが下書きに読み込む)。
+     */
+    public function topVersion(PageBuilderVersion $pageBuilderVersion): JsonResponse
+    {
+        return $this->versionContent($this->existingBuilder(null), $pageBuilderVersion);
+    }
+
+    /**
+     * 固定ページの版の内容(ルートの引数の並びがトップと違うため、メソッドを分ける)。
+     */
+    public function singlePageVersion(SinglePage $singlePage, PageBuilderVersion $pageBuilderVersion): JsonResponse
+    {
+        return $this->versionContent($this->existingBuilder($singlePage), $pageBuilderVersion);
     }
 
     /**

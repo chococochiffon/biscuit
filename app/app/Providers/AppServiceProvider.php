@@ -5,11 +5,14 @@ namespace App\Providers;
 use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\GalleryImage;
+use App\Models\PageBuilder;
+use App\Models\PageBuilderComponent;
 use App\View\Composers\CustomPageTypeComposer;
 use App\View\Composers\PendingArticleComposer;
 use App\View\Composers\PendingGalleryImageComposer;
 use App\View\Composers\SiteSettingComposer;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
@@ -35,6 +38,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // ページビルダーの版(page_builder_versions.versionable_type)に保存する対象の種類の名前(クラス名を保存しない)
+        Relation::morphMap([
+            'page_builder' => PageBuilder::class,
+            'page_builder_component' => PageBuilderComponent::class,
+        ]);
+
         RateLimiter::for('admin-login', function (Request $request) {
             return Limit::perMinute(5)->by(Str::transliterate(
                 Str::lower($request->string('email')).'|'.$request->ip()

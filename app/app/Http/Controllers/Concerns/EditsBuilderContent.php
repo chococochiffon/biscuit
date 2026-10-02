@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Enums\AuditAction;
 use App\Models\AuditLog;
+use App\Models\PageBuilderVersion;
 use App\Support\AuditLogger;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\BuilderPresenter;
@@ -19,6 +20,7 @@ use Illuminate\Support\Facades\DB;
  * ページビルダーのエディタの JSON で、編集中・公開中の内容を持つモデル(Models\Concerns\HasBuilderContent。ページの PageBuilder と
  * グローバルコンポーネントの PageBuilderComponent)の下書きの保存・公開・変更の破棄を行う共通処理。
  * エディタが知っている更新日時と今の更新日時が違えば、ほかの管理者が先に保存したとして 409 を返す(上書きしない)。
+ * 公開するたびに版(PageBuilderVersion)を残し、エディタの「版の履歴」に一覧と内容を返す。
  */
 trait EditsBuilderContent
 {
@@ -73,9 +75,11 @@ trait EditsBuilderContent
             $builder->schema_version = SchemaMigrator::CURRENT_VERSION;
             $builder->publish();
             $builder->save();
+            $version = $builder->recordVersion(Auth::guard('admin')->id());
 
             AuditLogger::record(AuditAction::Published, $builder, $label, metadata: [
-                'nodes' => [$publishedNodes, $this->countNodes($builder->published_content)],
+                'nodes' => [$publishedNodes, $version->node_count],
+                'version' => $version->id,
             ]);
         });
 
@@ -97,6 +101,45 @@ trait EditsBuilderContent
                 'nodes' => [$draftNodes, $this->countNodes($builder->draft_content)],
             ]);
         });
+    }
+
+    /**
+     * 版の履歴(新しい順に config('limits.builder_versions') 件。先頭が公開中の内容)。対象の行がまだなければ空。
+     */
+    protected function versionList(?Model $builder): JsonResponse
+    {
+        if ($builder === null || ! $builder->exists) {
+            return response()->json([]);
+        }
+
+        $versions = $builder->latestVersions()
+            ->with('administrator:id,name')
+            ->limit(config('limits.builder_versions'))
+            ->get(['id', 'administrator_id', 'node_count', 'created_at']);
+
+        return response()->json($versions->values()->map(fn (PageBuilderVersion $version, int $index) => [
+            'id' => $version->id,
+            'published_at' => $version->created_at->toIso8601String(),
+            'administrator' => $version->administrator?->name,
+            'node_count' => $version->node_count,
+            'current' => $index === 0 && $builder->isPublished(),
+        ]));
+    }
+
+    /**
+     * 版の内容(エディタの形。BuilderPresenter が今の構造の版にそろえる)。ほかの対象の版なら 404。
+     */
+    protected function versionContent(?Model $builder, PageBuilderVersion $version): JsonResponse
+    {
+        if ($builder === null || $version->versionable_type !== $builder->getMorphClass() || $version->versionable_id !== $builder->getKey()) {
+            abort(404);
+        }
+
+        return response()->json([
+            'id' => $version->id,
+            'published_at' => $version->created_at->toIso8601String(),
+            'content' => BuilderPresenter::forEditor($version->content),
+        ]);
     }
 
     /**

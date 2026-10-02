@@ -126,6 +126,8 @@ export interface EditorConfig {
     gallery: string
     // グローバルコンポーネントの一覧(ブロックの選択肢と見本)
     components: string
+    // 版の履歴の一覧(版の内容は末尾に /{id} を付ける)
+    versions: string
   }
 }
 
@@ -165,4 +167,21 @@ export interface DropTarget {
   parentId: string | null
   index: number
   from?: 'canvas' | 'tree'
+}
+
+// 版の履歴の 1 件(EditsBuilderContent::versionList())。current は公開中の内容の版
+export interface BuilderVersionSummary {
+  id: number
+  published_at: string
+  // 公開した管理者(分からなければ null)
+  administrator: string | null
+  node_count: number
+  current: boolean
+}
+
+// 版の内容(EditsBuilderContent::versionContent())
+export interface BuilderVersion {
+  id: number
+  published_at: string
+  content: BuilderContent
 }
