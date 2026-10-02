@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\EditsBuilderContent;
 use App\Http\Requests\SavePageBuilderComponentRequest;
 use App\Models\GalleryCategory;
 use App\Models\PageBuilderComponent;
+use App\Models\PageBuilderTheme;
 use App\Models\PageBuilderVersion;
 use App\Support\Builder\BlockRegistry;
 use App\Support\Builder\BuilderPresenter;
@@ -51,6 +52,8 @@ class PageBuilderComponentJsonController extends Controller
             'image_base_url' => Storage::disk('public')->url(''),
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             'timezone' => config('app.timezone'),
+            // テーマ(色のスタイルの theme:名前 と、ボタン・フォントの見本に使う)
+            'theme' => PageBuilderTheme::current()->toPresentation(),
             'breadcrumbs' => [],
         ]);
     }

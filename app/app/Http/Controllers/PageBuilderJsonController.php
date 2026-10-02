@@ -10,6 +10,7 @@ use App\Http\Resources\ArticleResource;
 use App\Http\Resources\GalleryImageResource;
 use App\Models\GalleryCategory;
 use App\Models\PageBuilder;
+use App\Models\PageBuilderTheme;
 use App\Models\PageBuilderVersion;
 use App\Models\SinglePage;
 use App\Models\SiteSetting;
@@ -51,6 +52,8 @@ class PageBuilderJsonController extends Controller
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             // 表示条件の期間の判定に使うサイトのタイムゾーン(期間の日時はこのタイムゾーンで持つ)
             'timezone' => config('app.timezone'),
+            // テーマ(色のスタイルの theme:名前 と、ボタン・フォントの見本に使う)
+            'theme' => PageBuilderTheme::current()->toPresentation(),
             // パンくずのブロックの Canvas の見本(公開側と同じ組み立て。トップは空)
             'breadcrumbs' => $singlePage === null ? [] : Breadcrumbs::forPage($singlePage->path, $singlePage->title),
         ]);

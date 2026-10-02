@@ -546,3 +546,66 @@
     font-size: 0.75rem;
     color: var(--bs-secondary-color);
 }
+
+/* テーマ: 色のスタイルの theme:名前 は --builder-theme-名前 になる。ボタンのブロックのメイン・サブの色と、見出し・本文のフォントもテーマに従う
+   (chococo の components/builder/Renderer.vue と同じ規則) */
+.builder-theme {
+    font-family: var(--builder-theme-body-font, inherit);
+}
+
+.builder-theme :is(h1, h2, h3, h4, h5, h6) {
+    font-family: var(--builder-theme-heading-font, inherit);
+}
+
+.builder-theme .btn-primary,
+.builder-theme .btn-secondary {
+    --builder-btn-color: var(--builder-theme-primary);
+    --bs-btn-bg: var(--builder-btn-color);
+    --bs-btn-border-color: var(--builder-btn-color);
+    --bs-btn-hover-bg: color-mix(in srgb, var(--builder-btn-color) 85%, #000);
+    --bs-btn-hover-border-color: color-mix(in srgb, var(--builder-btn-color) 85%, #000);
+    --bs-btn-active-bg: color-mix(in srgb, var(--builder-btn-color) 80%, #000);
+    --bs-btn-active-border-color: color-mix(in srgb, var(--builder-btn-color) 80%, #000);
+    --bs-btn-disabled-bg: var(--builder-btn-color);
+    --bs-btn-disabled-border-color: var(--builder-btn-color);
+}
+
+.builder-theme .btn-outline-primary,
+.builder-theme .btn-outline-secondary {
+    --builder-btn-color: var(--builder-theme-primary);
+    --bs-btn-color: var(--builder-btn-color);
+    --bs-btn-border-color: var(--builder-btn-color);
+    --bs-btn-hover-bg: var(--builder-btn-color);
+    --bs-btn-hover-border-color: var(--builder-btn-color);
+    --bs-btn-active-bg: var(--builder-btn-color);
+    --bs-btn-active-border-color: var(--builder-btn-color);
+    --bs-btn-disabled-color: var(--builder-btn-color);
+    --bs-btn-disabled-border-color: var(--builder-btn-color);
+}
+
+.builder-theme .btn-secondary,
+.builder-theme .btn-outline-secondary {
+    --builder-btn-color: var(--builder-theme-secondary);
+}
+
+/* 色の入力欄の下の、テーマの色の見本(クリックでテーマの色を選ぶ) */
+.builder-theme-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    margin-top: 4px;
+}
+
+.builder-theme-swatch {
+    width: 1.25rem;
+    height: 1.25rem;
+    padding: 0;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 3px;
+}
+
+.builder-theme-swatch.active {
+    outline: 2px solid var(--bs-primary);
+    outline-offset: 1px;
+}

@@ -103,6 +103,8 @@ export interface ShowPayload extends BuilderStatePayload {
   gallery_categories: { id: number, name: string }[]
   // サイトのタイムゾーン(表示条件の期間の判定に使う)
   timezone: string
+  // テーマ(色のスタイルの theme:名前 と、ボタン・フォントの見本に使う)
+  theme: BuilderTheme
 }
 
 // グローバルコンポーネント(PageBuilderComponentJsonController::index())。content は公開中の内容(未公開なら null)
@@ -209,4 +211,18 @@ export interface BuilderImportResult {
   warnings: string[]
   // 登録し直した画像の数
   images: number
+}
+
+// テーマのフォント(biscuit の ThemeRegistry::font())
+export interface BuilderThemeFont {
+  key: string
+  family: string
+  href: string
+}
+
+// ページビルダーのテーマ(PageBuilderTheme::toPresentation())
+export interface BuilderTheme {
+  // 名前(primary・secondary・accent・text・light) → #rrggbb
+  colors: Record<string, string>
+  fonts: { heading: BuilderThemeFont | null, body: BuilderThemeFont | null }
 }

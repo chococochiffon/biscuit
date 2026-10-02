@@ -3,6 +3,7 @@
 namespace App\Support\Builder;
 
 use App\Models\PageBuilder;
+use App\Models\PageBuilderTheme;
 use stdClass;
 
 /**
@@ -27,14 +28,14 @@ final class BuilderPresenter
     }
 
     /**
-     * 公開側(chococo)に返す内容(画像は公開 URL)。
+     * 公開側(chococo)に返す内容(画像は公開 URL)。テーマ(色・フォント)を theme に入れる。
      *
      * @param  array<string, mixed>  $content
      * @return array<string, mixed>
      */
     public static function forPublic(array $content): array
     {
-        return self::present($content, forPublic: true);
+        return [...self::present($content, forPublic: true), 'theme' => PageBuilderTheme::current()->toPresentation()];
     }
 
     /**

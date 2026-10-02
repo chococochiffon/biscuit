@@ -92,6 +92,11 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a href="{{ route('admin.builder-theme.edit') }}" class="nav-link">
+                            <i class="bi bi-palette"></i>{{ __('テーマ') }}
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a href="{{ route('admin.layouts.edit') }}" class="nav-link">
                             <i class="bi bi-layout-sidebar-inset"></i>{{ __('レイアウト管理') }}
                         </a>
