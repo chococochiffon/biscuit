@@ -50,13 +50,14 @@ class BuilderValidatorTest extends TestCase
             'children' => [
                 BuilderContent::node('section', children: [
                     ...$leaves,
+                    BuilderContent::node('slider', children: [BuilderContent::node('slide'), BuilderContent::node('slide')]),
                     BuilderContent::node('container', children: [BuilderContent::node('row', children: [BuilderContent::node('column', children: $leaves)])]),
                 ]),
             ],
         ];
 
         // 同じ ID を 2 回使わないよう、カラムの中は ID を振り直す
-        $content['children'][0]['children'][count($leaves)]['children'][0]['children'][0]['children'] = array_map(
+        $content['children'][0]['children'][count($leaves) + 1]['children'][0]['children'][0]['children'] = array_map(
             fn (array $leaf) => [...$leaf, 'id' => BuilderContent::newId($leaf['type'])],
             $leaves,
         );
@@ -135,6 +136,21 @@ class BuilderValidatorTest extends TestCase
 
                 return $content;
             }, 'article-list'],
+            'セクションの直下にスライド' => [function (array $content) {
+                $content['children'][0]['children'][] = BuilderContent::node('slide');
+
+                return $content;
+            }, 'slide'],
+            'スライダーの中に画像' => [function (array $content) {
+                $content['children'][0]['children'][] = BuilderContent::node('slider', children: [BuilderContent::node('image')]);
+
+                return $content;
+            }, 'image'],
+            'スライダーの切り替えの間隔が範囲外' => [function (array $content) {
+                $content['children'][0]['children'][] = BuilderContent::node('slider', ['interval' => 1]);
+
+                return $content;
+            }, 'slider'],
             '行の中に記事一覧' => [function (array $content) {
                 $content['children'][0]['children'][0]['children'][0]['children'][] = BuilderContent::node('article-list');
 
