@@ -9,6 +9,7 @@ use App\Installer\InstallerManager;
 use App\Installer\InstallerStep;
 use App\Installer\TemplateInstaller;
 use App\Models\Administrator;
+use App\Models\GalleryImage;
 use App\Models\LayoutBlock;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderTemplate;
@@ -170,6 +171,8 @@ class InstallerStepsTest extends TestCase
 
         $this->assertSame(0, Administrator::query()->count());
         $this->assertTrue(PageBuilderTemplate::query()->exists());
+        $this->assertSame(4, GalleryImage::query()->count());
+        Storage::disk('public')->assertExists(GalleryImage::query()->pluck('image')->all());
         Storage::disk('public')->assertExists(SiteSetting::DEFAULT_SITE_ICON_PATH);
     }
 

@@ -6,7 +6,7 @@ use Illuminate\Database\Seeder;
 
 /**
  * インストーラーが入れる本番用の初期データ(App\Installer\ApplicationInstaller が呼ぶ)。
- * 開発用の DatabaseSeeder と違い、固定の管理者(admin@example.com)・サンプルのユーザー・記事・Q&A などは入れない
+ * 開発用の DatabaseSeeder と違い、固定の管理者(admin@example.com)・サンプルのユーザー・記事・Q&A などは入れない(ギャラリーだけは最初の画像を入れる)
  * (管理者はインストーラーの管理者の段で作り、トップの見た目はデザインの段で作る)。何度呼んでもよい。
  */
 class InstallSeeder extends Seeder
@@ -19,5 +19,7 @@ class InstallSeeder extends Seeder
         $this->call(ContentModelRelationSeeder::class);
         // ページビルダーのテンプレート(ランディングページ・会社概要・お問い合わせ)
         $this->call(PageBuilderTemplateSeeder::class);
+        // ギャラリーの最初の画像(分類つきの 4 枚。登録済みなら登録しない)
+        $this->call(GallerySeeder::class);
     }
 }

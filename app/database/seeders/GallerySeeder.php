@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 class GallerySeeder extends Seeder
 {
     /**
-     * サンプルのギャラリーの分類と画像を登録する。
+     * サンプルのギャラリーの分類と画像を登録する(開発用の DatabaseSeeder と、インストール時の InstallSeeder で使う)。
      * 画像は database/seeders/images/ のサンプル画像を、管理画面からのアップロードと同じく長辺 1200px 以内に縮小して
      * image/gallery にランダムなファイル名で保存する。登録済みのギャラリー画像がある場合は登録しない(再実行で重複させない)。
      * 登録の前に、どのレコードからも参照されていない画像ファイルを削除する(migrate:refresh --seed のたびに古い画像がたまらないようにする)。
@@ -24,16 +24,17 @@ class GallerySeeder extends Seeder
             return;
         }
 
-        $categories = collect(['イラスト', 'バナー'])
+        $categories = collect(['昼のワークスペース', '夕方・夜のワークスペース'])
             ->mapWithKeys(fn (string $name, int $sortOrder) => [
                 $name => GalleryCategory::query()->firstOrCreate(['name' => $name], ['sort_order' => $sortOrder]),
             ]);
 
+        // chococo の見本のギャラリー(public/image/gallery/)と同じ画像
         $sampleImages = [
-            ['a_clean_warm_pastel_minimal_flat_soft_illustrat.png', 'やさしい色のイラスト', 'パステルカラーでまとめたシンプルなイラストです。', 'イラスト'],
-            ['a_clean_warm_pastel_themed_promotional_collage.png', 'コラージュ', 'いろいろなモチーフを組み合わせたコラージュです。', 'イラスト'],
-            ['wide_clean_pastel_cozy_promotional_illustration.png', 'くつろぎの風景', null, 'イラスト'],
-            ['biscuit-og-image-1200x630.png', 'biscuit のバナー', 'SNS でシェアしたときに表示される画像です。', 'バナー'],
+            ['gallery_001.jpg', '海の見える作業机', '朝の光が入る、窓辺のワークスペースです。', '昼のワークスペース'],
+            ['gallery_002.jpg', '夜景と作業机', '街の明かりを眺めながら作業する夜のデスクです。', '夕方・夜のワークスペース'],
+            ['gallery_003.jpg', '白いワークスペース', '高層ビルを望む、明るい白の作業机です。', '昼のワークスペース'],
+            ['gallery_004.jpg', '夕焼けの作業机', '夕日の沈む海を眺めるデスクです。', '夕方・夜のワークスペース'],
         ];
 
         foreach ($sampleImages as $sortOrder => [$filename, $name, $comment, $categoryName]) {
