@@ -190,6 +190,8 @@ export function createBuilderStore(api: BuilderApi) {
 
   return {
     state,
+    // エディタに出す機能(インストーラーのエディタでは一部を出さない)
+    features: api.features,
 
     async load(): Promise<void> {
       try {

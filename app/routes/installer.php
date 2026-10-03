@@ -8,6 +8,8 @@ use App\Http\Controllers\Installer\FinalizeController;
 use App\Http\Controllers\Installer\MailController;
 use App\Http\Controllers\Installer\SiteController;
 use App\Http\Controllers\Installer\WelcomeController;
+use App\Http\Controllers\PageBuilderJsonController;
+use App\Http\Controllers\PageBuilderTemplateJsonController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -52,3 +54,21 @@ foreach ([
 Route::post('install/administrator/generate', [AdministratorController::class, 'generate'])
     ->middleware('installer.step:administrator')
     ->name('installer.administrator.generate');
+
+// デザインの段のビルダー。最初の管理者を作ったセッションだけが使え(installer.builder)、JSON は管理画面のビルダーと同じ処理(トップ)を使う。
+// インストールを終えると、ほかのインストーラーのルートと同じく入れなくなる
+Route::post('install/design/unlock', [DesignController::class, 'unlock'])
+    ->middleware('installer.step:design')
+    ->name('installer.design.unlock');
+
+Route::middleware(['installer.step:design', 'installer.builder'])->group(function () {
+    Route::get('install/design/builder', [DesignController::class, 'builder'])->name('installer.design.builder');
+    Route::get('install/design/builder/json', [PageBuilderJsonController::class, 'show'])->name('installer.design.builder.json.show');
+    Route::put('install/design/builder/json', [PageBuilderJsonController::class, 'update'])->name('installer.design.builder.json.update');
+    Route::get('install/design/builder/json/preview-url', [PageBuilderJsonController::class, 'previewUrl'])->name('installer.design.builder.json.preview-url');
+    Route::post('install/design/builder/json/images', [PageBuilderJsonController::class, 'storeImage'])->name('installer.design.builder.json.images');
+    Route::get('install/design/builder/json/templates', [PageBuilderTemplateJsonController::class, 'index'])->name('installer.design.builder.json.templates');
+    Route::get('install/design/builder/json/article-list', [PageBuilderJsonController::class, 'articleList'])->name('installer.design.builder.json.article-list');
+    Route::get('install/design/builder/json/navigation', [PageBuilderJsonController::class, 'navigation'])->name('installer.design.builder.json.navigation');
+    Route::get('install/design/builder/json/gallery', [PageBuilderJsonController::class, 'gallery'])->name('installer.design.builder.json.gallery');
+});

@@ -104,7 +104,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('view-system-status', fn (Administrator $administrator) => $administrator->isSuperAdmin());
 
         // ページビルダーの Custom CSS とブロックの追加のクラス名は、公開側の見た目を大きく変えられるためスーパー管理者だけが書ける
-        Gate::define('edit-builder-css', fn (Administrator $administrator) => $administrator->isSuperAdmin());
+        // (インストーラーの中のビルダーでは書かせない。インストールのあとに管理画面で書く)
+        Gate::define('edit-builder-css', fn (Administrator $administrator) => $administrator->isSuperAdmin() && ! request()->routeIs('installer.*'));
 
         View::composer('layouts.admin', SiteSettingComposer::class);
         View::composer('layouts.admin', CustomPageTypeComposer::class);

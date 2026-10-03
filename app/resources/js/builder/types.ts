@@ -136,11 +136,16 @@ export interface GalleryImageSummary {
 // 画面(resources/views/admin/builder/edit.blade.php)が渡す設定
 export interface EditorConfig {
   backUrl: string
+  // 戻るボタンの文言(省略すると「戻る」)
+  backLabel?: string
+  // テンプレートを保存・削除できるか(省略すると true。インストーラーのエディタは使うだけ)
+  canSaveTemplates?: boolean
+  // null の機能はエディタに出さない(インストーラーのエディタは、下書きの保存・プレビュー・画像・見本のデータだけを使う)
   endpoints: {
     show: string
     update: string
-    publish: string
-    discard: string
+    publish: string | null
+    discard: string | null
     // グローバルコンポーネントのエディタにはプレビューがない(null)
     previewUrl: string | null
     images: string
@@ -151,12 +156,12 @@ export interface EditorConfig {
     navigation: string
     gallery: string
     // グローバルコンポーネントの一覧(ブロックの選択肢と見本)
-    components: string
+    components: string | null
     // 版の履歴の一覧(版の内容は末尾に /{id} を付ける)
-    versions: string
+    versions: string | null
     // 書き出し・読み込み
-    export: string
-    import: string
+    export: string | null
+    import: string | null
   }
 }
 

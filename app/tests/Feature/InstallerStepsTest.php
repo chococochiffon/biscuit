@@ -185,7 +185,7 @@ class InstallerStepsTest extends TestCase
         SiteSetting::query()->create(['site_title' => 'ビスケット商店', 'description' => '<b>手作り</b>のお菓子', 'site_icon' => SiteSetting::DEFAULT_SITE_ICON_PATH, 'site_image' => SiteSetting::DEFAULT_SITE_IMAGE_PATH]);
         $this->completeUntil(InstallerStep::Design);
 
-        $this->post(route('installer.design.store'))->assertRedirect(route('installer.finalize'));
+        $this->post(route('installer.design.store'), ['design' => 'default'])->assertRedirect(route('installer.finalize'));
 
         $builder = PageBuilder::top();
         $this->assertTrue($builder->isPublished());

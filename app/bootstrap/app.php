@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\Installer\EnsureInstallerBuilderAccess;
 use App\Http\Middleware\Installer\EnsureInstallerStep;
 use App\Http\Middleware\Installer\EnsureNotInstalled;
 use App\Http\Middleware\Installer\RedirectIfNotInstalled;
@@ -44,10 +45,10 @@ return Application::configure(basePath: dirname(__DIR__))
             SubstituteBindings::class,
             EnsureNotInstalled::class,
         ]);
-        $middleware->alias(['installer.step' => EnsureInstallerStep::class]);
+        $middleware->alias(['installer.step' => EnsureInstallerStep::class, 'installer.builder' => EnsureInstallerBuilderAccess::class]);
 
         // ページビルダーの内容(JSON。下書き・テンプレート)は送られたとおりに検証・保存する(空文字を null にしたり、前後の空白を削ったりしない)
-        $isPageBuilderJson = fn (Request $request) => $request->is('admin/json/builder/*', 'admin/json/builder-templates', 'admin/json/builder-templates/*');
+        $isPageBuilderJson = fn (Request $request) => $request->is('admin/json/builder/*', 'admin/json/builder-templates', 'admin/json/builder-templates/*', 'install/design/builder/json', 'install/design/builder/json/*');
         $middleware->convertEmptyStringsToNull(except: [$isPageBuilderJson]);
         $middleware->trimStrings(except: [$isPageBuilderJson]);
 

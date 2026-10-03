@@ -5,6 +5,7 @@ import { useBuilderStore } from '../store'
 import type { BuilderTemplate } from '../types'
 
 // テンプレートの画面: テンプレートを選んで今の内容を置き換える(元に戻せる)・今の内容をテンプレートとして保存する・テンプレートを削除する
+// (保存・削除は store.features.saveTemplates のときだけ。インストーラーのエディタは使うだけ)
 const store = useBuilderStore()
 
 const templates = ref<BuilderTemplate[] | null>(null)
@@ -75,13 +76,14 @@ onMounted(load)
             </div>
             <div class="d-flex gap-2 align-items-start flex-shrink-0">
               <button type="button" class="btn btn-sm btn-primary" @click="use(template)">{{ t('使う') }}</button>
-              <button type="button" class="btn btn-sm btn-outline-danger" :title="t('削除')" @click="remove(template)">
+              <button v-if="store.features.saveTemplates" type="button" class="btn btn-sm btn-outline-danger" :title="t('削除')" @click="remove(template)">
                 <i class="bi bi-trash" />
               </button>
             </div>
           </div>
         </div>
 
+        <template v-if="store.features.saveTemplates">
         <hr>
 
         <h3 class="builder-panel-heading">{{ t('今のページをテンプレートとして保存') }}</h3>
@@ -103,6 +105,7 @@ onMounted(load)
             {{ t('テンプレートとして保存') }}
           </button>
         </form>
+        </template>
       </div>
     </div>
   </div>
