@@ -7,6 +7,7 @@ use App\Models\Article;
 use App\Models\GalleryImage;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderComponent;
+use App\View\Composers\AnnouncementNoticeComposer;
 use App\View\Composers\CustomPageTypeComposer;
 use App\View\Composers\PendingArticleComposer;
 use App\View\Composers\PendingGalleryImageComposer;
@@ -108,6 +109,7 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.admin', SiteSettingComposer::class);
         View::composer('layouts.admin', CustomPageTypeComposer::class);
         View::composer('layouts.admin', UpdateNoticeComposer::class);
+        View::composer('layouts.admin', AnnouncementNoticeComposer::class);
         View::composer(['layouts.admin', 'admin.articles.index'], PendingArticleComposer::class);
         View::composer(['layouts.admin', 'admin.gallery_images.index'], PendingGalleryImageComposer::class);
     }

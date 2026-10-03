@@ -12,7 +12,10 @@
 
         <div class="row g-3 mb-4">
             <div class="col-lg-8">@include('admin.dashboard._recent_contents')</div>
-            <div class="col-lg-4">@include('admin.dashboard._quick_actions')</div>
+            <div class="col-lg-4">
+                @include('admin.dashboard._quick_actions')
+                @include('admin.dashboard._announcements')
+            </div>
         </div>
 
         <div class="row g-3 mb-4">

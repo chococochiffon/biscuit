@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AnnouncementService;
 use App\Services\DashboardService;
 use App\Services\MediaStatsService;
 use App\Services\PageViewStatsService;
@@ -24,6 +25,7 @@ class DashboardController extends Controller
         MediaStatsService $media,
         SystemStatusService $system,
         UpdateCheckService $updates,
+        AnnouncementService $announcements,
     ): View {
         $administrator = $request->user('admin');
         $systemStatus = null;
@@ -45,6 +47,8 @@ class DashboardController extends Controller
             'media' => $media->stats(),
             'systemStatus' => $systemStatus,
             'summary' => $stats->summary(),
+            // Biscuit からのお知らせ(すべての管理者。キャッシュが切れていれば読み直す。管理画面の上部のお知らせもこのキャッシュを使う)
+            'announcements' => array_slice($announcements->current(), 0, (int) config('biscuit.announcements.dashboard_limit')),
         ]);
     }
 }

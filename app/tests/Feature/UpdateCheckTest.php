@@ -122,7 +122,7 @@ class UpdateCheckTest extends TestCase
             ->assertSee('data-update-available', false)
             ->assertSee('最新 1.2.0');
         // ダッシュボードが作ったキャッシュで、ほかの画面の上部にも出す
-        $this->get(route('admin.builder-components.index'))->assertOk()->assertSee('data-update-notice', false)->assertSee('data-version="1.2.0"', false);
+        $this->get(route('admin.builder-components.index'))->assertOk()->assertSee('data-update-notice', false)->assertSee('data-dismissible="update:1.2.0"', false);
 
         $this->actingAsAdmin(['role' => AdministratorRole::Admin]);
         $this->get(route('admin.dashboard'))->assertOk()->assertDontSee('data-update-available', false);

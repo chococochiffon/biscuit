@@ -10,3 +10,6 @@ Artisan::command('inspire', function () {
 
 // 新しい Biscuit のバージョンを毎日確かめ、あればスーパー管理者にメールで知らせる(本番では php artisan schedule:run を cron で動かす)
 Schedule::command('biscuit:check-update')->dailyAt('09:00');
+
+// Biscuit からのお知らせを毎日読み、重要・セキュリティのお知らせをスーパー管理者にメールで知らせる
+Schedule::command('biscuit:check-announcements')->dailyAt('09:05');

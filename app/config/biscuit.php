@@ -34,6 +34,26 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Biscuit からのお知らせ
+    |--------------------------------------------------------------------------
+    |
+    | Biscuit の開発元が配信するお知らせ(リポジトリの main の announcements.json)を 1 日 1 回読み、管理画面のダッシュボードに出す。
+    | 重要・セキュリティのお知らせは管理画面の全画面の上部にも出し、biscuit:check-announcements(毎日のスケジュール)が
+    | スーパー管理者に 1 回だけメールで知らせる。BISCUIT_ANNOUNCEMENTS=false で読まない(外へ問い合わせない)。
+    |
+    */
+
+    'announcements' => [
+        'enabled' => (bool) env('BISCUIT_ANNOUNCEMENTS', true),
+        'url' => env('BISCUIT_ANNOUNCEMENTS_URL', 'https://raw.githubusercontent.com/chococochiffon/biscuit/main/announcements.json'),
+        'cache_hours' => 24,
+        'failure_cache_minutes' => 60,
+        // ダッシュボードに出す件数(新しい順)
+        'dashboard_limit' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | ダッシュボードのシステムの警告
     |--------------------------------------------------------------------------
     |
