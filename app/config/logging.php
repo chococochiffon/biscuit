@@ -58,6 +58,17 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        // インストーラー専用のログ(App\Installer\InstallerLog。パスワードなどは伏せて書く)。ログを書かない設定(テスト)では書かない
+        'installer' => env('LOG_CHANNEL') === 'null' ? [
+            'driver' => 'monolog',
+            'handler' => NullHandler::class,
+        ] : [
+            'driver' => 'single',
+            'path' => storage_path('logs/installer.log'),
+            'level' => 'info',
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

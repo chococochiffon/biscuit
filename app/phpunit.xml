@@ -31,6 +31,7 @@
         <env name="LOG_CHANNEL" value="null"/>
         <env name="BISCUIT_UPDATE_CHECK" value="false"/>
         <env name="BISCUIT_ANNOUNCEMENTS" value="false"/>
+        <env name="BISCUIT_INSTALLED" value="true"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
