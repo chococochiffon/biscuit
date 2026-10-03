@@ -46,10 +46,17 @@ final class BuilderPresenter
     {
         $content = (new SchemaMigrator)->migrate($content);
 
-        return [
+        $presented = [
             'version' => $content['version'],
             'children' => self::presentChildren($content['children'] ?? [], $forPublic),
         ];
+
+        // ページ・コンポーネントの Custom CSS(公開側は .page-builder の中にネストして効かせる)
+        if (CustomCss::normalize($content['css'] ?? null) !== null) {
+            $presented['css'] = $content['css'];
+        }
+
+        return $presented;
     }
 
     /**
@@ -106,6 +113,11 @@ final class BuilderPresenter
             $presented['visibility'] = ['hideOn' => $visibility['hideOn']];
         } elseif (! $forPublic && $visibility !== []) {
             $presented['visibility'] = self::object($visibility);
+        }
+
+        // ブロックの追加のクラス名(Custom CSS から狙う)
+        if (($node['classes'] ?? []) !== []) {
+            $presented['classes'] = $node['classes'];
         }
 
         // 独自コンポーネントの差し替えられる項目(エディタだけ。公開側は差し替えた値を当てはめて返すため要らない)

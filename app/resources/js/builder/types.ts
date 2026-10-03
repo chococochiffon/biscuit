@@ -18,6 +18,8 @@ export interface BuilderNode {
   visibility?: BuilderVisibility
   // 独自コンポーネントの中身だけが持つ、差し替えられる項目(項目名 → 表示名)
   exposed?: Record<string, string>
+  // 追加のクラス名(Custom CSS から狙う。スーパー管理者だけが変えられる)
+  classes?: string[]
   // 中にブロックを置ける種類だけが持つ
   children?: BuilderNode[]
 }
@@ -34,6 +36,8 @@ export interface BuilderVisibility {
 export interface BuilderContent {
   version: number
   children: BuilderNode[]
+  // ページ・コンポーネントの Custom CSS(スーパー管理者だけが変えられる)
+  css?: string
 }
 
 export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image' | 'bool' | 'video' | 'overrides'
@@ -109,6 +113,8 @@ export interface ShowPayload extends BuilderStatePayload {
   timezone: string
   // テーマ(色のスタイルの theme:名前 と、ボタン・フォントの見本に使う)
   theme: BuilderTheme
+  // Custom CSS・ブロックの追加のクラス名を書けるか(スーパー管理者だけ)
+  can_edit_css: boolean
 }
 
 // グローバルコンポーネント(PageBuilderComponentJsonController::index())。content は公開中の内容(未公開なら null)
@@ -230,4 +236,6 @@ export interface BuilderTheme {
   // 名前(primary・secondary・accent・text・light) → #rrggbb
   colors: Record<string, string>
   fonts: { heading: BuilderThemeFont | null, body: BuilderThemeFont | null }
+  // サイト共通の Custom CSS
+  css: string | null
 }

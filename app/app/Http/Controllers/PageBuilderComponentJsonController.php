@@ -13,6 +13,7 @@ use App\Support\Builder\BuilderPresenter;
 use App\Support\Builder\BuilderValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -50,6 +51,8 @@ class PageBuilderComponentJsonController extends Controller
             'image_base_url' => Storage::disk('public')->url(''),
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             'timezone' => config('app.timezone'),
+            // Custom CSS・ブロックの追加のクラス名を書けるか(スーパー管理者だけ)
+            'can_edit_css' => Gate::allows('edit-builder-css'),
             // テーマ(色のスタイルの theme:名前 と、ボタン・フォントの見本に使う)
             'theme' => PageBuilderTheme::current()->toPresentation(),
             'breadcrumbs' => [],

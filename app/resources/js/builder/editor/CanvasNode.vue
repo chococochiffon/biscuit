@@ -102,6 +102,6 @@ async function copy(): Promise<void> {
       <i v-if="node.visibility.hideOn?.length" class="bi bi-eye-slash" :title="hiddenHere ? t('この端末では表示しません。') : t('表示しない端末を指定しています。')" />
       <i v-if="period !== 'always'" class="bi bi-clock" :class="`is-${period}`" :title="PERIOD_TITLES[period]" />
     </div>
-    <BlockPreview :node="node" />
+    <BlockPreview :node="node" :class="node.classes" />
   </div>
 </template>

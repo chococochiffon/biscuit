@@ -20,7 +20,7 @@ final class BuilderValidator
      *
      * @var list<string>
      */
-    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'exposed', 'children'];
+    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'exposed', 'classes', 'children'];
 
     /**
      * 独自コンポーネントの差し替えた値(overrides)のキーの形(ノードの ID.項目名)と、1 つのブロックに入れられる数。
@@ -82,7 +82,7 @@ final class BuilderValidator
         $this->nodeCount = 0;
         $this->context = $context;
 
-        if (! self::isObject($content) || array_diff(array_keys($content), ['version', 'children']) !== []) {
+        if (! self::isObject($content) || array_diff(array_keys($content), ['version', 'children', 'css']) !== []) {
             return [$this->error(null, __('ビルダーの内容の形式が正しくありません。'))];
         }
 
@@ -91,6 +91,10 @@ final class BuilderValidator
         }
 
         $this->validateChildren($content['children'] ?? null, null, null);
+
+        foreach (CustomCss::errors($content['css'] ?? null) as $message) {
+            $this->errors[] = $this->error(null, $message);
+        }
 
         $max = (int) config('limits.builder_nodes');
 
@@ -106,14 +110,22 @@ final class BuilderValidator
      * errors() が空の内容だけを渡すこと。
      *
      * @param  array<string, mixed>  $content
-     * @return array{version: int, children: list<array<string, mixed>>}
+     * @return array{version: int, children: list<array<string, mixed>>, css?: string}
      */
     public function normalize(array $content): array
     {
-        return [
+        $normalized = [
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => array_map($this->normalizeNode(...), $content['children']),
         ];
+
+        $css = CustomCss::normalize($content['css'] ?? null);
+
+        if ($css !== null) {
+            $normalized['css'] = $css;
+        }
+
+        return $normalized;
     }
 
     /**
@@ -152,6 +164,10 @@ final class BuilderValidator
 
         if (($node['exposed'] ?? []) !== []) {
             $normalized['exposed'] = array_map(trim(...), $node['exposed']);
+        }
+
+        if (($node['classes'] ?? []) !== []) {
+            $normalized['classes'] = $node['classes'];
         }
 
         if ($definition['children'] !== []) {
@@ -235,6 +251,10 @@ final class BuilderValidator
 
         foreach (Visibility::errors($node['visibility'] ?? [], $label) as $message) {
             $this->errors[] = $this->error($id, $message);
+        }
+
+        if (array_key_exists('classes', $node) && ($message = CustomCss::classesError($node['classes'])) !== null) {
+            $this->errors[] = $this->error($id, __('「:block」の:message', ['block' => $label, 'message' => $message]));
         }
 
         if (array_key_exists('exposed', $node)) {

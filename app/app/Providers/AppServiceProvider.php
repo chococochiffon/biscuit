@@ -101,6 +101,9 @@ class AppServiceProvider extends ServiceProvider
         // ダッシュボードのシステム情報(バージョン・ディスク・エラーのログ)は、サーバーの状態を含むためスーパー管理者だけが見られる
         Gate::define('view-system-status', fn (Administrator $administrator) => $administrator->isSuperAdmin());
 
+        // ページビルダーの Custom CSS とブロックの追加のクラス名は、公開側の見た目を大きく変えられるためスーパー管理者だけが書ける
+        Gate::define('edit-builder-css', fn (Administrator $administrator) => $administrator->isSuperAdmin());
+
         View::composer('layouts.admin', SiteSettingComposer::class);
         View::composer('layouts.admin', CustomPageTypeComposer::class);
         View::composer(['layouts.admin', 'admin.articles.index'], PendingArticleComposer::class);

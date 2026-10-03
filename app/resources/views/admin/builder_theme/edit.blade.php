@@ -47,6 +47,29 @@
             @endforeach
             <p class="form-text mb-4">{{ __('フォントは公開側で Google Fonts から読み込みます。') }}</p>
 
+            <h2 class="h6 mb-3">{{ __('サイト共通の CSS') }}</h2>
+            <div class="mb-4">
+                <textarea
+                    id="custom_css"
+                    name="custom_css"
+                    rows="10"
+                    class="form-control font-monospace small @error('custom_css') is-invalid @enderror"
+                    spellcheck="false"
+                    @cannot('edit-builder-css') readonly @endcannot
+                    aria-describedby="custom_css_help"
+                >{{ old('custom_css', $theme->custom_css) }}</textarea>
+                @error('custom_css')
+                    <div class="invalid-feedback">{{ $message }}</div>
+                @enderror
+                <div id="custom_css_help" class="form-text">
+                    @can('edit-builder-css')
+                        {{ __('ビルダーで作ったすべてのページに効きます(ビルダーの部分の外へは効きません)。ページごとの CSS より先に読み込みます。@import・サイト外の url()・< と \ は使えず、@keyframes・@font-face と body・html への指定は効きません。') }}
+                    @else
+                        {{ __('CSS を変えられるのはスーパー管理者だけです。') }}
+                    @endcan
+                </div>
+            </div>
+
             <button type="submit" class="btn btn-primary">{{ __('保存する') }}</button>
         </form>
     </div>

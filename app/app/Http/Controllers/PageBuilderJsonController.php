@@ -23,6 +23,7 @@ use App\Support\Builder\BuilderValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
@@ -52,6 +53,8 @@ class PageBuilderJsonController extends Controller
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             // 表示条件の期間の判定に使うサイトのタイムゾーン(期間の日時はこのタイムゾーンで持つ)
             'timezone' => config('app.timezone'),
+            // Custom CSS・ブロックの追加のクラス名を書けるか(スーパー管理者だけ)
+            'can_edit_css' => Gate::allows('edit-builder-css'),
             // テーマ(色のスタイルの theme:名前 と、ボタン・フォントの見本に使う)
             'theme' => PageBuilderTheme::current()->toPresentation(),
             // パンくずのブロックの Canvas の見本(公開側と同じ組み立て。トップは空)

@@ -72,7 +72,7 @@ describe('テーマの色', () => {
   })
 
   it('テーマを CSS の変数にする(フォントは選んだものだけ)', () => {
-    expect(themeVariables({ colors: { primary: '#e99540' }, fonts: { heading: { key: 'noto-serif-jp', family: "'Noto Serif JP', serif", href: '' }, body: null } })).toEqual({
+    expect(themeVariables({ colors: { primary: '#e99540' }, fonts: { heading: { key: 'noto-serif-jp', family: "'Noto Serif JP', serif", href: '' }, body: null }, css: null })).toEqual({
       '--builder-theme-primary': '#e99540',
       '--builder-theme-heading-font': "'Noto Serif JP', serif",
     })
