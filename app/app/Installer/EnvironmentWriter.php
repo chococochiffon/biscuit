@@ -20,7 +20,7 @@ class EnvironmentWriter
         // データベース(データベースの段)
         'DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_ROOT_PASSWORD',
         // 本番向けの初期値(biscuit:install --prepare)と URL・ポート(本番用の Compose も読む)
-        'APP_ENV', 'APP_DEBUG', 'APP_URL', 'FRONT_URL', 'LOG_LEVEL', 'PAGE_VIEW_FORWARD_KEY', 'BISCUIT_ADMIN_PORT', 'BISCUIT_FRONT_PORT',
+        'APP_ENV', 'APP_DEBUG', 'APP_URL', 'FRONT_URL', 'LOG_LEVEL', 'PAGE_VIEW_FORWARD_KEY', 'BISCUIT_ADMIN_PORT', 'BISCUIT_FRONT_PORT', 'BISCUIT_BIND_ADDRESS', 'TRUSTED_PROXIES',
         // サイトの段(言語・タイムゾーン)
         'APP_LOCALE', 'APP_TIMEZONE',
         // メールの段(SMTP)

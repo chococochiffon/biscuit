@@ -8,6 +8,7 @@ use App\Installer\HealthChecker;
 use App\Installer\InstallationState;
 use App\Installer\InstallerManager;
 use App\Installer\InstallerStep;
+use App\Installer\SiteInstaller;
 use App\Installer\TemplateInstaller;
 use App\Models\Administrator;
 use App\Models\GalleryImage;
@@ -86,6 +87,19 @@ class InstallerStepsTest extends TestCase
         $this->assertStringContainsString("APP_URL='https://admin.example.com'", $this->env());
         $this->assertStringContainsString("FRONT_URL='https://example.com'", $this->env());
         $this->assertStringContainsString("APP_TIMEZONE='Asia/Tokyo'", $this->env());
+        // https で公開するときは、外側のリバースプロキシを信じる
+        $this->assertStringContainsString("TRUSTED_PROXIES='".SiteInstaller::PRIVATE_NETWORKS."'", $this->env());
+    }
+
+    public function test_site_step_does_not_trust_proxies_for_http_urls(): void
+    {
+        $this->completeUntil(InstallerStep::Site);
+
+        $this->post(route('installer.site.store'), [
+            'site_title' => 'x', 'locale' => 'ja', 'timezone' => 'Asia/Tokyo', 'front_url' => 'http://localhost', 'admin_url' => 'http://localhost:8080',
+        ])->assertRedirect(route('installer.mail'));
+
+        $this->assertStringContainsString("TRUSTED_PROXIES=''", $this->env());
     }
 
     public function test_site_step_rejects_the_same_url_for_both_sites(): void

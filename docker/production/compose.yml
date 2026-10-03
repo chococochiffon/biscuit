@@ -20,7 +20,7 @@ services:
     depends_on:
       - app
     ports:
-      - "${BISCUIT_ADMIN_PORT:-8080}:80"
+      - "${BISCUIT_BIND_ADDRESS:-0.0.0.0}:${BISCUIT_ADMIN_PORT:-8080}:80"
     volumes:
       - ../../app:/var/www/app:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
@@ -59,7 +59,7 @@ services:
     depends_on:
       - web
     ports:
-      - "${BISCUIT_FRONT_PORT:-80}:3000"
+      - "${BISCUIT_BIND_ADDRESS:-0.0.0.0}:${BISCUIT_FRONT_PORT:-80}:3000"
     environment:
       # SSR 時(chococo のサーバー → biscuit)は Compose の中の web へつなぐ
       NUXT_API_BASE: http://web/api

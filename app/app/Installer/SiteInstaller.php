@@ -10,6 +10,11 @@ use App\Models\SiteSetting;
  */
 class SiteInstaller
 {
+    /**
+     * HTTPS で公開するときに信じるリバースプロキシ(.env の TRUSTED_PROXIES)。
+     */
+    public const PRIVATE_NETWORKS = '127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16';
+
     public function __construct(private EnvironmentWriter $environment, private InstallationState $state) {}
 
     /**
@@ -26,7 +31,7 @@ class SiteInstaller
         ]);
         $setting->fill([
             'site_title' => $values['site_title'],
-            'description' => $values['description'],
+            'description' => $values['description'] ?? null,
             'front_url' => $frontUrl,
             'api_url' => $adminUrl.'/api',
         ])->save();
@@ -36,6 +41,8 @@ class SiteInstaller
             'FRONT_URL' => $frontUrl,
             'APP_LOCALE' => $values['locale'],
             'APP_TIMEZONE' => $values['timezone'],
+            // HTTPS で公開するときは、外側のリバースプロキシ(同じサーバーの Docker のネットワーク・プライベートなネットワーク)を信じる
+            'TRUSTED_PROXIES' => str_starts_with($adminUrl, 'https://') || str_starts_with($frontUrl, 'https://') ? self::PRIVATE_NETWORKS : '',
         ]);
 
         $this->state->markCompleted(InstallerStep::Site);

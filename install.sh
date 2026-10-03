@@ -5,6 +5,7 @@
 #   ./install.sh                     インストーラーを起動する(途中からの再開も同じ)
 #   ./install.sh --reset-database    インストールの途中で作ったデータベースを消して作り直せるようにする
 #   BISCUIT_ADMIN_PORT=8088 BISCUIT_FRONT_PORT=8090 ./install.sh   ポートを変える(既定は管理画面 8080・公開側 80)
+#   BISCUIT_BIND_ADDRESS=127.0.0.1 ./install.sh   このサーバーの中からだけつながるようにする(同じサーバーのリバースプロキシで HTTPS にするとき)
 #
 # 役割: Docker の準備・起動だけを受け持つ。設定の入力はブラウザのインストーラー(/install)で行い、DB・マイグレーションなどは
 # Laravel(php artisan biscuit:install)が行う。ブラウザから Docker は操作させず、Laravel が置いた決まった名前の合図
@@ -28,8 +29,11 @@ HOST_LOG="$ROOT/install.log"
 # Docker Compose のプロジェクト名(開発用の docker-compose.yml のプロジェクト biscuit と分ける)
 PROJECT="${BISCUIT_PROJECT:-biscuit-production}"
 
+# Biscuit の版(app/config/biscuit.php の version)。公開側(chococo)は、同じ番号のタグ(v1.0.0 など)を取得する
+BISCUIT_VERSION="$(sed -n "s/^[[:space:]]*'version' => '\([0-9][0-9.]*\)',.*/\1/p" "$ROOT/app/config/biscuit.php" | head -n 1)"
+
 CHOCOCO_REPOSITORY="${CHOCOCO_REPOSITORY:-https://github.com/chococochiffon/chococo.git}"
-CHOCOCO_REF="${CHOCOCO_REF:-master}"
+CHOCOCO_REF="${CHOCOCO_REF:-v${BISCUIT_VERSION}}"
 CHOCOCO_DIR="$ROOT/frontend/chococo"
 
 # データベースの起動・公開側の応答を待つ時間(秒)
@@ -125,10 +129,11 @@ prepare() {
     'mkdir -p storage/app/private storage/app/public storage/logs && chown -R www-data:www-data storage bootstrap/cache && chmod -R ug+rwX storage bootstrap/cache && chown www-data .env && chmod 660 .env && ln -sfn ../storage/app/public public/storage'
 
   info ".env に本番向けの初期値を入れます"
-  # ポートは、ホストで BISCUIT_ADMIN_PORT・BISCUIT_FRONT_PORT を指定したときだけその値にする(80 番が使われているときなど)
+  # ポート・待ち受けるアドレスは、ホストで BISCUIT_ADMIN_PORT・BISCUIT_FRONT_PORT・BISCUIT_BIND_ADDRESS を指定したときだけその値にする(80 番が使われているときなど)
   local port_options=()
   [ -n "${BISCUIT_ADMIN_PORT:-}" ] && port_options+=(-e "BISCUIT_ADMIN_PORT=$BISCUIT_ADMIN_PORT")
   [ -n "${BISCUIT_FRONT_PORT:-}" ] && port_options+=(-e "BISCUIT_FRONT_PORT=$BISCUIT_FRONT_PORT")
+  [ -n "${BISCUIT_BIND_ADDRESS:-}" ] && port_options+=(-e "BISCUIT_BIND_ADDRESS=$BISCUIT_BIND_ADDRESS")
   compose run --rm --no-deps -T -u www-data ${port_options[@]+"${port_options[@]}"} app php artisan biscuit:install --prepare
 
   info "インストーラーを起動します"

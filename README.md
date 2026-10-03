@@ -6,22 +6,61 @@
 <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=plastic" alt="">
 </p>
 
+Biscuit は、記事・固定ページ・ページビルダーを持つ CMS です。管理画面と API を Laravel(このリポジトリ)が、公開側のサイトを Nuxt の [chococo](https://github.com/chococochiffon/chococo) が受け持ちます。変更履歴は [CHANGELOG.md](CHANGELOG.md) にあります。
+
 ## インストール(インストーラー)
 
-サーバーや手元の PC に Biscuit を立ち上げるときは、インストーラーを使います。Docker(Docker Compose を含む)・git・curl が使える Linux・macOS・Windows(WSL2)で動きます。ホストに PHP・Node.js は要りません。
+### 必要な環境
+
+- Linux・macOS・Windows(WSL2)
+- Docker(Docker Compose v2 を含む)・git・curl。ホストに PHP・Node.js は要りません
+- メモリ 2GB 以上、ディスクの空き 5GB 以上(イメージのビルドに使います)
+- 管理画面のログインは確認コードをメールで送るため、メールを送れる SMTP サーバー
+
+### 手順
+
+リリースの版(タグ)を指定して取得し、`install.sh` を動かします。公開側(chococo)は、`install.sh` が同じ番号のタグを取得します。
 
 ```
-❯ git clone https://github.com/chococochiffon/biscuit.git
+❯ git clone --branch v1.0.0 https://github.com/chococochiffon/biscuit.git
 ❯ cd biscuit
 ❯ ./install.sh
 ```
 
-表示された URL(既定は http://localhost:8080/install)をブラウザで開き、画面の案内に沿って進めます。インストールが終わるまで `install.sh` は動かしたままにしてください(止めても、もう一度 `./install.sh` で再開できます)。
+表示された URL(既定は http://localhost:8080/install)をブラウザで開き、画面の案内に沿って進めます。インストールが終わるまで `install.sh` は動かしたままにしてください(止めても、もう一度 `./install.sh` で再開できます)。インストールの途中は、公開側のサイトは「準備中」と表示されます。
 
 - 既定のポートは、管理画面と API が 8080 番、公開側(chococo)が 80 番です。変えるときは `BISCUIT_ADMIN_PORT=8088 BISCUIT_FRONT_PORT=8090 ./install.sh` のように指定します
-- インストーラーは本番向けの構成(`docker/production/compose.yml`。Docker Compose のプロジェクト名は `biscuit-production`)で立ち上げます。HTTPS は、外側のリバースプロキシなどで用意してください
+- インストーラーは本番向けの構成(`docker/production/compose.yml`。Docker Compose のプロジェクト名は `biscuit-production`)で立ち上げます
 - インストールの途中で作ったデータベースを作り直すときは `./install.sh --reset-database` を使います
 - `install.sh` の記録は `install.log`、インストーラーの記録は `app/storage/logs/installer.log` に残ります
+- インストールの状態と確認の結果は `docker compose --env-file app/.env -f docker/production/compose.yml -p biscuit-production exec app php artisan biscuit:install --status` で見られます
+
+### HTTPS で公開する
+
+HTTPS は、外側のリバースプロキシ(Caddy・nginx など)で割り当てます。インストーラーのサイトの段で `https://` の URL を入れると、Biscuit はリバースプロキシが付けるヘッダー(`X-Forwarded-*`)を信じるように設定します(`app/.env` の `TRUSTED_PROXIES`)。
+
+同じサーバーで Caddy を使う例です。Caddy が 80・443 番を使うため Biscuit のポートを変え、外から直接つながらないよう、このサーバーの中(`127.0.0.1`)だけで待ち受けます。
+
+```
+❯ BISCUIT_BIND_ADDRESS=127.0.0.1 BISCUIT_ADMIN_PORT=8080 BISCUIT_FRONT_PORT=3000 ./install.sh
+```
+
+```
+# /etc/caddy/Caddyfile
+example.com {
+    reverse_proxy 127.0.0.1:3000
+}
+
+admin.example.com {
+    reverse_proxy 127.0.0.1:8080
+}
+```
+
+サイトの段では、公開側の URL に `https://example.com`、管理画面の URL に `https://admin.example.com` を入れます。
+
+### 更新
+
+新しい版が出ると、管理画面のダッシュボードとスーパー管理者へのメールで知らせます。更新のコマンド(`biscuit:update`)は次の版で用意する予定です。
 
 以下は、開発用の環境(`docker-compose.yml`)の作り方です。
 
@@ -97,3 +136,7 @@
 ```
 
 初期データの管理者は `admin@example.com` / `password` でログインできます。
+
+## ライセンス
+
+[MIT License](LICENSE)

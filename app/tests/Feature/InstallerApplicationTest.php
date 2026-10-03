@@ -136,5 +136,25 @@ class InstallerApplicationTest extends TestCase
         $this->assertStringContainsString("APP_URL='http://localhost:8080'", $env);
         $this->assertStringContainsString("FRONT_URL='http://localhost'", $env);
         $this->assertStringContainsString("BISCUIT_ADMIN_PORT='8080'", $env);
+        $this->assertStringContainsString("BISCUIT_BIND_ADDRESS='0.0.0.0'", $env);
+    }
+
+    public function test_prepare_accepts_only_an_ip_address_to_bind(): void
+    {
+        $path = tempnam(sys_get_temp_dir(), 'env');
+        $this->app->instance(EnvironmentWriter::class, new EnvironmentWriter($path));
+
+        try {
+            putenv('BISCUIT_BIND_ADDRESS=127.0.0.1');
+            $this->artisan('biscuit:install --prepare')->assertSuccessful();
+            $this->assertStringContainsString("BISCUIT_BIND_ADDRESS='127.0.0.1'", (string) file_get_contents($path));
+
+            putenv('BISCUIT_BIND_ADDRESS=example.com; rm -rf /');
+            $this->artisan('biscuit:install --prepare')->assertSuccessful();
+            $this->assertStringContainsString("BISCUIT_BIND_ADDRESS='0.0.0.0'", (string) file_get_contents($path));
+        } finally {
+            putenv('BISCUIT_BIND_ADDRESS');
+            @unlink($path);
+        }
     }
 }
