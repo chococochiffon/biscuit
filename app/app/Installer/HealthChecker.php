@@ -90,7 +90,12 @@ class HealthChecker
 
     private function frontReachable(): bool
     {
-        return (bool) $this->safely(fn () => Http::timeout(5)->get((string) config('installer.front_internal_url'))->status() < 500);
+        // インストール中の公開側は「準備中」を 503 で返すため、503 も届いたとみなす(届かなければ接続の例外で失敗)
+        return (bool) $this->safely(function () {
+            $status = Http::timeout(5)->get((string) config('installer.front_internal_url'))->status();
+
+            return $status < 500 || $status === 503;
+        });
     }
 
     private function schedulerRunning(): bool

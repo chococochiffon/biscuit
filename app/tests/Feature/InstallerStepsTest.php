@@ -345,6 +345,11 @@ class InstallerStepsTest extends TestCase
         config(['installer.front_internal_url' => 'http://broken-front:3000']);
         Http::fake(['broken-front:3000*' => Http::response('error', 502)]);
         $this->assertFalse(collect(app(HealthChecker::class)->check())->firstWhere('key', 'front')['ok']);
+
+        // インストール中の公開側の「準備中」(503)は届いたとみなす
+        config(['installer.front_internal_url' => 'http://preparing-front:3000']);
+        Http::fake(['preparing-front:3000*' => Http::response('preparing', 503)]);
+        $this->assertTrue(collect(app(HealthChecker::class)->check())->firstWhere('key', 'front')['ok']);
     }
 
     public function test_status_command_shows_the_health_checks(): void
