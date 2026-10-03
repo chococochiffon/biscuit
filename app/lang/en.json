@@ -829,7 +829,7 @@
     "表示期間の前です(公開側にはまだ出ません)。": "Before the display period (not shown on the site yet).",
     "表示期間の中です。": "Within the display period.",
     "表示期間を過ぎています(公開側には出ません)。": "The display period has ended (not shown on the site).",
-    "空欄なら期限を設けません。期間の外は公開側・プレビューに出しませんが、この画面には出します。": "Leave blank for no limit. Outside the period the block is not shown on the site or in the preview, but it stays visible here.",
+    "空欄なら期限を設けません。期間の外は公開側に出しません(プレビューとこの画面には出します)。": "Leave blank for no limit. Outside the period the block is not shown on the site (it is shown in the preview and here).",
     "表示する期間を指定しています。": "A display period is set.",
     "この端末では表示しません。": "Hidden on this device.",
     "表示しない端末を指定しています。": "Hidden on some devices.",

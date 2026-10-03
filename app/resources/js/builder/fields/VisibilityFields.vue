@@ -95,7 +95,7 @@ function updatePeriod(key: 'startAt' | 'endAt', event: Event): void {
     <div v-if="periodError" class="small text-danger mb-2">{{ periodError }}</div>
     <p v-if="period" class="small mb-1" :class="period.color">{{ period.text }}</p>
     <p class="small text-secondary mb-0">
-      {{ t('空欄なら期限を設けません。期間の外は公開側・プレビューに出しませんが、この画面には出します。') }}
+      {{ t('空欄なら期限を設けません。期間の外は公開側に出しません(プレビューとこの画面には出します)。') }}
     </p>
   </section>
 </template>
