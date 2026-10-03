@@ -16,17 +16,24 @@ use Illuminate\View\View;
  */
 class ApplicationController extends Controller
 {
-    public function show(InstallerManager $installer, HostBridge $host): View|RedirectResponse
+    /**
+     * install.sh が進める処理(host-status.json の stage)と、画面に出す名前。並び順が進む順。
+     * 失敗したときの stage(マイグレーション・初期データ・storage)は、biscuit:install --step=application の中の処理。
+     */
+    public const STAGES = ['build', 'start', 'database', 'application', 'front'];
+
+    public const APPLICATION_STAGES = ['migration', 'seed', 'storage'];
+
+    public function show(InstallerManager $installer, HostBridge $host): View
     {
-        if ($installer->state()->isCompleted(InstallerStep::Application)) {
-            return redirect()->route($installer->currentStep()->routeName());
-        }
+        $status = $host->status();
 
         return view('installer.application', [
             'installer' => $installer,
             'step' => InstallerStep::Application,
             'pending' => $host->isPending(),
-            'status' => $host->status(),
+            'status' => $status,
+            'stages' => $this->stages($status),
         ]);
     }
 
@@ -40,5 +47,37 @@ class ApplicationController extends Controller
         }
 
         return redirect()->route('installer.application');
+    }
+
+    /**
+     * 処理の一覧と、それぞれの状態(done・running・failed・waiting)。
+     *
+     * @param  array{status?: string, stage?: string|null}|null  $status
+     * @return list<array{key: string, label: string, state: string}>
+     */
+    private function stages(?array $status): array
+    {
+        $stage = $status['stage'] ?? null;
+        $stage = in_array($stage, self::APPLICATION_STAGES, true) ? 'application' : $stage;
+        $current = ($status['status'] ?? null) === 'succeeded' ? count(self::STAGES) : array_search($stage, self::STAGES, true);
+        $labels = [
+            'build' => __('公開側のイメージを作る'),
+            'start' => __('サービスを起動する'),
+            'database' => __('データベースの起動を待つ'),
+            'application' => __('テーブルと初期データを用意する'),
+            'front' => __('公開側のサイトを起動する'),
+        ];
+
+        return array_map(fn (string $key, int $index) => [
+            'key' => $key,
+            'label' => $labels[$key],
+            'state' => match (true) {
+                $current === false => 'waiting',
+                $index < $current => 'done',
+                $index > $current => 'waiting',
+                ($status['status'] ?? null) === 'failed' => 'failed',
+                default => 'running',
+            },
+        ], self::STAGES, array_keys(self::STAGES));
     }
 }

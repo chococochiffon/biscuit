@@ -16,36 +16,39 @@
         <div class="row g-3 mb-3">
             <div class="col-sm-8">
                 <label for="host" class="form-label">{{ __('SMTP のホスト') }}</label>
-                <input id="host" type="text" name="host" value="{{ old('host') }}" required placeholder="smtp.example.com" class="form-control @error('host') is-invalid @enderror">
+                <input id="host" type="text" name="host" value="{{ $values['host'] }}" required placeholder="smtp.example.com" class="form-control @error('host') is-invalid @enderror">
             </div>
             <div class="col-sm-4">
                 <label for="port" class="form-label">{{ __('ポート') }}</label>
-                <input id="port" type="number" name="port" value="{{ old('port', 587) }}" required min="1" max="65535" class="form-control @error('port') is-invalid @enderror">
+                <input id="port" type="number" name="port" value="{{ $values['port'] }}" required min="1" max="65535" class="form-control @error('port') is-invalid @enderror">
             </div>
         </div>
 
         <div class="mb-3">
             <label for="encryption" class="form-label">{{ __('暗号化') }}</label>
             <select id="encryption" name="encryption" class="form-select @error('encryption') is-invalid @enderror">
-                <option value="starttls" @selected(old('encryption', 'starttls') === 'starttls')>{{ __('STARTTLS(多くは 587 番)') }}</option>
-                <option value="ssl" @selected(old('encryption') === 'ssl')>{{ __('SSL/TLS(多くは 465 番)') }}</option>
+                <option value="starttls" @selected($values['encryption'] === 'starttls')>{{ __('STARTTLS(多くは 587 番)') }}</option>
+                <option value="ssl" @selected($values['encryption'] === 'ssl')>{{ __('SSL/TLS(多くは 465 番)') }}</option>
             </select>
         </div>
 
         <div class="row g-3 mb-3">
             <div class="col-sm-6">
                 <label for="username" class="form-label">{{ __('SMTP のユーザー名') }}</label>
-                <input id="username" type="text" name="username" value="{{ old('username') }}" autocomplete="off" class="form-control @error('username') is-invalid @enderror">
+                <input id="username" type="text" name="username" value="{{ $values['username'] }}" autocomplete="off" class="form-control @error('username') is-invalid @enderror">
             </div>
             <div class="col-sm-6">
                 <label for="password" class="form-label">{{ __('SMTP のパスワード') }}</label>
                 <input id="password" type="password" name="password" autocomplete="new-password" class="form-control @error('password') is-invalid @enderror">
+                @if ($configured)
+                    <div class="form-text">{{ __('空のままにすると、今のパスワードを使います。') }}</div>
+                @endif
             </div>
         </div>
 
         <div class="mb-3">
             <label for="from_address" class="form-label">{{ __('送信元のメールアドレス') }}</label>
-            <input id="from_address" type="email" name="from_address" value="{{ old('from_address') }}" required placeholder="no-reply@example.com" class="form-control @error('from_address') is-invalid @enderror">
+            <input id="from_address" type="email" name="from_address" value="{{ $values['from_address'] }}" required placeholder="no-reply@example.com" class="form-control @error('from_address') is-invalid @enderror">
         </div>
 
         <div class="mb-4">

@@ -12,6 +12,7 @@ use Illuminate\View\View;
 
 /**
  * インストーラーの最初の段(Welcome と環境の確認)。満たしていない項目があれば次へ進ませない。
+ * 前回の続き(install.sh を止めて動かし直したときなど)なら、続きの段へ進むボタンも出す。
  */
 class WelcomeController extends Controller
 {
@@ -24,6 +25,8 @@ class WelcomeController extends Controller
             'passes' => RequirementChecker::passes($results),
             'installer' => $installer,
             'step' => InstallerStep::Requirements,
+            // 前回の続き(環境の確認より先の段を終えている)なら、続きの段へ進める
+            'resumeStep' => $installer->state()->isCompleted(InstallerStep::Requirements) ? $installer->currentStep() : null,
         ]);
     }
 

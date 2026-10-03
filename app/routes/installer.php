@@ -48,3 +48,7 @@ foreach ([
         Route::post("install/{$step}", [$controller, 'store'])->name("installer.{$step}.store");
     });
 }
+
+Route::post('install/administrator/generate', [AdministratorController::class, 'generate'])
+    ->middleware('installer.step:administrator')
+    ->name('installer.administrator.generate');
