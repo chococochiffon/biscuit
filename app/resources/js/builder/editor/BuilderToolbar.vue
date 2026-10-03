@@ -8,6 +8,7 @@ import type { Device } from '../types'
 // テンプレート・版の履歴・書き出しと読み込み・プレビュー・下書き保存・公開・変更の破棄
 defineProps<{
   backUrl: string
+  backLabel?: string
   // プレビューを開けるか(グローバルコンポーネントのエディタにはない)
   canPreview: boolean
 }>()
@@ -70,7 +71,7 @@ function discard(): void {
 <template>
   <header class="builder-toolbar">
     <a :href="backUrl" class="btn btn-sm btn-outline-secondary">
-      <i class="bi bi-arrow-left" /> {{ t('戻る') }}
+      <i class="bi bi-arrow-left" /> {{ backLabel ?? t('戻る') }}
     </a>
     <div class="builder-toolbar-title">
       <span class="fw-semibold">{{ state.page?.title }}</span>
@@ -113,20 +114,20 @@ function discard(): void {
       <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.templatesOpen = true">
         <i class="bi bi-files" /> {{ t('テンプレート') }}
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.versionsOpen = true">
+      <button v-if="store.features.versions" type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.versionsOpen = true">
         <i class="bi bi-clock-history" /> {{ t('版の履歴') }}
       </button>
       <button v-if="state.canEditCss" type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" :title="t('このページの CSS')" @click="state.cssOpen = true">
         <i class="bi bi-filetype-css" /> {{ t('CSS') }}
       </button>
-      <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.transferOpen = true">
+      <button v-if="store.features.transfer" type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.transferOpen = true">
         <i class="bi bi-arrow-left-right" /> {{ t('書き出し・読み込み') }}
       </button>
       <button v-if="canPreview" type="button" class="btn btn-sm btn-outline-secondary" :disabled="state.busy || !state.loaded" @click="openPreview">
         <i class="bi bi-eye" /> {{ t('プレビュー') }}
       </button>
       <button
-        v-if="state.published && state.hasUnpublishedChanges"
+        v-if="store.features.publish && state.published && state.hasUnpublishedChanges"
         type="button"
         class="btn btn-sm btn-outline-danger"
         :disabled="state.busy"
@@ -137,7 +138,7 @@ function discard(): void {
       <button type="button" class="btn btn-sm btn-outline-primary" :disabled="state.busy || !state.loaded" @click="store.save()">
         {{ t('下書き保存') }}
       </button>
-      <button type="button" class="btn btn-sm btn-primary" :disabled="state.busy || !state.loaded" @click="publish">
+      <button v-if="store.features.publish" type="button" class="btn btn-sm btn-primary" :disabled="state.busy || !state.loaded" @click="publish">
         {{ t('公開') }}
       </button>
     </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Installer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Installer\AdministratorRequest;
 use App\Installer\AdministratorInstaller;
+use App\Installer\BuilderAccess;
 use App\Installer\InstallerManager;
 use App\Installer\InstallerStep;
 use App\Installer\PasswordPolicy;
@@ -31,9 +32,11 @@ class AdministratorController extends Controller
         return $this->form($installer, (string) $request->input('name'), (string) $request->input('email'), PasswordPolicy::generate());
     }
 
-    public function store(AdministratorRequest $request, AdministratorInstaller $administrators, InstallerManager $installer): RedirectResponse
+    public function store(AdministratorRequest $request, AdministratorInstaller $administrators, InstallerManager $installer, BuilderAccess $access): RedirectResponse
     {
-        $administrators->create($request->validated('name'), $request->validated('email'), $request->validated('password'));
+        $administrator = $administrators->create($request->validated('name'), $request->validated('email'), $request->validated('password'));
+        // このブラウザでは、デザインの段のビルダーを使える
+        $access->grant($request, $administrator);
 
         return redirect()->route($installer->currentStep()->routeName());
     }

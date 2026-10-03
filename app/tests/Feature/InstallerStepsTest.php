@@ -185,7 +185,7 @@ class InstallerStepsTest extends TestCase
         SiteSetting::query()->create(['site_title' => 'ビスケット商店', 'description' => '<b>手作り</b>のお菓子', 'site_icon' => SiteSetting::DEFAULT_SITE_ICON_PATH, 'site_image' => SiteSetting::DEFAULT_SITE_IMAGE_PATH]);
         $this->completeUntil(InstallerStep::Design);
 
-        $this->post(route('installer.design.store'))->assertRedirect(route('installer.finalize'));
+        $this->post(route('installer.design.store'), ['design' => 'default'])->assertRedirect(route('installer.finalize'));
 
         $builder = PageBuilder::top();
         $this->assertTrue($builder->isPublished());
@@ -345,6 +345,11 @@ class InstallerStepsTest extends TestCase
         config(['installer.front_internal_url' => 'http://broken-front:3000']);
         Http::fake(['broken-front:3000*' => Http::response('error', 502)]);
         $this->assertFalse(collect(app(HealthChecker::class)->check())->firstWhere('key', 'front')['ok']);
+
+        // インストール中の公開側の「準備中」(503)は届いたとみなす
+        config(['installer.front_internal_url' => 'http://preparing-front:3000']);
+        Http::fake(['preparing-front:3000*' => Http::response('preparing', 503)]);
+        $this->assertTrue(collect(app(HealthChecker::class)->check())->firstWhere('key', 'front')['ok']);
     }
 
     public function test_status_command_shows_the_health_checks(): void

@@ -41,28 +41,35 @@ export function createApi(config: EditorConfig) {
   const { endpoints } = config
 
   return {
+    // エディタに出す機能(URL が null の機能は出さない)
+    features: {
+      publish: endpoints.publish !== null && endpoints.discard !== null,
+      versions: endpoints.versions !== null,
+      transfer: endpoints.export !== null && endpoints.import !== null,
+      saveTemplates: config.canSaveTemplates !== false,
+    },
     show: () => request<ShowPayload>(endpoints.show, 'GET'),
     save: (content: BuilderContent, updatedAt: string | null) =>
       request<BuilderStatePayload>(endpoints.update, 'PUT', { content, updated_at: updatedAt }),
-    publish: (updatedAt: string | null) => request<BuilderStatePayload>(endpoints.publish, 'POST', { updated_at: updatedAt }),
-    discard: (updatedAt: string | null) => request<BuilderStatePayload>(endpoints.discard, 'POST', { updated_at: updatedAt }),
+    publish: (updatedAt: string | null) => request<BuilderStatePayload>(endpoints.publish ?? '', 'POST', { updated_at: updatedAt }),
+    discard: (updatedAt: string | null) => request<BuilderStatePayload>(endpoints.discard ?? '', 'POST', { updated_at: updatedAt }),
     previewUrl: () => request<{ url: string, expires_at: string }>(endpoints.previewUrl ?? '', 'GET'),
-    components: () => request<ComponentSummary[]>(endpoints.components, 'GET'),
+    components: () => (endpoints.components === null ? Promise.resolve([]) : request<ComponentSummary[]>(endpoints.components, 'GET')),
     templates: () => request<BuilderTemplate[]>(endpoints.templates, 'GET'),
     saveTemplate: (name: string, description: string, content: BuilderContent) =>
       request<BuilderTemplate>(endpoints.templates, 'POST', { name, description: description || null, content }),
     deleteTemplate: (id: number) => request<unknown>(`${endpoints.templates}/${id}`, 'DELETE'),
-    versions: () => request<BuilderVersionSummary[]>(endpoints.versions, 'GET'),
-    version: (id: number) => request<BuilderVersion>(`${endpoints.versions}/${id}`, 'GET'),
+    versions: () => request<BuilderVersionSummary[]>(endpoints.versions ?? '', 'GET'),
+    version: (id: number) => request<BuilderVersion>(`${endpoints.versions ?? ''}/${id}`, 'GET'),
     exportContent: (content: BuilderContent, title: string) =>
-      request<Record<string, unknown>>(endpoints.export, 'POST', { content, title }),
+      request<Record<string, unknown>>(endpoints.export ?? '', 'POST', { content, title }),
     // context は読み込む先のエディタの文脈(page・global・custom)
     importFile: (file: File, context: 'page' | 'global' | 'custom') => {
       const form = new FormData()
       form.append('file', file)
       form.append('context', context)
 
-      return request<BuilderImportResult>(endpoints.import, 'POST', form)
+      return request<BuilderImportResult>(endpoints.import ?? '', 'POST', form)
     },
     articleList: (query: Record<string, string>) =>
       request<{ articles: ArticleSummary[] }>(`${endpoints.articleList}?${new URLSearchParams(query)}`, 'GET'),

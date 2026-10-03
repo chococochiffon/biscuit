@@ -28,7 +28,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 /**
- * 管理画面のページビルダーのエディタが使う JSON(取得・下書きの保存・公開・変更の破棄・版の履歴・プレビューの URL・画像のアップロード・記事一覧・ナビゲーション・ギャラリーのブロックの見本)。
+ * 管理画面のページビルダーのエディタが使う JSON(インストーラーのデザインの段のビルダーも、トップの取得・下書きの保存・プレビュー・画像・見本で使う。
+ * そのときは installer.builder が最初の管理者として扱い、Custom CSS は書けない)(取得・下書きの保存・公開・変更の破棄・版の履歴・プレビューの URL・画像のアップロード・記事一覧・ナビゲーション・ギャラリーのブロックの見本)。
  * 対象はトップ(ルートに {singlePage} がない)と固定ページ。ビルダーの行は最初に下書きを保存したときに作る(取得では作らない)。
  */
 class PageBuilderJsonController extends Controller
@@ -143,17 +144,26 @@ class PageBuilderJsonController extends Controller
      */
     public function previewUrl(?SinglePage $singlePage = null): JsonResponse
     {
-        $builder = $this->existingBuilder($singlePage) ?? abort(404);
+        return response()->json(self::signedPreviewUrl($this->existingBuilder($singlePage) ?? abort(404)));
+    }
+
+    /**
+     * 下書きを chococo で表示するプレビューの URL(期限付きの署名付き)。インストーラーのデザインの段も使う。
+     *
+     * @return array{url: string, expires_at: string}
+     */
+    public static function signedPreviewUrl(PageBuilder $builder): array
+    {
         $expiresAt = Date::now()->addMinutes(self::PREVIEW_EXPIRE_MINUTES);
 
         // 署名はプレビュー API のパスとクエリにかかるため、chococo には id・expires・signature を渡し、chococo のサーバーが同じ API を呼ぶ
         $signedPath = URL::temporarySignedRoute('api.builder-previews.show', $expiresAt, ['pageBuilder' => $builder->id], absolute: false);
         parse_str((string) parse_url($signedPath, PHP_URL_QUERY), $query);
 
-        return response()->json([
+        return [
             'url' => SiteSetting::frontUrl().'/builder-preview?'.http_build_query(['id' => $builder->id, ...$query]),
             'expires_at' => $expiresAt->toIso8601String(),
-        ]);
+        ];
     }
 
     /**
