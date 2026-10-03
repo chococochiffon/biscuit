@@ -43,7 +43,7 @@ class DatabaseSeederTest extends TestCase
 
         $galleryImages = GalleryImage::query()->with('category')->ordered()->get();
         $this->assertCount(4, $galleryImages);
-        $this->assertSame(['イラスト', 'イラスト', 'イラスト', 'バナー'], $galleryImages->pluck('category.name')->all());
+        $this->assertSame(['昼のワークスペース', '夕方・夜のワークスペース', '昼のワークスペース', '夕方・夜のワークスペース'], $galleryImages->pluck('category.name')->all());
         Storage::disk('public')->assertExists($galleryImages->pluck('image')->all());
 
         $this->assertSame(['/information/about', '/builder-sample'], SinglePage::query()->orderBy('id')->pluck('path')->all());
