@@ -49,8 +49,15 @@ class InstallerApplicationTest extends TestCase
 
     public function test_progress_failure_and_retry_are_shown(): void
     {
-        $this->writeStatus('running', 'database');
-        $this->get(route('installer.application'))->assertSee('data-application-running', false)->assertSee('database');
+        $this->writeStatus('running', 'database', 'データベースの起動を待っています');
+        // 処理の一覧: 終えた処理・今の処理・まだの処理
+        $this->get(route('installer.application'))
+            ->assertSee('data-application-running', false)
+            ->assertSee('データベースの起動を待っています')
+            ->assertSee('data-stage="start" data-state="done"', false)
+            ->assertSee('data-stage="database" data-state="running"', false)
+            ->assertSee('data-stage="front" data-state="waiting"', false)
+            ->assertSee('aria-valuenow="2"', false);
         // 動いている間は合図を置き直さない
         $this->post(route('installer.application.start'));
         Storage::disk('local')->assertMissing(HostBridge::REQUEST_FILE);
@@ -59,7 +66,9 @@ class InstallerApplicationTest extends TestCase
         $this->get(route('installer.application'))
             ->assertSee('data-application-failed', false)
             ->assertSee('データベースのマイグレーションに失敗しました。')
-            ->assertSee('再試行');
+            ->assertSee('再試行')
+            // マイグレーションの失敗は「テーブルと初期データを用意する」の失敗として出す
+            ->assertSee('data-stage="application" data-state="failed"', false);
 
         $this->post(route('installer.application.start'));
         Storage::disk('local')->assertExists(HostBridge::REQUEST_FILE);

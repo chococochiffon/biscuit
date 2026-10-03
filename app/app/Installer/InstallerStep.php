@@ -43,6 +43,20 @@ enum InstallerStep: string
     }
 
     /**
+     * 終えたあとに戻って入力を直せる段か。サイト・メール・デザインはいつでも直せる。
+     * データベースは、アプリケーションの段(DB を作る)を終えるまでだけ直せる(DB を作ったあとに接続先を変えると、作った DB に届かなくなる)。
+     * 環境の確認・アプリケーション・管理者(2 人目を作らない)は戻れない。完了は段を終える前に必ず入る。
+     */
+    public function isEditable(InstallationState $state): bool
+    {
+        return match ($this) {
+            self::Site, self::Mail, self::Design, self::Finalize => true,
+            self::Database => ! $state->isCompleted(self::Application),
+            default => false,
+        };
+    }
+
+    /**
      * この段より前の段(並び順)。
      *
      * @return list<self>

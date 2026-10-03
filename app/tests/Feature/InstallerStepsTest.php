@@ -236,4 +236,71 @@ class InstallerStepsTest extends TestCase
         $this->post(route('installer.finalize.store'))->assertRedirect(route('installer.finalize'));
         Storage::disk('local')->assertMissing(InstallerManager::LOCK_FILE);
     }
+
+    public function test_administrator_step_can_generate_a_password(): void
+    {
+        $this->completeUntil(InstallerStep::Administrator);
+
+        $response = $this->post(route('installer.administrator.generate'), ['name' => 'オーナー', 'email' => 'owner@example.com'])
+            ->assertOk()
+            ->assertSee('data-generated-password', false)
+            ->assertSee('value="owner@example.com"', false);
+
+        preg_match('/<code class="user-select-all">([^<]+)<\/code>/', $response->getContent(), $matches);
+        $password = html_entity_decode($matches[1]);
+        $this->assertSame(config('installer.generated_password_length'), strlen($password));
+        $this->assertNull(session('generatedPassword'));
+
+        $this->post(route('installer.administrator.store'), ['name' => 'オーナー', 'email' => 'owner@example.com', 'password' => $password, 'password_confirmation' => $password])
+            ->assertRedirect(route('installer.design'));
+    }
+
+    public function test_the_installer_can_be_resumed_and_completed_steps_can_be_edited(): void
+    {
+        $this->completeUntil(InstallerStep::Mail);
+
+        // 最初の画面に、続きの段へのボタンを出す
+        $this->get(route('installer.requirements'))->assertOk()->assertSee('data-installer-resume', false)->assertSee(route('installer.mail'), false);
+
+        // 終えたサイトの段へは戻って直せ、ステッパーにリンクを出す。アプリケーションの段は戻れない
+        $this->get(route('installer.mail'))->assertOk()->assertSee('href="'.route('installer.site').'"', false)->assertDontSee('href="'.route('installer.application').'"', false);
+        $this->get(route('installer.site'))->assertOk();
+        $this->get(route('installer.application'))->assertRedirect(route('installer.mail'));
+
+        // DB を作ったあとは、データベースの段には戻れない
+        $this->get(route('installer.database'))->assertRedirect(route('installer.mail'));
+        $this->post(route('installer.database.store'), [])->assertRedirect(route('installer.mail'));
+    }
+
+    public function test_database_step_can_be_edited_until_the_application_step_is_done(): void
+    {
+        $this->completeUntil(InstallerStep::Application);
+        app(InstallationState::class)->markCompleted(InstallerStep::Database);
+
+        $this->get(route('installer.database'))->assertOk();
+    }
+
+    public function test_the_first_page_does_not_offer_to_resume_a_new_installation(): void
+    {
+        $this->get(route('installer.requirements'))->assertOk()->assertDontSee('data-installer-resume', false);
+    }
+
+    public function test_mail_step_can_be_edited_and_keeps_the_current_password(): void
+    {
+        Mail::fake();
+        $this->completeUntil(InstallerStep::Mail);
+        $this->post(route('installer.mail.store'), $this->mailInput(['encryption' => 'ssl', 'port' => 465]))->assertRedirect(route('installer.administrator'));
+
+        // 戻って開くと、今の設定が入っていて、パスワードは出さない
+        $this->get(route('installer.mail'))
+            ->assertOk()
+            ->assertSee('value="smtp.example.com"', false)
+            ->assertSee('<option value="ssl" selected', false)
+            ->assertDontSee('p$ss&quot;word', false)
+            ->assertSee('空のままにすると、今のパスワードを使います。');
+
+        $this->post(route('installer.mail.store'), $this->mailInput(['host' => 'smtp2.example.com', 'password' => '']))->assertRedirect(route('installer.administrator'));
+        $this->assertStringContainsString("MAIL_HOST='smtp2.example.com'", $this->env());
+        $this->assertStringContainsString("MAIL_PASSWORD='p\$ss\"word'", $this->env());
+    }
 }

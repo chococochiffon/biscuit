@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * 前の段を終えていない段には入れない(今の段へ回す)。使い方: ->middleware('installer.step:database')
+ * 前の段を終えていない段と、終えたあとに直せない段(InstallerStep::isEditable())には入れない(今の段へ回す)。
+ * 使い方: ->middleware('installer.step:database')
  */
 class EnsureInstallerStep
 {
@@ -17,7 +18,10 @@ class EnsureInstallerStep
 
     public function handle(Request $request, Closure $next, string $step): Response
     {
-        if (! $this->installer->canEnter(InstallerStep::from($step))) {
+        $step = InstallerStep::from($step);
+        $state = $this->installer->state();
+
+        if (! $this->installer->canEnter($step) || ($state->isCompleted($step) && ! $step->isEditable($state))) {
             return redirect()->route($this->installer->currentStep()->routeName());
         }
 

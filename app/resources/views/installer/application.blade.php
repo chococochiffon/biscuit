@@ -17,15 +17,37 @@
         {{ __('データベースと公開側のサイトを起動し、データベースを作ってテーブルを用意します。初回は数分かかることがあります。') }}
     </p>
 
+    @if ($running || in_array($status['status'] ?? null, ['failed', 'succeeded'], true))
+        {{-- 処理の一覧と進捗バー(終えた処理の数で進める) --}}
+        @php($doneCount = count(array_filter($stages, fn (array $stage) => $stage['state'] === 'done')))
+        <div class="progress mb-3" role="progressbar" aria-label="{{ __('セットアップの進み具合') }}" aria-valuenow="{{ $doneCount }}" aria-valuemin="0" aria-valuemax="{{ count($stages) }}" data-application-progress>
+            <div class="progress-bar {{ ($status['status'] ?? null) === 'failed' ? 'bg-danger' : '' }} {{ $running ? 'progress-bar-striped progress-bar-animated' : '' }}" style="width: {{ round($doneCount / count($stages) * 100) }}%"></div>
+        </div>
+        <ul class="list-group mb-3" data-application-stages>
+            @foreach ($stages as $stage)
+                <li class="list-group-item d-flex align-items-center gap-2 small {{ $stage['state'] === 'waiting' ? 'text-secondary' : '' }}" data-stage="{{ $stage['key'] }}" data-state="{{ $stage['state'] }}">
+                    @switch($stage['state'])
+                        @case('done')
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                            @break
+                        @case('running')
+                            <span class="spinner-border spinner-border-sm text-primary" aria-hidden="true"></span>
+                            @break
+                        @case('failed')
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                            @break
+                        @default
+                            <i class="bi bi-circle"></i>
+                    @endswitch
+                    <span>{{ $stage['label'] }}</span>
+                </li>
+            @endforeach
+        </ul>
+    @endif
+
     @if ($running)
-        <div class="alert alert-info d-flex align-items-center gap-2" role="status" data-application-running>
-            <div class="spinner-border spinner-border-sm" aria-hidden="true"></div>
-            <div>
-                {{ $pending ? __('インストーラーの起動の画面(install.sh)が受け取るのを待っています。install.sh を動かしたままにしてください。') : __('セットアップしています...') }}
-                @if ($status['stage'] ?? null)
-                    <div class="small text-secondary">{{ __('今の処理') }}: {{ $status['stage'] }}</div>
-                @endif
-            </div>
+        <div class="alert alert-info small" role="status" data-application-running>
+            {{ $pending ? __('インストーラーの起動の画面(install.sh)が受け取るのを待っています。install.sh を動かしたままにしてください。') : (isset($status['message']) ? __($status['message']) : __('セットアップしています...')) }}
         </div>
     @elseif (($status['status'] ?? null) === 'failed')
         <div class="alert alert-danger" role="alert" data-application-failed>

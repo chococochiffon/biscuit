@@ -8,6 +8,17 @@
         <p class="text-secondary small mb-0">{{ __('Biscuit を動かせる環境かを確かめます。すべて満たすと、次へ進めます。') }}</p>
     </div>
 
+    @if ($resumeStep)
+        {{-- 前回の続き(どれかの段を終えている)。終えた段の内容は残っている --}}
+        <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-2" role="status" data-installer-resume>
+            <div class="small">
+                <div class="fw-semibold">{{ __('前回のインストールの続きから再開できます。') }}</div>
+                <div>{{ __('次の段: :step', ['step' => $resumeStep->label()]) }}</div>
+            </div>
+            <a href="{{ route($resumeStep->routeName()) }}" class="btn btn-primary btn-sm">{{ __('続きから再開する') }}</a>
+        </div>
+    @endif
+
     <ul class="list-group mb-4" data-requirements>
         @foreach ($results as $result)
             <li class="list-group-item d-flex align-items-start gap-2 small">
