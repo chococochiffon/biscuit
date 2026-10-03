@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Enums\BuilderPageType;
 use App\Http\Controllers\Controller;
 use App\Models\PageBuilder;
+use App\Support\Builder\BuilderPresenter;
 use App\Support\PublicPageResponder;
 use Illuminate\Http\JsonResponse;
 use OpenApi\Attributes as OA;
@@ -14,7 +15,7 @@ class BuilderPreviewController extends Controller
     /**
      * ページビルダーの編集中の内容を、公開側で表示したときと同じ形(パス解決 API と同じ)で返す(chococo のプレビュー用)。
      * 管理画面のエディタが発行した署名付きの URL(期限付き)でだけ開ける。固定ページは公開期間外・use_builder が false でも、
-     * 編集中の内容を data.builder に入れて返す。検索エンジンに載らないよう X-Robots-Tag: noindex を付ける。
+     * 編集中の内容を data.builder に入れて返す。表示する期間の外のブロックも返す。検索エンジンに載らないよう X-Robots-Tag: noindex を付ける。
      */
     #[OA\Get(
         path: '/builder-previews/{pageBuilder}',
@@ -33,9 +34,10 @@ class BuilderPreviewController extends Controller
     )]
     public function show(PageBuilder $pageBuilder, PublicPageResponder $responder): JsonResponse
     {
-        $response = $pageBuilder->page_type === BuilderPageType::Top
+        // 表示する期間の外のブロック(これから始まるキャンペーンなど)も、プレビューでは確かめられるよう取り除かずに返す
+        $response = BuilderPresenter::showingAllPeriods(fn () => $pageBuilder->page_type === BuilderPageType::Top
             ? $responder->top($pageBuilder->draft_content)
-            : $responder->pageContent($pageBuilder->singlePage ?? abort(404), $pageBuilder->draft_content);
+            : $responder->pageContent($pageBuilder->singlePage ?? abort(404), $pageBuilder->draft_content));
 
         return $response->header('X-Robots-Tag', 'noindex, nofollow');
     }

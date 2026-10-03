@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\PageBuilder;
+use App\Models\PageBuilderComponent;
 use App\Models\SinglePage;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\BuilderPresenter;
 use App\Support\Builder\BuilderValidator;
 use App\Support\Builder\SchemaMigrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\URL;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -120,5 +122,32 @@ class BuilderVisibilityTest extends TestCase
 
         $this->travelTo('2026-10-10 00:00:00');
         $this->getJson('/api/resolve?path='.$singlePage->path)->assertOk()->assertJsonPath('data.builder.children.0.children.0.props.text', 'キャンペーン');
+    }
+
+    public function test_preview_shows_blocks_outside_the_period_including_component_contents(): void
+    {
+        $this->travelTo('2026-10-09 12:00:00');
+        $future = BuilderContent::node('heading', ['text' => 'これから始まる見出し']);
+        $future['visibility'] = ['startAt' => '2026-10-10T00:00'];
+        $component = PageBuilderComponent::factory()->published()->create([
+            'draft_content' => ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [BuilderContent::node('section', children: [$future])]],
+        ]);
+        $content = (new BuilderValidator)->normalize(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [
+            BuilderContent::node('section', children: [$future]),
+            BuilderContent::node('global', ['component' => $component->id]),
+        ]]);
+        $builder = PageBuilder::factory()->top()->create(['draft_content' => $content]);
+        $url = URL::temporarySignedRoute('api.builder-previews.show', now()->addMinutes(30), ['pageBuilder' => $builder->id], absolute: false);
+
+        // プレビューでは期間の外のブロックも返す(グローバルコンポーネントの中身も)
+        $this->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('builder.children.0.children.0.props.text', 'これから始まる見出し')
+            ->assertJsonPath('builder.children.1.data.children.0.children.0.props.text', 'これから始まる見出し');
+
+        // 公開側では取り除いたまま(プレビューのあとに公開側を返しても、切り替えは残らない)
+        $public = json_decode(json_encode(BuilderPresenter::forPublic($content)), true);
+        $this->assertSame([], $public['children'][0]['children']);
+        $this->assertSame([], $public['children'][1]['data']['children'][0]['children']);
     }
 }

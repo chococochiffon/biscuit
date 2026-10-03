@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\Date;
  * { "hideOn"?: ["desktop" | "tablet" | "mobile", ...], "startAt"?: "YYYY-MM-DDTHH:MM", "endAt"?: "YYYY-MM-DDTHH:MM" }
  * - hideOn: 表示しない端末。公開側(chococo)が端末の画面幅のメディアクエリで隠す(HTML には残る)。すべての端末は選べない。
  * - startAt/endAt: 表示する期間(日本時間。開始は含み、終了は含まない)。期間外のブロックは、公開側に返すとき
- *   (BuilderPresenter::forPublic())に取り除く(始まる前の内容を漏らさない)。エディタの Canvas では期間に関係なく表示する。
+ *   (BuilderPresenter::forPublic())に取り除く(始まる前の内容を漏らさない)。エディタの Canvas と、署名付き URL でだけ開ける
+ *   プレビュー(BuilderPresenter::showingAllPeriods())では期間に関係なく表示する。
  */
 final class Visibility
 {

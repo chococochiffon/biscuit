@@ -60,14 +60,39 @@ final class BuilderPresenter
     }
 
     /**
-     * 子の並び。公開側では、表示する期間の外のブロックを(子ごと)取り除く。
+     * 表示する期間の外のブロックも返すか(プレビューのあいだだけ true。showingAllPeriods())。
+     */
+    private static bool $showsAllPeriods = false;
+
+    /**
+     * 表示する期間の外のブロックも取り除かずに返しながら、処理を行う(ページビルダーのプレビュー。グローバル・独自コンポーネントの中身も同じ)。
+     *
+     * @template T
+     *
+     * @param  callable(): T  $callback
+     * @return T
+     */
+    public static function showingAllPeriods(callable $callback): mixed
+    {
+        $previous = self::$showsAllPeriods;
+        self::$showsAllPeriods = true;
+
+        try {
+            return $callback();
+        } finally {
+            self::$showsAllPeriods = $previous;
+        }
+    }
+
+    /**
+     * 子の並び。公開側では、表示する期間の外のブロックを(子ごと)取り除く(プレビューでは取り除かない)。
      *
      * @param  list<array<string, mixed>>  $children
      * @return list<array<string, mixed>>
      */
     private static function presentChildren(array $children, bool $forPublic): array
     {
-        if ($forPublic) {
+        if ($forPublic && ! self::$showsAllPeriods) {
             $children = array_filter($children, fn (array $node) => Visibility::isWithinPeriod($node));
         }
 

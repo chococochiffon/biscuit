@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Carbon\CarbonInterface;
+use Database\Factories\PageViewFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
@@ -17,7 +18,7 @@ use Illuminate\Support\Str;
 #[Fillable(['content_type', 'content_id', 'path', 'user_id', 'visitor_id', 'session_id', 'ip_hash', 'user_agent', 'referer', 'viewed_at'])]
 class PageView extends Model
 {
-    /** @use HasFactory<\Database\Factories\PageViewFactory> */
+    /** @use HasFactory<PageViewFactory> */
     use HasFactory;
 
     /**
