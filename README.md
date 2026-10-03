@@ -6,7 +6,26 @@
 <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=plastic" alt="">
 </p>
 
-## インストール
+## インストール(インストーラー)
+
+サーバーや手元の PC に Biscuit を立ち上げるときは、インストーラーを使います。Docker(Docker Compose を含む)・git・curl が使える Linux・macOS・Windows(WSL2)で動きます。ホストに PHP・Node.js は要りません。
+
+```
+❯ git clone https://github.com/chococochiffon/biscuit.git
+❯ cd biscuit
+❯ ./install.sh
+```
+
+表示された URL(既定は http://localhost:8080/install)をブラウザで開き、画面の案内に沿って進めます。インストールが終わるまで `install.sh` は動かしたままにしてください(止めても、もう一度 `./install.sh` で再開できます)。
+
+- 既定のポートは、管理画面と API が 8080 番、公開側(chococo)が 80 番です。変えるときは `BISCUIT_ADMIN_PORT=8088 BISCUIT_FRONT_PORT=8090 ./install.sh` のように指定します
+- インストーラーは本番向けの構成(`docker/production/compose.yml`。Docker Compose のプロジェクト名は `biscuit-production`)で立ち上げます。HTTPS は、外側のリバースプロキシなどで用意してください
+- インストールの途中で作ったデータベースを作り直すときは `./install.sh --reset-database` を使います
+- `install.sh` の記録は `install.log`、インストーラーの記録は `app/storage/logs/installer.log` に残ります
+
+以下は、開発用の環境(`docker-compose.yml`)の作り方です。
+
+## 開発環境のセットアップ
 
 リポジトリを取得し、`app/.env` を作成します。`.env.example` は Docker Compose の MySQL（`db` サービス）を使う設定になっているので、コピーすればそのまま使えます。
 
