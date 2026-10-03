@@ -69,7 +69,7 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
     :class="readonlyClass"
     :style="node.type === 'section' ? sectionStyle : style"
   >
-    <BlockPreview v-for="child in children" :key="child.id" :node="child" readonly />
+    <BlockPreview v-for="child in children" :key="child.id" :node="child" :class="child.classes" readonly />
   </component>
   <div v-else-if="readonly && node.type === 'slider'" :style="style">
     <div class="ratio" :class="`ratio-${sliderAspect}`">

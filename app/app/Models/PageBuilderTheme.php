@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use App\Support\Builder\CustomCss;
 use App\Support\Builder\ThemeRegistry;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * ページビルダーのテーマ(ビルダーのブロックにだけ効く色とフォント)。サイトに 1 つだけ登録し、取得は current() を使う。
+ * ページビルダーのテーマ(ビルダーのブロックにだけ効く色とフォントと、サイト共通の Custom CSS)。サイトに 1 つだけ登録し、取得は current() を使う。
  * 項目の定義は Support\Builder\ThemeRegistry。
  */
-#[Fillable(['colors', 'heading_font', 'body_font'])]
+#[Fillable(['colors', 'heading_font', 'body_font', 'custom_css'])]
 class PageBuilderTheme extends Model
 {
     use SoftDeletes;
@@ -49,7 +50,7 @@ class PageBuilderTheme extends Model
     /**
      * エディタ・公開側(chococo)に渡す形。
      *
-     * @return array{colors: array<string, string>, fonts: array{heading: array{key: string, family: string, href: string}|null, body: array{key: string, family: string, href: string}|null}}
+     * @return array{colors: array<string, string>, fonts: array{heading: array{key: string, family: string, href: string}|null, body: array{key: string, family: string, href: string}|null}, css: string|null}
      */
     public function toPresentation(): array
     {
@@ -59,6 +60,8 @@ class PageBuilderTheme extends Model
                 'heading' => ThemeRegistry::font($this->heading_font),
                 'body' => ThemeRegistry::font($this->body_font),
             ],
+            // サイト共通の Custom CSS(ビルダーの部分にだけ効かせる)
+            'css' => CustomCss::normalize($this->custom_css),
         ];
     }
 }

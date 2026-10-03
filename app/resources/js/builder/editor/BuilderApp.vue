@@ -9,6 +9,7 @@ import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
 import TemplateDialog from './TemplateDialog.vue'
+import CssDialog from './CssDialog.vue'
 import TransferDialog from './TransferDialog.vue'
 import VersionDialog from './VersionDialog.vue'
 
@@ -51,7 +52,7 @@ function confirmLeave(event: BeforeUnloadEvent): void {
 }
 
 function dialogOpen(): boolean {
-  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen
+  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen
 }
 
 // キーボードの操作: Ctrl+S で下書き保存。入力欄の外では Ctrl+Z/Ctrl+Shift+Z(Ctrl+Y)で元に戻す/やり直す、
@@ -67,6 +68,7 @@ function handleKeydown(event: KeyboardEvent): void {
       store.state.templatesOpen = false
       store.state.versionsOpen = false
       store.state.transferOpen = false
+      store.state.cssOpen = false
     }
 
     return
@@ -180,5 +182,6 @@ onBeforeUnmount(() => {
     <TemplateDialog v-if="store.state.templatesOpen" />
     <VersionDialog v-if="store.state.versionsOpen" />
     <TransferDialog v-if="store.state.transferOpen" />
+    <CssDialog v-if="store.state.cssOpen" />
   </div>
 </template>

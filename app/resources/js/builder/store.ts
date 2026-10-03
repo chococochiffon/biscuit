@@ -30,7 +30,11 @@ export function createBuilderStore(api: BuilderApi) {
     // サイトのタイムゾーン(表示条件の期間の判定に使う)
     timezone: 'Asia/Tokyo',
     // テーマ(色のスタイルの theme:名前・ボタン・フォントの見本)
-    theme: { colors: {}, fonts: { heading: null, body: null } } as BuilderTheme,
+    theme: { colors: {}, fonts: { heading: null, body: null }, css: null } as BuilderTheme,
+    // Custom CSS・ブロックの追加のクラス名を書けるか(スーパー管理者だけ)
+    canEditCss: false,
+    // Custom CSS の画面を開いているか
+    cssOpen: false,
     // グローバルコンポーネント(グローバルコンポーネントのブロックの選択肢と見本。使うときに読み込む)
     components: null as ComponentSummary[] | null,
     content: { version: 1, children: [] } as BuilderContent,
@@ -139,6 +143,23 @@ export function createBuilderStore(api: BuilderApi) {
     }
   }
 
+  /**
+   * 内容を置き換える(テンプレート・版・ファイルの読み込み)。Custom CSS は書ける人のときだけ置き換える
+   * (ほかの管理者の保存では biscuit が今の CSS を保つため、画面だけ変わらないようにする)。
+   */
+  function replaceContentWith(children: BuilderNode[], css: string | undefined): void {
+    state.content.children = children
+
+    if (state.canEditCss) {
+      if (css) {
+        state.content.css = css
+      }
+      else {
+        delete state.content.css
+      }
+    }
+  }
+
   function changed(): void {
     state.dirty = true
     state.revision++
@@ -179,6 +200,7 @@ export function createBuilderStore(api: BuilderApi) {
         state.galleryCategories = payload.gallery_categories
         state.timezone = payload.timezone
         state.theme = payload.theme
+        state.canEditCss = payload.can_edit_css
         loadThemeFonts(payload.theme)
         applyState(payload, true)
         state.loaded = true
@@ -403,6 +425,53 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     /**
+     * ページ(コンポーネント)の Custom CSS を変える(空なら消す)。
+     */
+    updateCss(css: string): void {
+      const next = css.trim()
+
+      mutate('css', () => {
+        if ((state.content.css ?? '') === next) {
+          return false
+        }
+
+        if (next === '') {
+          delete state.content.css
+        }
+        else {
+          state.content.css = next
+        }
+
+        return true
+      })
+      delete state.errors.content
+    },
+
+    /**
+     * ブロックの追加のクラス名を変える(空なら消す)。
+     */
+    updateClasses(id: string, classes: string[]): void {
+      const node = findNode(state.content, id)
+
+      if (node && mutate(`classes:${id}`, () => {
+        if (JSON.stringify(node.classes ?? []) === JSON.stringify(classes)) {
+          return false
+        }
+
+        if (classes.length === 0) {
+          delete node.classes
+        }
+        else {
+          node.classes = classes
+        }
+
+        return true
+      })) {
+        delete state.errors[`nodes.${id}`]
+      }
+    },
+
+    /**
      * 独自コンポーネントの中身のブロックの項目を、差し替えられる項目にする(表示名)・やめる(null)。
      */
     updateExposed(id: string, prop: string, label: string | null): void {
@@ -622,7 +691,7 @@ export function createBuilderStore(api: BuilderApi) {
      */
     applyTemplate(template: BuilderTemplate): void {
       mutate(null, () => {
-        state.content.children = template.content.children.map(cloneWithNewIds)
+        replaceContentWith(template.content.children.map(cloneWithNewIds), template.content.css)
 
         return true
       })
@@ -649,7 +718,7 @@ export function createBuilderStore(api: BuilderApi) {
         const version = await api.version(id)
 
         mutate(null, () => {
-          state.content.children = version.content.children
+          replaceContentWith(version.content.children, version.content.css)
 
           return true
         })
@@ -701,7 +770,7 @@ export function createBuilderStore(api: BuilderApi) {
       }
 
       mutate(null, () => {
-        state.content.children = result.content.children
+        replaceContentWith(result.content.children, result.content.css)
 
         return true
       })

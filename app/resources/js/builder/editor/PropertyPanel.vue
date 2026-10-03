@@ -6,6 +6,7 @@ import { useBuilderStore } from '../store'
 import PropField from '../fields/PropField.vue'
 import StyleField from '../fields/StyleField.vue'
 import VisibilityFields from '../fields/VisibilityFields.vue'
+import ClassesField from '../fields/ClassesField.vue'
 import CustomFields from '../fields/CustomFields.vue'
 import ExposeField from '../fields/ExposeField.vue'
 import { isExposable } from '../custom'
@@ -106,6 +107,7 @@ const errors = computed(() => (node.value ? store.state.errors[`nodes.${node.val
         <p v-if="groups.length === 0" class="small text-secondary">
           {{ t('このブロックには変えられるスタイルがありません。') }}
         </p>
+        <ClassesField v-if="store.state.canEditCss" :key="fieldKey('classes')" :node="node" />
       </template>
     </div>
     <div v-else>

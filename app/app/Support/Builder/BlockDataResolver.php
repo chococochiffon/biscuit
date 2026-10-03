@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Collection;
  * - video: embed_url(動画の URL から組み立てた埋め込み用の URL。VideoUrl)
  * - global: children(参照するグローバルコンポーネントの公開中の内容のノード。未公開・削除済みなら空)
  * - custom: children(参照する独自コンポーネントの公開中の内容に、差し替えた値を当てはめたノード。未公開・削除済みなら空)
+ * - global・custom の css: コンポーネントの公開中の内容の Custom CSS(なければ null。置いたページで読み込む)
  */
 final class BlockDataResolver
 {
@@ -38,8 +39,8 @@ final class BlockDataResolver
             'navigation' => ['items' => self::navigationItems($props)],
             'gallery' => ['images' => GalleryImageResource::collection(self::galleryImages($props))->resolve()],
             'video' => ['embed_url' => is_string($props['url'] ?? null) ? VideoUrl::embedUrl($props['url']) : null],
-            'global' => ['children' => self::globalComponentChildren($props)],
-            'custom' => ['children' => self::customComponentChildren($props)],
+            'global' => ['children' => self::globalComponentChildren($props), 'css' => self::componentCss($props)],
+            'custom' => ['children' => self::customComponentChildren($props), 'css' => self::componentCss($props)],
             default => null,
         };
     }
@@ -96,6 +97,19 @@ final class BlockDataResolver
         $content['children'] = self::applyOverrides($content['children'] ?? [], $values);
 
         return BuilderPresenter::forPublic($content)['children'];
+    }
+
+    /**
+     * コンポーネントの公開中の内容の Custom CSS(なければ null)。
+     *
+     * @param  array<string, mixed>  $props
+     */
+    public static function componentCss(array $props): ?string
+    {
+        $id = is_int($props['component'] ?? null) ? $props['component'] : null;
+        $content = $id === null ? null : PageBuilderComponent::query()->find($id, ['id', 'published_content'])?->published_content;
+
+        return CustomCss::normalize($content['css'] ?? null);
     }
 
     /**

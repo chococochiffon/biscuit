@@ -31,7 +31,7 @@ const component = computed(() => store.state.components?.find(item => item.id ==
       <i class="bi bi-puzzle" /> {{ t('「:name」はまだ公開されていません。', { name: component.name }) }}
     </div>
     <template v-else>
-      <BlockPreview v-for="child in component.content.children" :key="child.id" :node="child" readonly />
+      <BlockPreview v-for="child in component.content.children" :key="child.id" :node="child" :class="child.classes" readonly />
     </template>
   </div>
 </template>

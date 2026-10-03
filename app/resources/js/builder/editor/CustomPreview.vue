@@ -35,7 +35,7 @@ const children = computed(() =>
       <i class="bi bi-boxes" /> {{ t('「:name」はまだ公開されていません。', { name: component.name }) }}
     </div>
     <template v-else>
-      <BlockPreview v-for="child in children" :key="child.id" :node="child" readonly />
+      <BlockPreview v-for="child in children" :key="child.id" :node="child" :class="child.classes" readonly />
     </template>
   </div>
 </template>

@@ -11,7 +11,8 @@ declare global {
  * 文言を現在の言語で返す。:name などの置き換え記号は replacements で埋める。
  */
 export function t(key: string, replacements: Record<string, string | number> = {}): string {
-  let text = window.builderTranslations?.[key] ?? key
+  // ブラウザの外(Vitest)では翻訳がないため、原文のまま返す
+  let text = (typeof window === 'undefined' ? undefined : window.builderTranslations?.[key]) ?? key
 
   for (const [name, value] of Object.entries(replacements)) {
     text = text.replaceAll(`:${name}`, String(value))

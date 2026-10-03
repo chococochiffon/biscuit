@@ -10,12 +10,14 @@ use App\Support\AuditLogger;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\BuilderPresenter;
 use App\Support\Builder\BuilderValidator;
+use App\Support\Builder\CustomCss;
 use App\Support\Builder\SchemaMigrator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 
 /**
  * ページビルダーのエディタの JSON で、編集中・公開中の内容を持つモデル(Models\Concerns\HasBuilderContent。ページの PageBuilder と
@@ -39,6 +41,11 @@ trait EditsBuilderContent
      */
     protected function saveDraft(Model $builder, array $content, string $label, ?callable $afterSave = null): void
     {
+        // Custom CSS とクラス名はスーパー管理者だけが変えられる。ほかの管理者の保存では、今の下書きの値のまま保つ
+        if (Gate::denies('edit-builder-css')) {
+            $content = CustomCss::preserve($content, $builder->draft_content);
+        }
+
         DB::transaction(function () use ($builder, $content, $label, $afterSave) {
             $builder->draft_content = $content;
             $builder->schema_version = SchemaMigrator::CURRENT_VERSION;

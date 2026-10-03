@@ -116,6 +116,9 @@ function discard(): void {
       <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.versionsOpen = true">
         <i class="bi bi-clock-history" /> {{ t('版の履歴') }}
       </button>
+      <button v-if="state.canEditCss" type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" :title="t('このページの CSS')" @click="state.cssOpen = true">
+        <i class="bi bi-filetype-css" /> {{ t('CSS') }}
+      </button>
       <button type="button" class="btn btn-sm btn-outline-secondary" :disabled="!state.loaded" @click="state.transferOpen = true">
         <i class="bi bi-arrow-left-right" /> {{ t('書き出し・読み込み') }}
       </button>
