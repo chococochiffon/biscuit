@@ -9,4 +9,4 @@ AGENTS.md
 /docker/db/data
 /frontend/
 # インストーラー(install.sh)のロック
-/.install.lock
+/.biscuit.lock

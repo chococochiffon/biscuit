@@ -16,21 +16,18 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-APP="$ROOT/app"
-COMPOSE_FILE="$ROOT/docker/production/compose.yml"
+# ホスト側のログ(app/storage は www-data のものになり、ホストのユーザーは書けないため、リポジトリの直下に置く。*.log は git で除外)
+HOST_LOG="$ROOT/install.log"
+# shellcheck source=docker/production/lib.sh
+. "$ROOT/docker/production/lib.sh"
+
 # app コンテナの中から見たパス
 INSTALLER_DIR="storage/app/private/installer"
 REQUEST_FILE="$INSTALLER_DIR/host-request.json"
 STATUS_FILE="$INSTALLER_DIR/host-status.json"
-LOCK_FILE="storage/app/private/installed"
-# ホスト側のログ(app/storage は www-data のものになり、ホストのユーザーは書けないため、リポジトリの直下に置く。*.log は git で除外)
-HOST_LOG="$ROOT/install.log"
 
-# Docker Compose のプロジェクト名(開発用の docker-compose.yml のプロジェクト biscuit と分ける)
-PROJECT="${BISCUIT_PROJECT:-biscuit-production}"
-
-# Biscuit の版(app/config/biscuit.php の version)。公開側(chococo)は、同じ番号のタグ(v1.0.0 など)を取得する
-BISCUIT_VERSION="$(sed -n "s/^[[:space:]]*'version' => '\([0-9][0-9.]*\)',.*/\1/p" "$ROOT/app/config/biscuit.php" | head -n 1)"
+# 公開側(chococo)は、Biscuit と同じ番号のタグ(v1.0.0 など)を取得する
+BISCUIT_VERSION="$(biscuit_version)"
 
 CHOCOCO_REPOSITORY="${CHOCOCO_REPOSITORY:-https://github.com/chococochiffon/chococo.git}"
 CHOCOCO_REF="${CHOCOCO_REF:-v${BISCUIT_VERSION}}"
@@ -40,52 +37,8 @@ CHOCOCO_DIR="$ROOT/frontend/chococo"
 DB_WAIT_SECONDS=180
 FRONT_WAIT_SECONDS=120
 
-info() { printf '\033[1;34m==>\033[0m %s\n' "$*"; }
-warn() { printf '\033[1;33m警告:\033[0m %s\n' "$*" >&2; }
-fail() { printf '\033[1;31mエラー:\033[0m %s\n' "$*" >&2; exit 1; }
-
-log() {
-  mkdir -p "$(dirname "$HOST_LOG")" 2>/dev/null || true
-  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" >>"$HOST_LOG" 2>/dev/null || true
-}
-
-compose() {
-  docker compose --env-file "$APP/.env" -f "$COMPOSE_FILE" -p "$PROJECT" "$@"
-}
-
-# app コンテナの中で www-data として動かす(動いていなければ一時的なコンテナで)
-in_app() {
-  if [ -n "$(compose ps -q --status running app 2>/dev/null)" ]; then
-    compose exec -T -u www-data app "$@"
-  else
-    compose run --rm --no-deps -T -u www-data app "$@"
-  fi
-}
-
-# .env の値(シングル・ダブルクォートを外す)
-env_value() {
-  sed -n "s/^$1=//p" "$APP/.env" | tail -n 1 | sed -e "s/^'\(.*\)'$/\1/" -e 's/^"\(.*\)"$/\1/'
-}
-
-admin_url() { env_value APP_URL; }
-front_url() { env_value FRONT_URL; }
-
 usage() {
-  sed -n '3,7p' "$0" | sed 's/^# \{0,1\}//'
-}
-
-check_requirements() {
-  info "動かすための環境を確かめます"
-  command -v docker >/dev/null 2>&1 || fail "Docker が見つかりません。Docker(Windows・macOS は Docker Desktop)を入れてください。"
-  docker info >/dev/null 2>&1 || fail "Docker が動いていないか、使う権限がありません。Docker を起動するか、ユーザーを docker グループに入れてください。"
-  docker compose version >/dev/null 2>&1 || fail "Docker Compose(docker compose)が使えません。Docker を新しくしてください。"
-  command -v git >/dev/null 2>&1 || fail "git が見つかりません。git を入れてください。"
-  command -v curl >/dev/null 2>&1 || fail "curl が見つかりません。curl を入れてください。"
-}
-
-# ロックファイルは www-data だけが読めるが、ディレクトリは見られるため、ホストから有無だけを確かめる(コンテナを動かさない)
-is_installed() {
-  [ -f "$APP/$LOCK_FILE" ]
+  sed -n '3,8p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # 進み具合を書く(ブラウザのインストーラーが読む)。message は秘密の値を含めない
@@ -251,24 +204,6 @@ reset_database() {
   compose rm -s -f db >/dev/null 2>&1 || true
   docker volume rm "${PROJECT}_db-data" >/dev/null 2>&1 || true
   info "データベースを消しました。./install.sh を動かして、もう一度セットアップしてください。"
-}
-
-# install.sh を同時に 2 つ動かさない(合図を取り合わないよう、ロックのディレクトリを作れたものだけが動く)
-LOCK_DIR="$ROOT/.install.lock"
-
-acquire_lock() {
-  if ! mkdir "$LOCK_DIR" 2>/dev/null; then
-    local pid
-    pid="$(cat "$LOCK_DIR/pid" 2>/dev/null || true)"
-    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-      fail "install.sh はすでに動いています(プロセス $pid)。そちらを使うか、止めてからもう一度動かしてください。"
-    fi
-    # 前に動いていた install.sh が残したロック(もう動いていない)は取り直す
-    rm -rf "$LOCK_DIR"
-    mkdir "$LOCK_DIR" || fail "ロック($LOCK_DIR)を作れませんでした。"
-  fi
-  echo "$$" >"$LOCK_DIR/pid"
-  trap 'rm -rf "$LOCK_DIR"' EXIT
 }
 
 main() {
