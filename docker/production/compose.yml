@@ -1,0 +1,98 @@
+# Biscuit の本番用の Docker Compose(インストーラー ./install.sh が使う。開発用の docker-compose.yml とは別)。
+# 値はすべて app/.env から読む(install.sh が --env-file app/.env -f docker/production/compose.yml -p biscuit-production で動かす。
+# プロジェクト名は開発用の docker-compose.yml(biscuit)と分ける。BISCUIT_PROJECT で変えられる)。
+# MySQL の DB・ユーザー・パスワードも app/.env の DB_* から作るため、Laravel と食い違わない(認証情報の元は app/.env だけ)。
+# phpMyAdmin・Mailpit は入れず、DB のポートは外に開けない。HTTPS は外側のリバースプロキシで用意する。
+services:
+  # Laravel(php-fpm)。ソースはリポジトリの app/ をそのまま使う
+  app:
+    build:
+      context: ..
+      dockerfile: production/app.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - ../../app:/var/www/app
+
+  # 管理画面と API(既定は 8080 番)
+  web:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "${BISCUIT_ADMIN_PORT:-8080}:80"
+    volumes:
+      - ../../app:/var/www/app:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/up"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # MySQL(最初の起動で app/.env の DB_* から DB とユーザーを作る。データは名前付きボリューム db-data)。
+  # 値が空のまま起動しないよう、install.sh がデータベースの段を終えたことを確かめてから起動する
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    command: mysqld --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-}
+      MYSQL_USER: ${DB_USERNAME:-}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-}
+      TZ: Asia/Tokyo
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  # 公開側(chococo。既定は 80 番)。install.sh が frontend/chococo に取得したソースから本番用にビルドする
+  front:
+    build:
+      context: ../../frontend/chococo
+      dockerfile: ../../docker/production/front.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - web
+    ports:
+      - "${BISCUIT_FRONT_PORT:-80}:3000"
+    environment:
+      # SSR 時(chococo のサーバー → biscuit)は Compose の中の web へつなぐ
+      NUXT_API_BASE: http://web/api
+      # ブラウザ → biscuit の API
+      NUXT_PUBLIC_API_BASE: ${APP_URL:-http://localhost:8080}/api
+      NUXT_PUBLIC_SITE_URL: ${FRONT_URL:-http://localhost}
+      # PV の記録で biscuit と共有する鍵(app/.env の PAGE_VIEW_FORWARD_KEY と同じ値)
+      NUXT_PAGE_VIEW_KEY: ${PAGE_VIEW_FORWARD_KEY:-}
+
+  # 毎日の確認(新しいバージョン・Biscuit からのお知らせのメール)を動かすスケジューラー
+  scheduler:
+    build:
+      context: ..
+      dockerfile: production/app.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - db
+    user: www-data
+    volumes:
+      - ../../app:/var/www/app
+    command: ["php", "artisan", "schedule:work"]
+
+  # 管理画面の CSS・JS をビルドする(install.sh が 1 回だけ動かす。ホストに Node.js がなくてよい)
+  assets:
+    image: node:24-slim
+    profiles: ["build"]
+    working_dir: /app
+    user: "${HOST_UID:-1000}:${HOST_GID:-1000}"
+    environment:
+      npm_config_cache: /tmp/.npm
+    volumes:
+      - ../../app:/app
+    command: ["sh", "-c", "npm ci && npm run build"]
+
+volumes:
+  db-data:

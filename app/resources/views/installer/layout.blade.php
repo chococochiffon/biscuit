@@ -7,6 +7,7 @@
         <meta name="robots" content="noindex, nofollow">
         <title>@yield('title') - {{ __('Biscuit のインストール') }}</title>
         @vite(['resources/css/admin.css'])
+        @stack('head')
     </head>
     <body class="bg-light">
         {{-- インストーラーの画面の枠。上に Stepper(今の段を常に表示)、下に段ごとの中身。$installer は InstallerManager、$step は今の段 --}}

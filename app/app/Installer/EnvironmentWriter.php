@@ -16,7 +16,12 @@ class EnvironmentWriter
      *
      * @var list<string>
      */
-    public const ALLOWED_KEYS = ['DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_ROOT_PASSWORD'];
+    public const ALLOWED_KEYS = [
+        // データベース(データベースの段)
+        'DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_ROOT_PASSWORD',
+        // 本番向けの初期値(biscuit:install --prepare)と URL・ポート(本番用の Compose も読む)
+        'APP_ENV', 'APP_DEBUG', 'APP_URL', 'FRONT_URL', 'LOG_LEVEL', 'PAGE_VIEW_FORWARD_KEY', 'BISCUIT_ADMIN_PORT', 'BISCUIT_FRONT_PORT',
+    ];
 
     /**
      * 値に使えない文字(シングルクォートで囲んでも .env・Docker Compose で壊れる・展開されるもの)と改行。
@@ -24,6 +29,21 @@ class EnvironmentWriter
     public const UNSAFE_VALUE_PATTERN = '/[\'"\\\\$`#\s]/';
 
     public function __construct(private ?string $path = null) {}
+
+    /**
+     * キーの今の値(クォートを外す。なければ null)。
+     */
+    public function get(string $key): ?string
+    {
+        $path = $this->path ?? base_path('.env');
+        $content = is_file($path) ? (string) file_get_contents($path) : '';
+
+        if (preg_match('/^'.preg_quote($key, '/').'=(.*)$/m', $content, $matches) !== 1) {
+            return null;
+        }
+
+        return preg_replace('/\A([\'"])(.*)\1\z/', '$2', trim($matches[1]));
+    }
 
     /**
      * キーの値を書き換える(なければ末尾に足す)。
@@ -53,12 +73,8 @@ class EnvironmentWriter
                 : rtrim($content, "\n")."\n{$line}\n";
         }
 
-        // 途中で失敗しても .env が半端にならないよう、一時ファイルに書いてから置き換える
-        $temporary = $path.'.installer.tmp';
-
-        if (file_put_contents($temporary, $content) === false || ! rename($temporary, $path)) {
-            @unlink($temporary);
-
+        // 本番では php-fpm(www-data)が app/ のディレクトリに書き込めないため、一時ファイルを置き換えずに .env へ直接書く(書き込み中はロックする)
+        if (file_put_contents($path, $content, LOCK_EX) === false) {
             throw new RuntimeException('Failed to write .env.');
         }
     }

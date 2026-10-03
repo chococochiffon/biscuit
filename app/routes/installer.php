@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Installer\ApplicationController;
 use App\Http\Controllers\Installer\DatabaseController;
 use App\Http\Controllers\Installer\PendingStepController;
 use App\Http\Controllers\Installer\WelcomeController;
@@ -26,8 +27,13 @@ Route::middleware('installer.step:database')->group(function () {
     Route::post('install/database/generate', [DatabaseController::class, 'generate'])->name('installer.database.generate');
 });
 
+Route::middleware('installer.step:application')->group(function () {
+    Route::get('install/application', [ApplicationController::class, 'show'])->name('installer.application');
+    Route::post('install/application', [ApplicationController::class, 'start'])->name('installer.application.start');
+});
+
 // まだ作っていない段(段ごとのコントローラーに置き換えていく)
-foreach (array_slice(InstallerStep::cases(), 2) as $step) {
+foreach (array_slice(InstallerStep::cases(), 3) as $step) {
     Route::get("install/{$step->value}", PendingStepController::class)
         ->defaults('step', $step->value)
         ->middleware("installer.step:{$step->value}")
