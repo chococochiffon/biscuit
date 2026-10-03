@@ -11,6 +11,7 @@ use App\View\Composers\CustomPageTypeComposer;
 use App\View\Composers\PendingArticleComposer;
 use App\View\Composers\PendingGalleryImageComposer;
 use App\View\Composers\SiteSettingComposer;
+use App\View\Composers\UpdateNoticeComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
@@ -106,6 +107,7 @@ class AppServiceProvider extends ServiceProvider
 
         View::composer('layouts.admin', SiteSettingComposer::class);
         View::composer('layouts.admin', CustomPageTypeComposer::class);
+        View::composer('layouts.admin', UpdateNoticeComposer::class);
         View::composer(['layouts.admin', 'admin.articles.index'], PendingArticleComposer::class);
         View::composer(['layouts.admin', 'admin.gallery_images.index'], PendingGalleryImageComposer::class);
     }

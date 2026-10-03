@@ -2,7 +2,12 @@
 @if ($systemStatus)
     @php($systemInfo = $systemStatus['info'])
     <div class="small text-muted d-flex flex-wrap gap-3 border-top pt-3" data-system-info>
-        <span>Biscuit {{ $systemInfo['biscuit_version'] }}</span>
+        <span>
+            Biscuit {{ $systemInfo['biscuit_version'] }}
+            @if ($systemStatus['update'])
+                <a href="{{ $systemStatus['update']['url'] }}" target="_blank" rel="noopener noreferrer" class="badge text-bg-info text-decoration-none ms-1">{{ __('最新 :version', ['version' => $systemStatus['update']['version']]) }}</a>
+            @endif
+        </span>
         <span>Laravel {{ $systemInfo['laravel_version'] }}</span>
         <span>PHP {{ $systemInfo['php_version'] }}</span>
         <span>{{ __('環境') }}: {{ $systemInfo['environment'] }}@if ($systemInfo['debug']) (debug)@endif</span>

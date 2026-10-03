@@ -15,6 +15,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | 更新できるバージョンの確認
+    |--------------------------------------------------------------------------
+    |
+    | GitHub のリリース(repository の最新のリリース。タグは v1.2.3 の形)を 1 日 1 回確かめ、上の version より新しければ
+    | スーパー管理者に知らせる(ダッシュボード・管理画面の上部・メール)。結果は cache_hours 時間、問い合わせに失敗したときは
+    | failure_cache_minutes 分だけキャッシュする。BISCUIT_UPDATE_CHECK=false で確かめない(外へ問い合わせない)。
+    | メールは biscuit:check-update(毎日のスケジュール)が送るため、本番では php artisan schedule:run を cron で動かす。
+    |
+    */
+
+    'update_check' => [
+        'enabled' => (bool) env('BISCUIT_UPDATE_CHECK', true),
+        'repository' => env('BISCUIT_UPDATE_REPOSITORY', 'chococochiffon/biscuit'),
+        'cache_hours' => 24,
+        'failure_cache_minutes' => 60,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | ダッシュボードのシステムの警告
     |--------------------------------------------------------------------------
     |
