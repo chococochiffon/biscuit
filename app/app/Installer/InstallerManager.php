@@ -12,7 +12,7 @@ use Throwable;
  *
  * インストール済みかは、次のどれかで判定する(APP_INSTALLED のような設定だけには頼らない)。
  * - ロックファイル(local ディスクの installed)がある
- * - DB に管理者がいる(このインストーラーより前からある環境。見つけたらロックファイルを作る)
+ * - DB に管理者がいる(このインストーラーより前からある環境。見つけたらロックファイルを作る。インストーラーの途中は除く)
  * - config('installer.assume_installed')(テスト用)
  * インストール済みなら /install へは入れず(EnsureNotInstalled)、まだならほかの画面・API はインストーラーへ回す(RedirectIfNotInstalled)。
  */
@@ -85,6 +85,11 @@ class InstallerManager
      */
     private function detectExistingInstallation(): bool
     {
+        // インストーラーの途中(管理者の段で管理者を作ったあと)は、インストール済みとみなさない
+        if ($this->state->hasProgress()) {
+            return false;
+        }
+
         try {
             if (! Schema::hasTable('administrators') || ! Administrator::query()->exists()) {
                 return false;

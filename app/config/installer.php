@@ -57,6 +57,9 @@ return [
 
     'db_password_min_length' => 12,
 
+    // 最初の管理者のパスワードの最低文字数
+    'admin_password_min_length' => 12,
+
     'generated_password_length' => 24,
 
 ];

@@ -1,10 +1,13 @@
 <?php
 
+use App\Http\Controllers\Installer\AdministratorController;
 use App\Http\Controllers\Installer\ApplicationController;
 use App\Http\Controllers\Installer\DatabaseController;
-use App\Http\Controllers\Installer\PendingStepController;
+use App\Http\Controllers\Installer\DesignController;
+use App\Http\Controllers\Installer\FinalizeController;
+use App\Http\Controllers\Installer\MailController;
+use App\Http\Controllers\Installer\SiteController;
 use App\Http\Controllers\Installer\WelcomeController;
-use App\Installer\InstallerStep;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -32,10 +35,16 @@ Route::middleware('installer.step:application')->group(function () {
     Route::post('install/application', [ApplicationController::class, 'start'])->name('installer.application.start');
 });
 
-// まだ作っていない段(段ごとのコントローラーに置き換えていく)
-foreach (array_slice(InstallerStep::cases(), 3) as $step) {
-    Route::get("install/{$step->value}", PendingStepController::class)
-        ->defaults('step', $step->value)
-        ->middleware("installer.step:{$step->value}")
-        ->name($step->routeName());
+// 段ごとに、表示(GET)と保存(POST)を同じ形で並べる
+foreach ([
+    'site' => SiteController::class,
+    'mail' => MailController::class,
+    'administrator' => AdministratorController::class,
+    'design' => DesignController::class,
+    'finalize' => FinalizeController::class,
+] as $step => $controller) {
+    Route::middleware("installer.step:{$step}")->group(function () use ($step, $controller) {
+        Route::get("install/{$step}", [$controller, 'show'])->name("installer.{$step}");
+        Route::post("install/{$step}", [$controller, 'store'])->name("installer.{$step}.store");
+    });
 }

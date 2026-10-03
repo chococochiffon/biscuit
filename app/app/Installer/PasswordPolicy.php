@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class PasswordPolicy
 {
     /**
-     * 生成するパスワードに使う文字(EnvironmentWriter::UNSAFE_VALUE_PATTERN の文字を含まない)。
+     * 生成するパスワードに使う文字(DatabaseRequest::UNSAFE_PASSWORD_PATTERN の文字を含まない)。
      */
     private const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789-_.!%+=';
 
