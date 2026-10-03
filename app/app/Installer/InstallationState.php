@@ -32,6 +32,14 @@ class InstallationState
     }
 
     /**
+     * インストールの途中か(どれかの段を終えている)。
+     */
+    public function hasProgress(): bool
+    {
+        return $this->read()['completed'] !== [];
+    }
+
+    /**
      * 段を終えたことを残す。
      */
     public function markCompleted(InstallerStep $step): void

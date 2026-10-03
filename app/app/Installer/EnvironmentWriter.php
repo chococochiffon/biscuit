@@ -7,7 +7,7 @@ use RuntimeException;
 
 /**
  * インストーラーが .env を書き換える。書き換えられるのは ALLOWED_KEYS のキーだけで、ほかの行はそのまま残す
- * (ブラウザから .env 全体を編集させない)。値はシングルクォートで囲み、.env と Docker Compose で特別な意味を持つ文字は受け付けない。
+ * (ブラウザから .env 全体を編集させない)。値はシングルクォートで囲み、シングルクォートと改行などの制御文字は受け付けない。
  */
 class EnvironmentWriter
 {
@@ -21,12 +21,17 @@ class EnvironmentWriter
         'DB_CONNECTION', 'DB_HOST', 'DB_PORT', 'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD', 'DB_ROOT_PASSWORD',
         // 本番向けの初期値(biscuit:install --prepare)と URL・ポート(本番用の Compose も読む)
         'APP_ENV', 'APP_DEBUG', 'APP_URL', 'FRONT_URL', 'LOG_LEVEL', 'PAGE_VIEW_FORWARD_KEY', 'BISCUIT_ADMIN_PORT', 'BISCUIT_FRONT_PORT',
+        // サイトの段(言語・タイムゾーン)
+        'APP_LOCALE', 'APP_TIMEZONE',
+        // メールの段(SMTP)
+        'MAIL_MAILER', 'MAIL_SCHEME', 'MAIL_HOST', 'MAIL_PORT', 'MAIL_USERNAME', 'MAIL_PASSWORD', 'MAIL_FROM_ADDRESS',
     ];
 
     /**
-     * 値に使えない文字(シングルクォートで囲んでも .env・Docker Compose で壊れる・展開されるもの)と改行。
+     * 値に使えない文字。値はシングルクォートで囲む(.env・Docker Compose のどちらでも中身はそのまま読まれる)ため、
+     * 壊れるのはシングルクォートと改行などの制御文字だけ(DB のパスワードは、さらに DatabaseRequest で記号を絞る)。
      */
-    public const UNSAFE_VALUE_PATTERN = '/[\'"\\\\$`#\s]/';
+    public const UNSAFE_VALUE_PATTERN = '/[\'\x00-\x1F\x7F]/';
 
     public function __construct(private ?string $path = null) {}
 

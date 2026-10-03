@@ -2,13 +2,14 @@
 
 namespace App\Installer;
 
+use Database\Seeders\InstallSeeder;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
 /**
  * アプリケーションの段の処理(biscuit:install --step=application。install.sh がサービスを起動したあとに動かす)。
- * DB の接続確認 → マイグレーション → storage のリンク → キャッシュの削除。終えたらアプリケーションの段を済みにする。
+ * DB の接続確認 → マイグレーション → 本番用の初期データ(InstallSeeder) → storage のリンク → キャッシュの削除。終えたらアプリケーションの段を済みにする。
  * 失敗したら、何に失敗したかを InstallerStepException で返す(何度やり直してもよい)。
  */
 class ApplicationInstaller
@@ -35,6 +36,16 @@ class ApplicationInstaller
         }
 
         InstallerLog::info('マイグレーションを実行しました。');
+
+        try {
+            Artisan::call('db:seed', ['--class' => InstallSeeder::class, '--force' => true]);
+        } catch (Throwable $exception) {
+            InstallerLog::error('初期データを入れられませんでした。', ['error' => $exception->getMessage()]);
+
+            throw new InstallerStepException('seed', __('初期データを入れられませんでした。再試行してください。'));
+        }
+
+        InstallerLog::info('初期データを入れました。');
 
         // 公開用のリンク(public/storage)は install.sh が作る。ないときだけ作り、作れなければ知らせる
         if (! file_exists(public_path('storage'))) {

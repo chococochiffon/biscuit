@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\Installer\DatabaseRequest;
 use App\Installer\EnvironmentWriter;
 use App\Installer\InstallationState;
 use App\Installer\InstallerStep;
@@ -125,7 +126,7 @@ class InstallerDatabaseTest extends TestCase
             $password = PasswordPolicy::generate();
 
             $this->assertSame(24, strlen($password));
-            $this->assertDoesNotMatchRegularExpression(EnvironmentWriter::UNSAFE_VALUE_PATTERN, $password);
+            $this->assertDoesNotMatchRegularExpression(DatabaseRequest::UNSAFE_PASSWORD_PATTERN, $password);
             $this->assertFalse(PasswordPolicy::isForbidden($password));
         }
 

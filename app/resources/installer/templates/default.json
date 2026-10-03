@@ -1,0 +1,54 @@
+{
+    "version": 1,
+    "children": [
+        {
+            "type": "section",
+            "props": {},
+            "styles": { "paddingTop": "96px", "paddingBottom": "96px", "backgroundColor": "theme:light", "textAlign": "center" },
+            "children": [
+                {
+                    "type": "container",
+                    "props": {},
+                    "styles": { "maxWidth": "960px" },
+                    "children": [
+                        {
+                            "type": "heading",
+                            "props": { "text": "{{site_title}}", "level": 1 },
+                            "styles": { "fontSize": "44px", "fontWeight": "700" },
+                            "responsive": { "mobile": { "fontSize": "30px" } }
+                        },
+                        {
+                            "type": "text",
+                            "props": { "html": "<p>{{site_description}}</p>" },
+                            "styles": { "color": "#6c757d", "fontSize": "18px" }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "type": "section",
+            "props": {},
+            "styles": { "paddingTop": "48px", "paddingBottom": "64px" },
+            "children": [
+                {
+                    "type": "container",
+                    "props": {},
+                    "styles": {},
+                    "children": [
+                        {
+                            "type": "heading",
+                            "props": { "text": "{{latest_articles}}", "level": 2 },
+                            "styles": { "textAlign": "center", "marginBottom": "24px" }
+                        },
+                        {
+                            "type": "article-list",
+                            "props": { "limit": 6 },
+                            "styles": {}
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

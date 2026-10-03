@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Installer;
 
-use App\Installer\EnvironmentWriter;
 use App\Installer\PasswordPolicy;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
@@ -14,6 +13,11 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 class DatabaseRequest extends FormRequest
 {
+    /**
+     * DB のパスワードに使えない文字(MySQL のクライアントやシェルでも扱いやすいよう、.env の決まりより絞る。生成するパスワードはこの文字を使わない)。
+     */
+    public const UNSAFE_PASSWORD_PATTERN = '/[\'"\\\\$`#\s]/';
+
     public function authorize(): bool
     {
         return true;
@@ -42,7 +46,7 @@ class DatabaseRequest extends FormRequest
                         $fail(__('初期のパスワードやよく使われるパスワードのままです。セキュリティ保護のため変更してください。'));
                     } elseif (in_array(strtolower($value), [strtolower((string) $this->input('database')), strtolower((string) $this->input('username'))], true)) {
                         $fail(__('パスワードに、データベース名やユーザー名と同じ値は使えません。'));
-                    } elseif (preg_match(EnvironmentWriter::UNSAFE_VALUE_PATTERN, $value) === 1) {
+                    } elseif (preg_match(self::UNSAFE_PASSWORD_PATTERN, $value) === 1) {
                         $fail(__('パスワードに、空白と $ " \' \\ ` # は使えません。'));
                     }
                 },
