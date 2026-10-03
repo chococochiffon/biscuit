@@ -11,7 +11,14 @@ return [
     |
     */
 
-    'version' => '0.1.0',
+    'version' => '1.0.0',
+
+    /*
+    | HTTPS を外側のリバースプロキシで割り当てるとき、プロキシが付ける X-Forwarded-*(元の https・ホスト・IP アドレス)を信じる相手
+    | (.env の TRUSTED_PROXIES。カンマ区切りの IP・CIDR)。信じないと、URL・リダイレクトが http:// になる。
+    | インストーラーのサイトの段で https の URL を入れると、プライベートなネットワークを入れる。空なら信じない
+    */
+    'trusted_proxies' => array_values(array_filter(array_map('trim', explode(',', (string) env('TRUSTED_PROXIES', ''))))),
 
     /*
     |--------------------------------------------------------------------------

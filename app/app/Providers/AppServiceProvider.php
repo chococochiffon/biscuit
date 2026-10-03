@@ -15,6 +15,7 @@ use App\View\Composers\SiteSettingComposer;
 use App\View\Composers\UpdateNoticeComposer;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +41,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // HTTPS を割り当てる外側のリバースプロキシを信じる(config/biscuit.php の trusted_proxies。設定のキャッシュのあとも効くよう、ここで渡す)
+        if (config('biscuit.trusted_proxies') !== []) {
+            TrustProxies::at(config('biscuit.trusted_proxies'));
+        }
+
         // ページビルダーの版(page_builder_versions.versionable_type)に保存する対象の種類の名前(クラス名を保存しない)
         Relation::morphMap([
             'page_builder' => PageBuilder::class,

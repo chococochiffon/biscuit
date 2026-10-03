@@ -26,6 +26,8 @@ class EnvironmentPreparer
             // ポートは、install.sh が渡した値(コンテナの環境変数)・.env の値・既定値の順
             'BISCUIT_ADMIN_PORT' => (string) (getenv('BISCUIT_ADMIN_PORT') ?: $this->environment->get('BISCUIT_ADMIN_PORT') ?: 8080),
             'BISCUIT_FRONT_PORT' => (string) (getenv('BISCUIT_FRONT_PORT') ?: $this->environment->get('BISCUIT_FRONT_PORT') ?: 80),
+            // 待ち受けるアドレス(HTTPS のリバースプロキシを同じサーバーに置くときは 127.0.0.1)。IP アドレスでなければ既定の 0.0.0.0
+            'BISCUIT_BIND_ADDRESS' => $this->bindAddress((string) (getenv('BISCUIT_BIND_ADDRESS') ?: $this->environment->get('BISCUIT_BIND_ADDRESS') ?: '')),
         ];
 
         if (! filled($this->environment->get('PAGE_VIEW_FORWARD_KEY'))) {
@@ -52,5 +54,10 @@ class EnvironmentPreparer
         }
 
         InstallerLog::info('.env に本番向けの初期値を入れました。', ['admin_port' => $adminPort, 'front_port' => $frontPort]);
+    }
+
+    private function bindAddress(string $address): string
+    {
+        return filter_var($address, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4) !== false ? $address : '0.0.0.0';
     }
 }
