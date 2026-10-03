@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Enums\AdministratorRole;
 use App\Installer\EnvironmentWriter;
+use App\Installer\HealthChecker;
 use App\Installer\InstallationState;
 use App\Installer\InstallerManager;
 use App\Installer\InstallerStep;
@@ -17,6 +18,7 @@ use App\Models\SiteSetting;
 use App\Support\Builder\BuilderContent;
 use Database\Seeders\InstallSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
@@ -35,6 +37,7 @@ class InstallerStepsTest extends TestCase
         Storage::fake('local');
         Storage::fake('public');
         config(['installer.assume_installed' => false]);
+        Http::fake(['http://front:3000*' => Http::response('ok')]);
 
         $this->envPath = tempnam(sys_get_temp_dir(), 'env');
         file_put_contents($this->envPath, "APP_URL=http://localhost:8080\nFRONT_URL=http://localhost\nMAIL_MAILER=smtp\nMAIL_HOST=mailpit\n");
@@ -215,7 +218,13 @@ class InstallerStepsTest extends TestCase
         $this->completeUntil(InstallerStep::Design);
         app(TemplateInstaller::class)->installDefault();
 
-        $this->get(route('installer.finalize'))->assertOk()->assertSee('data-finalize-checks', false)->assertDontSee('bi-x-circle-fill', false);
+        $this->get(route('installer.finalize'))
+            ->assertOk()
+            ->assertSee('data-finalize-checks="required"', false)
+            ->assertDontSee('bi-x-circle-fill', false)
+            // 推奨の項目は満たしていなくても完了できる(テストの環境は本番の設定ではない)
+            ->assertSee('data-check="environment" data-ok="false"', false)
+            ->assertSee('data-check="front" data-ok="true"', false);
 
         $this->post(route('installer.finalize.store'))
             ->assertOk()
@@ -302,5 +311,46 @@ class InstallerStepsTest extends TestCase
         $this->post(route('installer.mail.store'), $this->mailInput(['host' => 'smtp2.example.com', 'password' => '']))->assertRedirect(route('installer.administrator'));
         $this->assertStringContainsString("MAIL_HOST='smtp2.example.com'", $this->env());
         $this->assertStringContainsString("MAIL_PASSWORD='p\$ss\"word'", $this->env());
+    }
+
+    public function test_health_checker_separates_required_and_recommended_checks(): void
+    {
+        $checks = collect(app(HealthChecker::class)->check())->keyBy('key');
+
+        // 管理者・サイト・デザインがまだないため、必須を満たさない
+        $this->assertFalse($checks['administrator']['ok']);
+        $this->assertFalse(HealthChecker::passes($checks->values()->all()));
+        $this->assertTrue($checks['database']['ok']);
+        $this->assertTrue($checks['migrations']['ok']);
+        $this->assertSame('recommended', $checks['scheduler']['level']);
+
+        // 推奨の項目が満たせなくても、必須を満たせば完了できる
+        $this->assertTrue(HealthChecker::passes([
+            ['level' => 'required', 'ok' => true],
+            ['level' => 'recommended', 'ok' => false],
+        ]));
+    }
+
+    public function test_health_checker_sees_the_scheduler_and_the_front(): void
+    {
+        $this->assertFalse(collect(app(HealthChecker::class)->check())->firstWhere('key', 'scheduler')['ok']);
+
+        $this->artisan('schedule:run')->assertSuccessful();
+        $this->assertTrue(collect(app(HealthChecker::class)->check())->firstWhere('key', 'scheduler')['ok']);
+
+        $this->travel(config('installer.scheduler_heartbeat_minutes') + 1)->minutes();
+        $this->assertFalse(collect(app(HealthChecker::class)->check())->firstWhere('key', 'scheduler')['ok']);
+
+        // 同じ URL への Http::fake は最初の応答が残るため、別の URL で確かめる(パターンの先頭には * が付くため、setUp の URL は http:// から書く)
+        config(['installer.front_internal_url' => 'http://broken-front:3000']);
+        Http::fake(['broken-front:3000*' => Http::response('error', 502)]);
+        $this->assertFalse(collect(app(HealthChecker::class)->check())->firstWhere('key', 'front')['ok']);
+    }
+
+    public function test_status_command_shows_the_health_checks(): void
+    {
+        $this->artisan('biscuit:install', ['--status' => true])
+            ->expectsOutputToContain('インストールの確認')
+            ->expectsOutputToContain('スケジューラーが動いている');
     }
 }

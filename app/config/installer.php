@@ -43,6 +43,12 @@ return [
         'port' => (int) env('INSTALLER_DB_PORT', 3306),
     ],
 
+    // インストールの確認(HealthChecker)で、公開側のサイトに届くかを確かめる URL(本番の Compose の中の公開側のコンテナ)
+    'front_internal_url' => env('INSTALLER_FRONT_INTERNAL_URL', 'http://front:3000'),
+
+    // スケジューラーが動いているとみなす、最後の合図(scheduler-heartbeat)からの時間(分)
+    'scheduler_heartbeat_minutes' => 5,
+
     /*
     |--------------------------------------------------------------------------
     | パスワードのポリシー
