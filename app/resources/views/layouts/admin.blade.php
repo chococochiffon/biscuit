@@ -179,6 +179,18 @@
                 </nav>
 
                 <main class="flex-grow-1 p-4">
+                    {{-- 更新できる Biscuit のバージョンのお知らせ(スーパー管理者だけ。「閉じる」で隠したバージョンは admin.js がこのブラウザで出さない) --}}
+                    @if ($updateNotice)
+                        <div class="alert alert-info d-flex align-items-center gap-2 py-2" role="status" data-update-notice data-version="{{ $updateNotice['version'] }}" hidden>
+                            <i class="bi bi-arrow-up-circle"></i>
+                            <div class="flex-grow-1 small">
+                                {{ __('Biscuit の新しいバージョン :version が公開されています(今のバージョン: :current)。', ['version' => $updateNotice['version'], 'current' => config('biscuit.version')]) }}
+                                <a href="{{ $updateNotice['url'] }}" target="_blank" rel="noopener noreferrer">{{ __('リリースノートを見る') }}</a>
+                            </div>
+                            <button type="button" class="btn-close" aria-label="{{ __('閉じる') }}" data-update-notice-close></button>
+                        </div>
+                    @endif
+
                     @if (session('status'))
                         <div class="alert alert-success">
                             {{ session('status') }}

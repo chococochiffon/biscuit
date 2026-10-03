@@ -15,6 +15,7 @@ import { initQuestionAnswerForm, initQuestionAnswerFlows } from './admin/questio
 import { initGalleryCategoryManagerModal } from './admin/gallery-images.js';
 import { initLayoutBlocks } from './admin/layouts.js';
 import { initPageViewCharts } from './admin/page-views.js';
+import { initUpdateNotice } from './admin/update-notice.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
@@ -37,4 +38,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initGalleryCategoryManagerModal();
     initLayoutBlocks();
     initPageViewCharts();
+    initUpdateNotice();
 });

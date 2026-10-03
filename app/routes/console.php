@@ -2,7 +2,11 @@
 
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
 Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
+
+// 新しい Biscuit のバージョンを毎日確かめ、あればスーパー管理者にメールで知らせる(本番では php artisan schedule:run を cron で動かす)
+Schedule::command('biscuit:check-update')->dailyAt('09:00');
