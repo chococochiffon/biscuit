@@ -1,0 +1,136 @@
+#!/usr/bin/env bash
+#
+# Biscuit の運用のコマンド(ホスト側)。インストールのあとに、Biscuit を置いたディレクトリで動かす。
+#
+#   ./biscuit status      版・URL・コンテナ・データベースの状態を表示する
+#   ./biscuit doctor      動作に問題がないかを診断する(問題があれば終了コード 1)
+#   ./biscuit install     インストーラーを起動する(./install.sh と同じ)
+#   ./biscuit help        この説明を表示する
+#
+# 役割: Docker・git を扱う処理と、ホストから見える状態の確認を受け持つ。Biscuit の中の処理(診断・状態など)は
+# app コンテナの中の php artisan biscuit:* が行う。パスワードなどの秘密の値は、画面にもログにも出さない。
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+# ホスト側のログ(*.log は git で除外)
+HOST_LOG="$ROOT/biscuit.log"
+# shellcheck source=docker/production/lib.sh
+. "$ROOT/docker/production/lib.sh"
+
+usage() {
+  sed -n '3,9p' "$0" | sed 's/^# \{0,1\}//'
+}
+
+# インストールを終えていなければ、インストーラーへ案内して止める
+require_installed() {
+  if [ ! -f "$APP/.env" ] || ! is_installed; then
+    fail "Biscuit はまだインストールしていません。./install.sh でインストールしてください。"
+  fi
+}
+
+# いまの版(git のタグ)。タグの上になければ、コミットを表示する
+git_version() {
+  git -C "$1" describe --tags --exact-match 2>/dev/null || printf '%s(タグではありません)' "$(git -C "$1" rev-parse --short HEAD 2>/dev/null || echo '?')"
+}
+
+# 結果の 1 行(ok・warn・ng と、項目と、詳しく)
+report() {
+  local result="$1" label="$2" detail="${3:-}"
+  case "$result" in
+    ok) printf '  \033[32m✔\033[0m %s' "$label" ;;
+    warn) printf '  \033[33m!\033[0m %s' "$label" ;;
+    *) printf '  \033[31m✘\033[0m %s' "$label" ;;
+  esac
+  [ -n "$detail" ] && printf '  \033[2m%s\033[0m' "$detail"
+  printf '\n'
+}
+
+# ホストから見える状態の診断(Docker のコンテナ・git の作業ツリー・ディスク)。必須の問題があれば 1 を返す
+host_checks() {
+  local failed=0 service state
+
+  printf '\nホスト\n'
+  for service in db app web front scheduler; do
+    state="$(compose ps -a --format '{{.State}}' "$service" 2>/dev/null | head -n 1)"
+    if [ "$state" = "running" ]; then
+      report ok "コンテナ $service が動いている"
+    else
+      report ng "コンテナ $service が動いている" "${state:-ありません}(./install.sh で起動し直せます)"
+      failed=1
+    fi
+  done
+
+  if [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+    report ok "Biscuit のファイルを書き換えていない" "$(git_version "$ROOT")"
+  else
+    report warn "Biscuit のファイルを書き換えていない" "変更があります(更新のときに失われることがあります)"
+  fi
+
+  if [ -d "$ROOT/frontend/chococo/.git" ]; then
+    report ok "公開側(chococo)がある" "$(git_version "$ROOT/frontend/chococo")"
+  else
+    report ng "公開側(chococo)がある" "frontend/chococo がありません"
+    failed=1
+  fi
+
+  local free_kb
+  free_kb="$(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }')"
+  if [ "${free_kb:-0}" -ge 2097152 ]; then
+    report ok "ディスクの空きが 2GB 以上ある" "$((free_kb / 1024 / 1024))GB"
+  else
+    report warn "ディスクの空きが 2GB 以上ある" "$((free_kb / 1024))MB(更新のビルド・バックアップに足りないことがあります)"
+  fi
+
+  return "$failed"
+}
+
+cmd_status() {
+  require_installed
+  printf '\n  Biscuit %s\n\n' "$(biscuit_version)"
+  printf '  サイト:     %s\n  管理画面:   %s/admin\n' "$(front_url)" "$(admin_url)"
+  printf '  biscuit:    %s\n  chococo:    %s\n\n' "$(git_version "$ROOT")" "$(git_version "$ROOT/frontend/chococo" 2>/dev/null || echo '-')"
+  compose ps --format 'table {{.Service}}\t{{.State}}\t{{.Status}}'
+  printf '\n'
+  in_app php artisan biscuit:status
+}
+
+cmd_doctor() {
+  require_installed
+  local failed=0
+
+  printf '\n  Biscuit Doctor\n'
+  host_checks || failed=1
+
+  printf '\nBiscuit\n'
+  if [ -n "$(compose ps -q --status running app 2>/dev/null)" ]; then
+    in_app php artisan biscuit:doctor || failed=1
+  else
+    report ng "app コンテナが動いていないため、Biscuit の中を診断できません"
+    failed=1
+  fi
+
+  printf '\n'
+  if [ "$failed" -eq 0 ]; then
+    info "問題は見つかりませんでした(警告(!)は、本番で公開する前に確かめてください)。"
+  else
+    warn "問題があります。✘ の項目を確かめてください。"
+  fi
+  log "doctor failed=$failed"
+  return "$failed"
+}
+
+main() {
+  local command="${1:-help}"
+  [ $# -gt 0 ] && shift
+
+  case "$command" in
+    status) check_requirements >/dev/null; cmd_status ;;
+    doctor) check_requirements >/dev/null; cmd_doctor ;;
+    install) exec "$ROOT/install.sh" "$@" ;;
+    help|-h|--help) usage ;;
+    *) usage; exit 1 ;;
+  esac
+}
+
+main "$@"
