@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Installer\DatabaseController;
 use App\Http\Controllers\Installer\PendingStepController;
 use App\Http\Controllers\Installer\WelcomeController;
 use App\Installer\InstallerStep;
@@ -19,7 +20,14 @@ use Illuminate\Support\Facades\Route;
 Route::get('install', [WelcomeController::class, 'show'])->name('installer.requirements');
 Route::post('install', [WelcomeController::class, 'start'])->name('installer.start');
 
-foreach (array_slice(InstallerStep::cases(), 1) as $step) {
+Route::middleware('installer.step:database')->group(function () {
+    Route::get('install/database', [DatabaseController::class, 'show'])->name('installer.database');
+    Route::post('install/database', [DatabaseController::class, 'store'])->name('installer.database.store');
+    Route::post('install/database/generate', [DatabaseController::class, 'generate'])->name('installer.database.generate');
+});
+
+// まだ作っていない段(段ごとのコントローラーに置き換えていく)
+foreach (array_slice(InstallerStep::cases(), 2) as $step) {
     Route::get("install/{$step->value}", PendingStepController::class)
         ->defaults('step', $step->value)
         ->middleware("installer.step:{$step->value}")

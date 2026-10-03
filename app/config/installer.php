@@ -27,4 +27,36 @@ return [
 
     'extensions' => ['pdo_mysql', 'mbstring', 'openssl', 'fileinfo', 'gd', 'bcmath', 'exif', 'tokenizer', 'xml', 'ctype', 'json'],
 
+    /*
+    |--------------------------------------------------------------------------
+    | データベース
+    |--------------------------------------------------------------------------
+    |
+    | インストーラーが立ち上げる MySQL(Docker Compose の db サービス)に固定する。ホスト・ポートは画面に表示するだけ。
+    | DB 名・ユーザー・パスワードはインストーラーで決め、app/.env の DB_* に書く(Docker Compose も同じ値を読む)。
+    |
+    */
+
+    'database' => [
+        'connection' => 'mysql',
+        'host' => env('INSTALLER_DB_HOST', 'db'),
+        'port' => (int) env('INSTALLER_DB_PORT', 3306),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | パスワードのポリシー
+    |--------------------------------------------------------------------------
+    |
+    | 配布物に含まれる初期値・よく使われる値(大文字小文字を問わない)は使わせない。DB のパスワードは、.env と Docker Compose で
+    | 特別な意味を持つ文字($ " ' \ ` # と空白)を使わせない(値が壊れないようにする)。生成するパスワードも同じ文字の範囲で作る。
+    |
+    */
+
+    'forbidden_passwords' => ['password', 'passw0rd', 'biscuit', 'root', 'admin', 'administrator', 'secret', 'changeme', '12345678', '123456789', '1234567890', 'qwerty', 'letmein'],
+
+    'db_password_min_length' => 12,
+
+    'generated_password_length' => 24,
+
 ];
