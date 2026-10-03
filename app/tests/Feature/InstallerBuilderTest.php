@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Enums\AuditAction;
+use App\Enums\BuilderPageType;
+use App\Http\Controllers\PageBuilderJsonController;
+use App\Http\Middleware\Installer\RedirectIfNotInstalled;
 use App\Installer\InstallationState;
 use App\Installer\InstallerManager;
 use App\Installer\InstallerStep;
@@ -180,16 +183,40 @@ class InstallerBuilderTest extends TestCase
         $this->assertSame('ようこそ', PageBuilder::top()->draft_content['children'][0]['children'][0]['props']['text']);
     }
 
-    public function test_public_api_can_be_read_after_the_application_step_for_the_preview(): void
+    public function test_only_the_preview_can_read_the_api_during_the_installation(): void
     {
-        $this->getJson(route('api.site-setting.show'))->assertOk()->assertJsonPath('data.site_title', 'ビスケット商店');
-        $this->postJson(route('api.page-views.store'), ['path' => '/'])->assertStatus(503);
+        $builder = PageBuilder::newEmpty(BuilderPageType::Top);
+        $builder->draft_content = $this->content();
+        $builder->save();
+        $query = [];
+        parse_str((string) parse_url(PageBuilderJsonController::signedPreviewUrl($builder)['url'], PHP_URL_QUERY), $query);
+        $headers = [
+            RedirectIfNotInstalled::PREVIEW_ID_HEADER => $query['id'],
+            RedirectIfNotInstalled::PREVIEW_EXPIRES_HEADER => $query['expires'],
+            RedirectIfNotInstalled::PREVIEW_SIGNATURE_HEADER => $query['signature'],
+        ];
 
-        // アプリケーションの段を終えるまでは読み取りも止める
-        Storage::fake('local');
-        $state = app(InstallationState::class);
-        $state->markCompleted(InstallerStep::Requirements);
+        // 署名のない公開側の表示は 503(chococo は「準備中」を出す)
         $this->getJson(route('api.site-setting.show'))->assertStatus(503);
+        $this->getJson(route('api.site-setting.show'), [...$headers, RedirectIfNotInstalled::PREVIEW_SIGNATURE_HEADER => 'invalid'])->assertStatus(503);
+
+        // プレビューは、署名付きのプレビューの API と、署名をヘッダーで付けたサイト設定・レイアウトを読める
+        $this->getJson(route('api.builder-previews.show', ['pageBuilder' => $builder->id, 'expires' => $query['expires'], 'signature' => $query['signature']]))->assertOk();
+        $this->getJson(route('api.site-setting.show'), $headers)->assertOk()->assertJsonPath('data.site_title', 'ビスケット商店');
+        $this->getJson(route('api.layout.show'), $headers)->assertOk();
+
+        // 書き込みは署名があっても止める
+        $this->postJson(route('api.page-views.store'), ['path' => '/'], $headers)->assertStatus(503);
+
+        // 期限が切れた署名は通さない
+        $this->travel(PageBuilderJsonController::PREVIEW_EXPIRE_MINUTES + 1)->minutes();
+        $this->getJson(route('api.site-setting.show'), $headers)->assertStatus(503);
+        $this->travelBack();
+
+        // アプリケーションの段を終えるまでは、署名があっても止める
+        Storage::fake('local');
+        app(InstallationState::class)->markCompleted(InstallerStep::Requirements);
+        $this->getJson(route('api.site-setting.show'), $headers)->assertStatus(503);
         $this->get(route('admin.login'))->assertRedirect(route('installer.requirements'));
     }
 }
