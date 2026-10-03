@@ -16,6 +16,8 @@ export interface BuilderNode {
   responsive?: Partial<Record<ResponsiveDevice, BuilderStyles>>
   // 表示条件(書かなければ常に表示)
   visibility?: BuilderVisibility
+  // 独自コンポーネントの中身だけが持つ、差し替えられる項目(項目名 → 表示名)
+  exposed?: Record<string, string>
   // 中にブロックを置ける種類だけが持つ
   children?: BuilderNode[]
 }
@@ -34,7 +36,7 @@ export interface BuilderContent {
   children: BuilderNode[]
 }
 
-export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image' | 'bool' | 'video'
+export type PropType = 'string' | 'richtext' | 'int' | 'enum' | 'url' | 'image' | 'bool' | 'video' | 'overrides'
 
 export interface PropDefinition {
   label: string
@@ -44,7 +46,7 @@ export interface PropDefinition {
   min?: number
   options?: string[]
   nullable?: boolean
-  // 選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類)
+  // 選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類、global-components・custom-components: コンポーネント)
   source?: string
 }
 
@@ -71,6 +73,8 @@ export interface Registry {
 export interface PageInfo {
   // component はグローバルコンポーネント(ページではないため path は null)
   type: 'top' | 'single_page' | 'component'
+  // コンポーネントの種類(コンポーネントのエディタだけ。custom では差し替えられる項目を選べる)
+  kind?: 'global' | 'custom'
   id: number | null
   title: string
   path: string | null
@@ -110,6 +114,7 @@ export interface ShowPayload extends BuilderStatePayload {
 // グローバルコンポーネント(PageBuilderComponentJsonController::index())。content は公開中の内容(未公開なら null)
 export interface ComponentSummary {
   id: number
+  kind: 'global' | 'custom'
   name: string
   published: boolean
   content: BuilderContent | null
@@ -177,7 +182,7 @@ export interface BuilderTemplate {
 
 // ドラッグ中のもの(パレットの新しいブロック、または置いてあるブロック)
 export type Dragging =
-  | { kind: 'new', type: string }
+  | { kind: 'new', type: string, props?: Record<string, unknown> }
   | { kind: 'move', id: string, type: string }
 
 // ドロップ先(parentId が null ならページの直下)。from は入れる位置を示している場所(Canvas とコンポーネントツリー)

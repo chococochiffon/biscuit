@@ -7,6 +7,7 @@ import type { BuilderNode } from '../types'
 import ArticleListPreview from './ArticleListPreview.vue'
 import BreadcrumbPreview from './BreadcrumbPreview.vue'
 import DropList from './DropList.vue'
+import CustomPreview from './CustomPreview.vue'
 import GlobalPreview from './GlobalPreview.vue'
 import { videoEmbedUrl } from '../video'
 import GalleryPreview from './GalleryPreview.vue'
@@ -154,6 +155,7 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
   <BreadcrumbPreview v-else-if="node.type === 'breadcrumb'" :node="node" :style="style" />
   <GalleryPreview v-else-if="node.type === 'gallery'" :node="node" :style="style" />
   <GlobalPreview v-else-if="node.type === 'global'" :node="node" />
+  <CustomPreview v-else-if="node.type === 'custom'" :node="node" :style="style" />
   <div v-else class="builder-preview-placeholder">
     {{ t('この種類のブロックは表示できません。') }}
   </div>

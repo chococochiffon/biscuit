@@ -42,11 +42,11 @@ class PageBuilderTransferTest extends TestCase
     /**
      * @param  array<string, mixed>  $file
      */
-    private function import(array $file, bool $allowsGlobal = true): TestResponse
+    private function import(array $file, string $context = 'page'): TestResponse
     {
         return $this->post(route('admin.json.builder.import'), [
             'file' => UploadedFile::fake()->createWithContent('page.json', json_encode($file)),
-            'allows_global' => $allowsGlobal ? '1' : '0',
+            'context' => $context,
         ], ['Accept' => 'application/json']);
     }
 
@@ -136,7 +136,7 @@ class PageBuilderTransferTest extends TestCase
             ->assertJsonPath('warnings', ['グローバルコンポーネント「未公開」は中身がない(未公開)ため、ブロックを外しました。']);
 
         // コンポーネントのエディタへの読み込み・同じ名前がない場合は、中身のセクションを展開する
-        $this->import($file, allowsGlobal: false)
+        $this->import($file, context: 'global')
             ->assertOk()
             ->assertJsonPath('content.children.0.type', 'section')
             ->assertJsonPath('content.children.0.children.0.props.text', 'お知らせの中身');

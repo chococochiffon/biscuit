@@ -2,6 +2,8 @@
 
 namespace App\Support\Builder;
 
+use App\Enums\BuilderComponentKind;
+use App\Enums\BuilderContext;
 use App\Models\GalleryCategory;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderComponent;
@@ -17,9 +19,10 @@ use InvalidArgumentException;
  * 読み込みでは次のように今のサイトに合わせてから検証し、整形した内容を返す(保存はしない。エディタが下書きを置き換える)。
  * - グローバルコンポーネント: 同じ名前のコンポーネントがあればそれを使い、なければ中身のセクションをページに展開する
  *   (コンポーネントの中にはコンポーネントを置けないため、コンポーネントへの読み込みでは常に展開する)
+ * - 独自コンポーネント: 同じ名前の独自コンポーネントがあればそれを使い、なければブロックを外す
  * - ギャラリーの分類: 同じ名前の分類があればそれを使い、なければ「すべて」にする
  * - 画像: ファイルに入っている画像を登録し直す(入っていなければ、同じパスの画像がこのサイトにあればそのまま使い、なければ外す)
- * - ブロックの ID はすべて振り直す
+ * - ブロックの ID はすべて振り直す(独自コンポーネントの中身への読み込みでは、差し替えた値のつながりを保つため振り直さない)
  */
 final class BuilderTransfer
 {
@@ -61,11 +64,11 @@ final class BuilderTransfer
         $categories = [];
 
         foreach (BuilderContent::nodes($content) as $node) {
-            if ($node['type'] === 'global' && is_int($node['props']['component'] ?? null)) {
+            if (in_array($node['type'], ['global', 'custom'], true) && is_int($node['props']['component'] ?? null)) {
                 $component = PageBuilderComponent::query()->find($node['props']['component']);
 
                 if ($component !== null) {
-                    $components[$component->id] = ['name' => $component->name, 'content' => $component->published_content];
+                    $components[$component->id] = ['kind' => $component->kind->value, 'name' => $component->name, 'content' => $component->published_content];
                 }
             }
 
@@ -104,7 +107,7 @@ final class BuilderTransfer
      *
      * @throws InvalidArgumentException
      */
-    public function import(mixed $data, BuilderValidator $validator, bool $allowsGlobal = true): array
+    public function import(mixed $data, BuilderValidator $validator, BuilderContext $context = BuilderContext::Page): array
     {
         $this->warnings = [];
         $this->storedPaths = [];
@@ -121,17 +124,20 @@ final class BuilderTransfer
         $components = is_array($data['components'] ?? null) ? $data['components'] : [];
         $categories = is_array($data['galleryCategories'] ?? null) ? $data['galleryCategories'] : [];
 
-        $content['children'] = $this->resolveComponents($content['children'] ?? [], $components, $allowsGlobal);
-        $content['children'] = $this->mapNodes($content['children'], fn (array $node) => $this->resolveGalleryCategory($node, $categories));
+        // 独自コンポーネントの中身はブロックの ID を振り直さない(ページに置いた部品の差し替えた値が、部品の中のブロックの ID で項目を指しているため)
+        $renewIds = $context !== BuilderContext::CustomComponent;
+        $content['children'] = $this->resolveComponents($content['children'] ?? [], $components, $context);
+        $content['children'] = $this->resolveCustomBlocks($content['children'], $components, $context);
+        $content['children'] = $this->mapNodes($content['children'], fn (array $node) => $this->resolveGalleryCategory($node, $categories), $renewIds);
 
-        $errors = $validator->errors($content, $allowsGlobal);
+        $errors = $validator->errors($content, $context);
 
         if ($errors !== []) {
             throw new InvalidArgumentException($errors[0]['message']);
         }
 
         $images = is_array($data['images'] ?? null) ? $data['images'] : [];
-        $content['children'] = $this->mapNodes($content['children'], fn (array $node) => $this->importImages($node, $images));
+        $content['children'] = $this->mapNodes($content['children'], fn (array $node) => $this->importImages($node, $images), renewIds: false);
 
         return [
             'content' => $validator->normalize($content),
@@ -180,7 +186,7 @@ final class BuilderTransfer
      * @param  array<array-key, mixed>  $components
      * @return list<mixed>
      */
-    private function resolveComponents(array $children, array $components, bool $allowsGlobal): array
+    private function resolveComponents(array $children, array $components, BuilderContext $context): array
     {
         $resolved = [];
 
@@ -193,7 +199,7 @@ final class BuilderTransfer
 
             $exported = $components[$node['props']['component'] ?? ''] ?? null;
             $name = is_array($exported) && is_string($exported['name'] ?? null) ? $exported['name'] : null;
-            $local = $allowsGlobal && $name !== null ? PageBuilderComponent::query()->where('name', $name)->orderBy('id')->first() : null;
+            $local = $context->allowsBlock('global') && $name !== null ? $this->localComponent(BuilderComponentKind::Global, $name) : null;
 
             if ($local !== null && is_array($node['props'] ?? null)) {
                 $node['props']['component'] = $local->id;
@@ -209,6 +215,54 @@ final class BuilderTransfer
         }
 
         return $resolved;
+    }
+
+    /**
+     * 独自コンポーネントのブロック(木のどこにでも置ける)を、同じ名前の独自コンポーネントにつなぎ直す。見つからない・置けない文脈なら外す
+     * (中身の形がブロックを置いた場所に合うとは限らないため、展開はしない)。
+     *
+     * @param  list<mixed>  $children
+     * @param  array<array-key, mixed>  $components
+     * @return list<mixed>
+     */
+    private function resolveCustomBlocks(array $children, array $components, BuilderContext $context): array
+    {
+        $resolved = [];
+
+        foreach ($children as $node) {
+            if (is_array($node) && is_array($node['children'] ?? null)) {
+                $node['children'] = $this->resolveCustomBlocks($node['children'], $components, $context);
+            }
+
+            if (! is_array($node) || ($node['type'] ?? null) !== 'custom') {
+                $resolved[] = $node;
+
+                continue;
+            }
+
+            $exported = $components[$node['props']['component'] ?? ''] ?? null;
+            $name = is_array($exported) && is_string($exported['name'] ?? null) ? $exported['name'] : null;
+            $local = $context->allowsBlock('custom') && $name !== null ? $this->localComponent(BuilderComponentKind::Custom, $name) : null;
+
+            if ($local !== null && is_array($node['props'] ?? null)) {
+                $node['props']['component'] = $local->id;
+                $resolved[] = $node;
+            } else {
+                $this->warnings[] = $name === null
+                    ? __('参照先の分からない独自コンポーネントのブロックを外しました。')
+                    : __('独自コンポーネント「:name」が見つからないため、ブロックを外しました。', ['name' => $name]);
+            }
+        }
+
+        return $resolved;
+    }
+
+    /**
+     * 今のサイトの、種類と名前が同じコンポーネント(なければ null)。
+     */
+    private function localComponent(BuilderComponentKind $kind, string $name): ?PageBuilderComponent
+    {
+        return PageBuilderComponent::query()->where('kind', $kind)->where('name', $name)->orderBy('id')->first();
     }
 
     /**
@@ -245,24 +299,43 @@ final class BuilderTransfer
     private function importImages(array $node, array $images): array
     {
         foreach (BlockRegistry::get($node['type'])['props'] ?? [] as $name => $prop) {
-            $path = $node['props'][$name] ?? null;
+            $value = $node['props'][$name] ?? null;
 
-            if ($prop['type'] !== 'image' || ! is_string($path)) {
-                continue;
+            if ($prop['type'] === 'image' && is_string($value)) {
+                $node['props'][$name] = $this->importImagePath($value, $images);
             }
 
-            if (! array_key_exists($path, $this->storedPaths)) {
-                $this->storedPaths[$path] = is_string($images[$path] ?? null) ? $this->storeImage($images[$path]) : null;
-            }
-
-            $node['props'][$name] = $this->storedPaths[$path] ?? (Storage::disk('public')->exists($path) ? $path : null);
-
-            if ($node['props'][$name] === null) {
-                $this->warnings[] = __('ファイルに入っていない画像を外しました。');
+            // 独自コンポーネントの差し替えた値の画像(画像のパスの形の値)
+            if ($prop['type'] === 'overrides' && is_array($value)) {
+                foreach ($value as $key => $override) {
+                    if (is_string($override) && preg_match(BuilderContent::IMAGE_PATH_PATTERN, $override) === 1) {
+                        $node['props'][$name][$key] = $this->importImagePath($override, $images);
+                    }
+                }
             }
         }
 
         return $node;
+    }
+
+    /**
+     * ファイルの画像を登録し直したパス(入っていなければ、同じパスの画像がこのサイトにあればそのまま、なければ null)。
+     *
+     * @param  array<array-key, mixed>  $images
+     */
+    private function importImagePath(string $path, array $images): ?string
+    {
+        if (! array_key_exists($path, $this->storedPaths)) {
+            $this->storedPaths[$path] = is_string($images[$path] ?? null) ? $this->storeImage($images[$path]) : null;
+        }
+
+        $stored = $this->storedPaths[$path] ?? (Storage::disk('public')->exists($path) ? $path : null);
+
+        if ($stored === null) {
+            $this->warnings[] = __('ファイルに入っていない画像を外しました。');
+        }
+
+        return $stored;
     }
 
     /**
@@ -292,24 +365,27 @@ final class BuilderTransfer
     }
 
     /**
-     * 木のすべてのノードを親から順に変換し、ID を振り直す(変換は形の正しいノードだけに行い、ほかは検証に任せる)。
+     * 木のすべてのノードを親から順に変換する(変換は形の正しいノードだけに行い、ほかは検証に任せる)。renewIds なら ID を振り直す。
      *
      * @param  list<mixed>  $children
      * @param  callable(array<string, mixed>): array<string, mixed>  $callback
      * @return list<mixed>
      */
-    private function mapNodes(array $children, callable $callback): array
+    private function mapNodes(array $children, callable $callback, bool $renewIds = true): array
     {
-        return array_map(function (mixed $node) use ($callback) {
+        return array_map(function (mixed $node) use ($callback, $renewIds) {
             if (! is_array($node) || ! is_string($node['type'] ?? null) || ! BlockRegistry::has($node['type'])) {
                 return $node;
             }
 
             $node = $callback($node);
-            $node['id'] = BuilderContent::newId($node['type']);
+
+            if ($renewIds) {
+                $node['id'] = BuilderContent::newId($node['type']);
+            }
 
             if (is_array($node['children'] ?? null)) {
-                $node['children'] = $this->mapNodes($node['children'], $callback);
+                $node['children'] = $this->mapNodes($node['children'], $callback, $renewIds);
             }
 
             return $node;

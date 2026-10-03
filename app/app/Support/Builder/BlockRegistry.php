@@ -2,15 +2,18 @@
 
 namespace App\Support\Builder;
 
+use App\Enums\BuilderContext;
+
 /**
  * ページビルダーのブロックの定義(種類・置ける子・props・使えるスタイル)。
  * 保存時の検証(BuilderValidator)と管理画面のエディタ(toArray() を JSON で渡す)のどちらもここを元にする。
  * 置ける親(allowedParents)は allowedChildren を逆に引いて作り、定義は片側だけに書く。
  *
- * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool・video)と default を持ち、
+ * props の各項目は label(管理画面の入力欄の名前。日本語の原文)・type(string・richtext・int・enum・url・image・bool・video・overrides)と default を持ち、
  * string・richtext は max(文字数)、int は min/max、enum は options を持つ。nullable の項目は null も受け付ける(url・image・video は常に null 可)。
- * video は YouTube・Vimeo の動画の URL だけを受け付ける(VideoUrl)。
- * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類、global-components: グローバルコンポーネント)。
+ * video は YouTube・Vimeo の動画の URL だけを受け付ける(VideoUrl)。overrides は独自コンポーネントの差し替えた値(「ノードの ID.項目名」→ 値)。
+ * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類、global-components: グローバルコンポーネント、
+ * custom-components: 独自コンポーネント)。
  */
 final class BlockRegistry
 {
@@ -34,7 +37,15 @@ final class BlockRegistry
      *
      * @var list<string>
      */
-    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
+    private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery', 'custom'];
+
+    /**
+     * 独自コンポーネント(BuilderContext::CustomComponent)の一番外側に置けるブロック(カラムの中と同じブロックとコンテナ・行。
+     * 独自コンポーネントの中には独自コンポーネントを置けない)。
+     *
+     * @var list<string>
+     */
+    public const CUSTOM_ROOT_CHILDREN = ['container', 'row', ...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
 
     /**
      * 余白のスタイル。
@@ -271,6 +282,19 @@ final class BlockRegistry
                 ],
                 'styles' => [],
             ],
+            // 独自コンポーネント: 参照する部品の id と、部品の差し替えられる項目に入れた値(values。キーは「ノードの ID.項目名」)だけを保存し、
+            // 公開側に返すときに部品の公開中の内容に値を当てはめて data.children に入れる(BlockDataResolver)。パレットには部品ごとに出す
+            'custom' => [
+                'label' => '独自コンポーネント',
+                'category' => 'cms',
+                'icon' => 'boxes',
+                'children' => [],
+                'props' => [
+                    'component' => ['label' => '使う部品', 'type' => 'int', 'default' => null, 'min' => 1, 'max' => 2147483647, 'nullable' => true, 'source' => 'custom-components'],
+                    'values' => ['label' => '差し替える項目', 'type' => 'overrides', 'default' => []],
+                ],
+                'styles' => self::MARGIN_STYLES,
+            ],
             'divider' => [
                 'label' => '区切り線',
                 'category' => 'basic',
@@ -301,13 +325,13 @@ final class BlockRegistry
     }
 
     /**
-     * 親(null はページの直下)の中に、指定した種類のブロックを置けるか。
+     * 親(null は一番外側)の中に、指定した種類のブロックを置けるか(一番外側に置けるもの・使えるブロックは文脈で変わる)。
      */
-    public static function allowsChild(?string $parentType, string $childType): bool
+    public static function allowsChild(?string $parentType, string $childType, BuilderContext $context = BuilderContext::Page): bool
     {
-        $children = $parentType === null ? self::ROOT_CHILDREN : (self::get($parentType)['children'] ?? []);
+        $children = $parentType === null ? $context->rootChildren() : (self::get($parentType)['children'] ?? []);
 
-        return in_array($childType, $children, true);
+        return $context->allowsBlock($childType) && in_array($childType, $children, true);
     }
 
     /**
@@ -321,20 +345,25 @@ final class BlockRegistry
     }
 
     /**
-     * 管理画面のエディタに渡す定義(表示名は現在の言語に翻訳し、置ける親を足す)。
+     * 管理画面のエディタに渡す定義(表示名は現在の言語に翻訳し、置ける親を足す)。文脈で使えないブロック・置ける場所のないブロックは渡さない。
      *
      * @return array{rootChildren: list<string>, blocks: array<string, array<string, mixed>>, styles: array<string, string|list<string>>}
      */
-    public static function toArray(): array
+    public static function toArray(BuilderContext $context = BuilderContext::Page): array
     {
-        $definitions = self::definitions();
+        $definitions = array_filter(self::definitions(), fn (string $type) => $context->allowsBlock($type), ARRAY_FILTER_USE_KEY);
         $blocks = [];
 
         foreach ($definitions as $type => $definition) {
             $parents = array_keys(array_filter($definitions, fn (array $parent) => in_array($type, $parent['children'], true)));
 
-            if (in_array($type, self::ROOT_CHILDREN, true)) {
+            if (in_array($type, $context->rootChildren(), true)) {
                 array_unshift($parents, null);
+            }
+
+            // 文脈の中で置ける場所のないブロック(独自コンポーネントの中のセクションなど)は、パレットに出さないよう渡さない
+            if ($parents === []) {
+                continue;
             }
 
             $blocks[$type] = [
@@ -346,7 +375,7 @@ final class BlockRegistry
         }
 
         return [
-            'rootChildren' => self::ROOT_CHILDREN,
+            'rootChildren' => $context->rootChildren(),
             'blocks' => $blocks,
             'styles' => StyleRegistry::kinds(),
         ];

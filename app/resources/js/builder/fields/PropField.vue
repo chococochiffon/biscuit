@@ -7,22 +7,30 @@ import ImageField from './ImageField.vue'
 import RichTextField from './RichTextField.vue'
 import { videoEmbedUrl } from '../video'
 
-// ブロックの内容(props)の項目 1 つの入力欄。項目の型(BlockRegistry の type)に合わせて入力欄を選ぶ
+// ブロックの内容(props)の項目 1 つの入力欄。項目の型(BlockRegistry の type)に合わせて入力欄を選ぶ。
+// override を渡すと、独自コンポーネントの差し替えた値の入力欄になる(値の読み書きを override に任せ、空は「部品の値のまま」。
+// 選択肢・オン/オフにも「部品の値のまま」を出し、文字の入力欄には部品の値を薄く出す)
 const props = defineProps<{
   node: BuilderNode
   name: string
   prop: PropDefinition
+  override?: { value: unknown, fallback: unknown, set: (value: unknown) => void }
 }>()
 
 const store = useBuilderStore()
 
-// グローバルコンポーネントの選択肢は、入力欄を出したときに読み込む
-if (props.prop.source === 'global-components') {
+// コンポーネント(グローバル・独自)の選択肢は、入力欄を出したときに読み込み、項目の種類のものだけを出す
+const COMPONENT_SOURCES: Record<string, 'global' | 'custom'> = { 'global-components': 'global', 'custom-components': 'custom' }
+const componentKind = computed(() => COMPONENT_SOURCES[props.prop.source ?? ''] ?? null)
+const componentOptions = computed(() => (store.state.components ?? []).filter(component => component.kind === componentKind.value))
+
+if (componentKind.value) {
   store.loadComponents()
 }
 
 const id = computed(() => `prop-${props.node.id}-${props.name}`)
-const value = computed(() => props.node.props[props.name])
+const value = computed(() => (props.override ? props.override.value : props.node.props[props.name]))
+const fallbackText = computed(() => (props.override && typeof props.override.fallback === 'string' ? props.override.fallback : ''))
 
 // 選択肢の表示名(値そのものを出すと分かりにくいもの)
 const OPTION_LABELS: Record<string, string> = {
@@ -69,6 +77,12 @@ const isUrlInvalid = computed(() => props.prop.type === 'url' && typeof value.va
 const isVideoInvalid = computed(() => props.prop.type === 'video' && typeof value.value === 'string' && videoEmbedUrl(value.value) === null)
 
 function update(next: unknown): void {
+  if (props.override) {
+    props.override.set(next)
+
+    return
+  }
+
   store.updateProp(props.node.id, props.name, next)
 }
 
@@ -79,7 +93,21 @@ function updateInt(raw: string): void {
 
 <template>
   <div class="mb-3">
-    <div v-if="prop.type === 'bool'" class="form-check form-switch">
+    <template v-if="prop.type === 'bool' && override">
+      <label :for="id" class="form-label small fw-semibold mb-1">{{ prop.label }}</label>
+      <select
+        :id="id"
+        class="form-select form-select-sm form-select-auto"
+        :value="value === true ? 'true' : value === false ? 'false' : ''"
+        @change="update(({ true: true, false: false } as Record<string, boolean>)[($event.target as HTMLSelectElement).value] ?? null)"
+      >
+        <option value="">{{ t('部品の値のまま') }}</option>
+        <option value="true">{{ t('オン') }}</option>
+        <option value="false">{{ t('オフ') }}</option>
+      </select>
+    </template>
+
+    <div v-else-if="prop.type === 'bool'" class="form-check form-switch">
       <input
         :id="id"
         type="checkbox"
@@ -99,6 +127,7 @@ function updateInt(raw: string): void {
       type="text"
       class="form-control form-control-sm"
       :maxlength="prop.max"
+      :placeholder="fallbackText"
       :value="value ?? ''"
       @input="update(($event.target as HTMLInputElement).value)"
     >
@@ -125,7 +154,7 @@ function updateInt(raw: string): void {
     </select>
 
     <select
-      v-else-if="prop.source === 'global-components'"
+      v-else-if="componentKind"
       :id="id"
       class="form-select form-select-sm form-select-auto"
       :value="value ?? ''"
@@ -133,10 +162,10 @@ function updateInt(raw: string): void {
       @change="updateInt(($event.target as HTMLSelectElement).value)"
     >
       <option value="">{{ t('選んでください') }}</option>
-      <option v-for="component in store.state.components ?? []" :key="component.id" :value="component.id">
+      <option v-for="component in componentOptions" :key="component.id" :value="component.id">
         {{ component.published ? component.name : `${component.name} ${t('(未公開)')}` }}
       </option>
-      <option v-if="typeof value === 'number' && store.state.components !== null && !store.state.components.some(component => component.id === value)" :value="value">
+      <option v-if="typeof value === 'number' && store.state.components !== null && !componentOptions.some(component => component.id === value)" :value="value">
         {{ t('(削除されたコンポーネント)') }}
       </option>
     </select>
@@ -148,7 +177,8 @@ function updateInt(raw: string): void {
       :value="value ?? ''"
       @change="updateInt(($event.target as HTMLSelectElement).value)"
     >
-      <option v-if="prop.nullable" value="">{{ t('指定しない') }}</option>
+      <option v-if="override" value="">{{ t('部品の値のまま') }}</option>
+      <option v-else-if="prop.nullable" value="">{{ t('指定しない') }}</option>
       <option v-for="option in intOptions" :key="option" :value="option">
         {{ name === 'level' ? `H${option}` : option }}
       </option>
@@ -169,9 +199,10 @@ function updateInt(raw: string): void {
       v-else-if="prop.type === 'enum'"
       :id="id"
       class="form-select form-select-sm form-select-auto"
-      :value="value"
-      @change="update(($event.target as HTMLSelectElement).value)"
+      :value="value ?? ''"
+      @change="update(($event.target as HTMLSelectElement).value || null)"
     >
+      <option v-if="override" value="">{{ t('部品の値のまま') }}</option>
       <option v-for="option in prop.options" :key="option" :value="option">{{ OPTION_LABELS[option] ?? option }}</option>
     </select>
 

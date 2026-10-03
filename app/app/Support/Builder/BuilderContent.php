@@ -115,6 +115,15 @@ final class BuilderContent
                 if ($prop['type'] === 'image' && is_string($value) && $value !== '') {
                     $paths[$value] = true;
                 }
+
+                // 独自コンポーネントの差し替えた値の画像(値の型は部品の項目で決まるため、画像のパスの形のものを拾う)
+                if ($prop['type'] === 'overrides' && is_array($value)) {
+                    foreach ($value as $override) {
+                        if (is_string($override) && preg_match(self::IMAGE_PATH_PATTERN, $override) === 1) {
+                            $paths[$override] = true;
+                        }
+                    }
+                }
             }
         }
 

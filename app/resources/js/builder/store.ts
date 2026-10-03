@@ -3,6 +3,7 @@ import { ApiError, type BuilderApi } from './api'
 import { createHistory } from './history'
 import { t } from './i18n'
 import { canPlace, cloneWithNewIds, containsNode, createNode, equalizeColumns, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from './nodes'
+import { setExposed, setOverride } from './custom'
 import { setNodeStyle } from './styles'
 import { loadThemeFonts } from './theme'
 import { formatDateTime, setVisibility } from './visibility'
@@ -209,10 +210,11 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     /**
-     * 新しいブロックを親(null はページの直下)の index の位置に置き、選択する。
+     * 新しいブロックを親(null はページの直下)の index の位置に置き、選択する。props は既定値に重ねる(パレットの独自コンポーネントの部品の id など)。
      */
-    add(type: string, parentId: string | null, index: number): boolean {
+    add(type: string, parentId: string | null, index: number, props: Record<string, unknown> = {}): boolean {
       const node = createNode(state.registry, type)
+      Object.assign(node.props, JSON.parse(JSON.stringify(props)))
 
       const inserted = () => {
         if (!insertNode(state.registry, state.content, parentId, index, node)) {
@@ -235,21 +237,21 @@ export function createBuilderStore(api: BuilderApi) {
     /**
      * パレットのクリックで新しいブロックを置く。選択中のブロックの中(末尾)に置けなければその後ろ、どちらもだめならページの末尾。
      */
-    addNearSelection(type: string): boolean {
+    addNearSelection(type: string, props: Record<string, unknown> = {}): boolean {
       const selected = this.selectedNode()
 
       if (selected?.children && canPlace(state.registry, selected.type, type)) {
-        return this.add(type, selected.id, selected.children.length)
+        return this.add(type, selected.id, selected.children.length, props)
       }
 
       const location = selected ? findLocation(state.content, selected.id) : null
 
       if (location && canPlace(state.registry, location.parent?.type ?? null, type)) {
-        return this.add(type, location.parent?.id ?? null, location.index + 1)
+        return this.add(type, location.parent?.id ?? null, location.index + 1, props)
       }
 
       if (canPlace(state.registry, null, type)) {
-        return this.add(type, null, state.content.children.length)
+        return this.add(type, null, state.content.children.length, props)
       }
 
       state.message = { type: 'warning', text: t('「:block」は、選んでいるブロックの中や後ろには置けません。', { block: this.definition(type).label }) }
@@ -401,6 +403,28 @@ export function createBuilderStore(api: BuilderApi) {
     },
 
     /**
+     * 独自コンポーネントの中身のブロックの項目を、差し替えられる項目にする(表示名)・やめる(null)。
+     */
+    updateExposed(id: string, prop: string, label: string | null): void {
+      const node = findNode(state.content, id)
+
+      if (node && mutate(`exposed:${id}:${prop}`, () => setExposed(node, prop, label))) {
+        delete state.errors[`nodes.${id}`]
+      }
+    },
+
+    /**
+     * 独自コンポーネントのブロックの差し替えた値を変える(null・空は部品の値のまま)。
+     */
+    updateOverride(id: string, key: string, value: unknown): void {
+      const node = findNode(state.content, id)
+
+      if (node && mutate(`override:${id}:${key}`, () => setOverride(node, key, value))) {
+        delete state.errors[`nodes.${id}`]
+      }
+    },
+
+    /**
      * 表示条件の一部を変える(すべての端末で表示しない・開始が終了より後になる変更はしない)。変えたら true。
      */
     updateVisibility(id: string, patch: Partial<BuilderVisibility>): boolean {
@@ -469,7 +493,7 @@ export function createBuilderStore(api: BuilderApi) {
 
       if (dragging && dropTarget) {
         if (dragging.kind === 'new') {
-          this.add(dragging.type, dropTarget.parentId, dropTarget.index)
+          this.add(dragging.type, dropTarget.parentId, dropTarget.index, dragging.props)
         }
         else if (this.move(dragging.id, dropTarget.parentId, dropTarget.index)) {
           state.selectedId = dragging.id
@@ -670,7 +694,7 @@ export function createBuilderStore(api: BuilderApi) {
       let result: BuilderImportResult
 
       try {
-        result = await api.importFile(file, state.page?.type !== 'component')
+        result = await api.importFile(file, state.page?.type === 'component' ? state.page.kind ?? 'global' : 'page')
       }
       catch (error) {
         throw new Error(error instanceof ApiError && error.data.message ? error.data.message : t('読み込みに失敗しました。'))

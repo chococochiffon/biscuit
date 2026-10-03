@@ -2,6 +2,7 @@
 
 namespace App\Support\Builder;
 
+use App\Enums\BuilderContext;
 use App\Support\HtmlSanitizer;
 
 /**
@@ -19,7 +20,24 @@ final class BuilderValidator
      *
      * @var list<string>
      */
-    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'children'];
+    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'exposed', 'children'];
+
+    /**
+     * 独自コンポーネントの差し替えた値(overrides)のキーの形(ノードの ID.項目名)と、1 つのブロックに入れられる数。
+     */
+    public const OVERRIDE_KEY_PATTERN = '/\A[a-z]+(?:-[a-z]+)*_[0-9A-HJKMNP-TV-Z]{26}\.[A-Za-z]+\z/';
+
+    private const OVERRIDES_MAX = 50;
+
+    /**
+     * 差し替えた値の文字の最大数(本文のテキストと同じ)。
+     */
+    private const OVERRIDE_VALUE_MAX_LENGTH = 20000;
+
+    /**
+     * 差し替えられる項目の名前の最大文字数。
+     */
+    private const EXPOSED_LABEL_MAX_LENGTH = 50;
 
     /**
      * URL の項目に入れられるリンク先(http(s)・mailto・tel・サイト内の / 始まり・ページ内の #)。
@@ -47,22 +65,22 @@ final class BuilderValidator
     private int $nodeCount = 0;
 
     /**
-     * グローバルコンポーネントのブロックを置けるか(コンポーネントの内容では置けない)。
+     * 検証している内容の文脈(一番外側に置けるもの・使えるブロック・差し替えられる項目を持てるかが変わる)。
      */
-    private bool $allowsGlobal = true;
+    private BuilderContext $context = BuilderContext::Page;
 
     /**
-     * 内容を検証し、エラーの一覧を返す(空なら正しい)。グローバルコンポーネントの内容は allowsGlobal を false にして検証する
+     * 内容を検証し、エラーの一覧を返す(空なら正しい)。コンポーネントの内容はその文脈(BuilderContext)で検証する
      * (コンポーネントの中にコンポーネントを置くと、入れ子が終わらなくなるおそれがあるため)。
      *
      * @return list<array{node: string|null, message: string}>
      */
-    public function errors(mixed $content, bool $allowsGlobal = true): array
+    public function errors(mixed $content, BuilderContext $context = BuilderContext::Page): array
     {
         $this->errors = [];
         $this->ids = [];
         $this->nodeCount = 0;
-        $this->allowsGlobal = $allowsGlobal;
+        $this->context = $context;
 
         if (! self::isObject($content) || array_diff(array_keys($content), ['version', 'children']) !== []) {
             return [$this->error(null, __('ビルダーの内容の形式が正しくありません。'))];
@@ -132,6 +150,10 @@ final class BuilderValidator
             $normalized['visibility'] = $visibility;
         }
 
+        if (($node['exposed'] ?? []) !== []) {
+            $normalized['exposed'] = array_map(trim(...), $node['exposed']);
+        }
+
         if ($definition['children'] !== []) {
             $normalized['children'] = array_map($this->normalizeNode(...), $node['children'] ?? []);
         }
@@ -184,13 +206,15 @@ final class BuilderValidator
             $this->ids[$id] = true;
         }
 
-        if ($type === 'global' && ! $this->allowsGlobal) {
-            $this->errors[] = $this->error($id, __('グローバルコンポーネントの中には、グローバルコンポーネントを置けません。'));
+        if (! $this->context->allowsBlock($type)) {
+            $this->errors[] = $this->error($id, $type === 'global'
+                ? __('グローバルコンポーネントの中には、グローバルコンポーネントを置けません。')
+                : __('独自コンポーネントの中には、独自コンポーネントを置けません。'));
 
             return;
         }
 
-        if (! BlockRegistry::allowsChild($parentType, $type)) {
+        if (! BlockRegistry::allowsChild($parentType, $type, $this->context)) {
             $this->errors[] = $this->error($id, $parentType === null
                 ? __('「:child」はページの直下に置けません。', ['child' => $label])
                 : __('「:child」は「:parent」の中に置けません。', ['child' => $label, 'parent' => __(BlockRegistry::get($parentType)['label'])]));
@@ -211,6 +235,10 @@ final class BuilderValidator
 
         foreach (Visibility::errors($node['visibility'] ?? [], $label) as $message) {
             $this->errors[] = $this->error($id, $message);
+        }
+
+        if (array_key_exists('exposed', $node)) {
+            $this->validateExposed($node['exposed'], $definition['props'], $id, $label);
         }
 
         if ($definition['children'] === []) {
@@ -238,16 +266,19 @@ final class BuilderValidator
         foreach ($props as $name => $value) {
             if (! isset($definitions[$name])) {
                 $this->errors[] = $this->error($id, __('「:block」に「:name」という項目はありません。', ['block' => $label, 'name' => $name]));
-            } elseif (! $this->isValidProp($definitions[$name], $value)) {
+            } elseif (! self::isValidPropValue($definitions[$name], $value)) {
                 $this->errors[] = $this->error($id, __('「:block」の「:name」の値が正しくありません。', ['block' => $label, 'name' => $name]));
             }
         }
     }
 
     /**
+     * 項目の値が、その項目の定義(BlockRegistry の props の 1 つ)に合っているか。
+     * 独自コンポーネントの差し替えた値を当てはめるとき(BlockDataResolver)にも使う。
+     *
      * @param  array<string, mixed>  $definition
      */
-    private function isValidProp(array $definition, mixed $value): bool
+    public static function isValidPropValue(array $definition, mixed $value): bool
     {
         if ($value === null) {
             return ($definition['nullable'] ?? false) || in_array($definition['type'], ['url', 'image', 'video'], true);
@@ -261,8 +292,62 @@ final class BuilderValidator
             'video' => is_string($value) && VideoUrl::embedUrl($value) !== null,
             'url' => is_string($value) && strlen($value) <= self::URL_MAX_LENGTH && preg_match(self::URL_PATTERN, $value) === 1,
             'image' => is_string($value) && preg_match(BuilderContent::IMAGE_PATH_PATTERN, $value) === 1,
+            'overrides' => self::isValidOverrides($value),
             default => false,
         };
+    }
+
+    /**
+     * 独自コンポーネントの差し替えた値(ノードの ID.項目名 → 文字・数値・真偽値・null)。値が部品の項目に合っているかは、
+     * 部品の中身が変わりうるため、公開側に返すときに部品の項目の定義で確かめる(BlockDataResolver)。
+     */
+    private static function isValidOverrides(mixed $value): bool
+    {
+        if (! self::isObject($value) || count($value) > self::OVERRIDES_MAX) {
+            return false;
+        }
+
+        foreach ($value as $key => $override) {
+            if (! is_string($key) || preg_match(self::OVERRIDE_KEY_PATTERN, $key) !== 1) {
+                return false;
+            }
+
+            if (! ($override === null || is_bool($override) || is_int($override) || (is_string($override) && mb_strlen($override) <= self::OVERRIDE_VALUE_MAX_LENGTH))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * 差し替えられる項目(項目名 → 表示名)。独自コンポーネントの中身だけが持て、選択肢を登録済みのデータから作る項目・差し替えた値の項目は選べない。
+     *
+     * @param  array<string, array<string, mixed>>  $definitions
+     */
+    private function validateExposed(mixed $exposed, array $definitions, ?string $id, string $label): void
+    {
+        if (! $this->context->allowsExposed()) {
+            $this->errors[] = $this->error($id, __('「:block」に「:name」という項目はありません。', ['block' => $label, 'name' => 'exposed']));
+
+            return;
+        }
+
+        if (! self::isObject($exposed)) {
+            $this->errors[] = $this->error($id, __('「:block」の差し替えられる項目の形式が正しくありません。', ['block' => $label]));
+
+            return;
+        }
+
+        foreach ($exposed as $name => $exposedLabel) {
+            $definition = $definitions[$name] ?? null;
+
+            if ($definition === null || isset($definition['source']) || $definition['type'] === 'overrides') {
+                $this->errors[] = $this->error($id, __('「:block」の「:name」は差し替えられる項目にできません。', ['block' => $label, 'name' => $name]));
+            } elseif (! is_string($exposedLabel) || trim($exposedLabel) === '' || mb_strlen($exposedLabel) > self::EXPOSED_LABEL_MAX_LENGTH) {
+                $this->errors[] = $this->error($id, __('「:block」の差し替えられる項目の名前は、:max 文字までで入力してください。', ['block' => $label, 'max' => self::EXPOSED_LABEL_MAX_LENGTH]));
+            }
+        }
     }
 
     /**

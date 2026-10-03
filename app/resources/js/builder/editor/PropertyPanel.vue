@@ -6,6 +6,9 @@ import { useBuilderStore } from '../store'
 import PropField from '../fields/PropField.vue'
 import StyleField from '../fields/StyleField.vue'
 import VisibilityFields from '../fields/VisibilityFields.vue'
+import CustomFields from '../fields/CustomFields.vue'
+import ExposeField from '../fields/ExposeField.vue'
+import { isExposable } from '../custom'
 import { styleGroups } from '../fields/styleLabels'
 
 // 右のプロパティ: 選択中のブロックの内容(props)・スタイル・表示条件を、ブロックの定義から作った入力欄で編集する。
@@ -29,6 +32,11 @@ const DEVICE_LABELS = { desktop: t('デスクトップ'), tablet: t('タブレ�
 
 // Undo/Redo で内容を差し替えたら入力欄を作り直す(入力欄が持つ入力中の値を捨てて、差し替えた値を出す)
 const fieldKey = (name: string) => `${node.value?.id}:${name}:${store.state.device}:${store.state.restoreCount}`
+
+// 内容のタブに出す項目(独自コンポーネントのブロックの差し替えた値は、CustomFields で部品の項目ごとに出す)
+const contentProps = computed(() => Object.entries(definition.value?.props ?? {}).filter(([, prop]) => prop.type !== 'overrides'))
+// 独自コンポーネントのエディタでは、項目ごとに「使うたびに変えられる項目にする」を出す
+const isCustomComponent = computed(() => store.state.page?.type === 'component' && store.state.page.kind === 'custom')
 
 const errors = computed(() => (node.value ? store.state.errors[`nodes.${node.value.id}`] ?? [] : store.state.errors.content ?? []))
 </script>
@@ -65,13 +73,11 @@ const errors = computed(() => (node.value ? store.state.errors[`nodes.${node.val
       </ul>
 
       <template v-if="tab === 'content'">
-        <PropField
-          v-for="(prop, name) in definition.props"
-          :key="fieldKey(String(name))"
-          :node="node"
-          :name="String(name)"
-          :prop="prop"
-        />
+        <div v-for="[name, prop] in contentProps" :key="fieldKey(name)" :class="{ 'builder-exposable': isCustomComponent && isExposable(prop) }">
+          <PropField :node="node" :name="name" :prop="prop" />
+          <ExposeField v-if="isCustomComponent && isExposable(prop)" :node="node" :name="name" :prop="prop" />
+        </div>
+        <CustomFields v-if="node.type === 'custom'" :key="fieldKey('custom')" :node="node" />
         <p v-if="Object.keys(definition.props).length === 0" class="small text-secondary">
           {{ t('このブロックには入力する内容がありません。') }}
         </p>
