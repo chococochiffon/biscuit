@@ -1,5 +1,6 @@
 <?php
 
+use App\Installer\HealthChecker;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -13,3 +14,6 @@ Schedule::command('biscuit:check-update')->dailyAt('09:00');
 
 // Biscuit からのお知らせを毎日読み、重要・セキュリティのお知らせをスーパー管理者にメールで知らせる
 Schedule::command('biscuit:check-announcements')->dailyAt('09:05');
+
+// スケジューラーが動いている合図を毎分置く(インストールの確認と、これからの System Doctor が見る)
+Schedule::call(fn () => HealthChecker::beat())->everyMinute()->name('biscuit:scheduler-heartbeat');

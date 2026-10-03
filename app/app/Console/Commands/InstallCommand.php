@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Installer\ApplicationInstaller;
 use App\Installer\EnvironmentPreparer;
+use App\Installer\HealthChecker;
 use App\Installer\InstallerManager;
 use App\Installer\InstallerStep;
 use App\Installer\InstallerStepException;
@@ -17,7 +18,7 @@ use Illuminate\Console\Command;
  * install.sh(ホスト側)は、決まった処理だけをこのコマンドで動かす(--prepare・--step=application)。
  */
 #[Signature('biscuit:install
-    {--status : インストールの状態(終えた段・環境の確認)を表示する}
+    {--status : インストールの状態(終えた段・環境の確認・インストールの確認)を表示する}
     {--prepare : .env に本番向けの初期値を入れる(install.sh が最初に呼ぶ)}
     {--step= : 段の処理を動かす(application)}')]
 #[Description('Biscuit のインストールの状態を表示し、install.sh から決まった処理を動かす')]
@@ -56,6 +57,13 @@ class InstallCommand extends Command
 
         $results = $checker->check();
         $this->table(['環境の確認', '結果'], array_map(fn (array $result) => [$result['label'], $result['ok'] ? 'OK' : (string) $result['message']], $results));
+
+        $this->table(['インストールの確認', '種類', '結果', '詳しく'], array_map(fn (array $check) => [
+            $check['label'],
+            $check['level'] === 'required' ? '必須' : '推奨',
+            $check['ok'] ? 'OK' : ($check['level'] === 'required' ? 'NG' : '警告'),
+            (string) $check['detail'],
+        ], app(HealthChecker::class)->check()));
 
         return RequirementChecker::passes($results) ? self::SUCCESS : self::FAILURE;
     }
