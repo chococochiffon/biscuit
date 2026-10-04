@@ -7,6 +7,7 @@
 #   ./biscuit backup      データベース・画像・.env をバックアップする(新しい 7 個を残す)
 #   ./biscuit backup list           いまあるバックアップを表示する
 #   ./biscuit backup copy <名前> <ディレクトリ>  バックアップをホストのディレクトリに写す
+#   ./biscuit restore <名前かファイル>  バックアップからデータベースと画像を戻す(先にいまの状態をバックアップする)
 #   ./biscuit install     インストーラーを起動する(./install.sh と同じ)
 #   ./biscuit help        この説明を表示する
 #
@@ -22,7 +23,7 @@ HOST_LOG="$ROOT/biscuit.log"
 . "$ROOT/docker/production/lib.sh"
 
 usage() {
-  sed -n '3,12p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,13p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # インストールを終えていなければ、インストーラーへ案内して止める
@@ -145,7 +146,7 @@ cmd_backup() {
       local name="${2:-}" dest="${3:-}"
       [ -n "$name" ] && [ -n "$dest" ] || fail "使い方: ./biscuit backup copy <名前(./biscuit backup list の「ファイル」)> <写す先のディレクトリ>"
       # 決まった形の名前だけを受け付ける(ほかのファイルを読ませない)
-      [[ "$name" =~ ^biscuit-[0-9]{8}-[0-9]{6}-[a-z-]+\.tar\.gz$ ]] || fail "バックアップの名前ではありません: $name"
+      [[ "$name" =~ $BACKUP_NAME_PATTERN ]] || fail "バックアップの名前ではありません: $name"
       [ -d "$dest" ] || fail "写す先のディレクトリがありません: $dest"
       [ ! -e "$dest/$name" ] || fail "写す先に同じ名前のファイルがあります: $dest/$name"
       # バックアップは www-data だけが読めるため、コンテナの中で読んで写す。秘密の値が入るため、写したファイルも本人だけが読めるようにする
@@ -163,6 +164,88 @@ cmd_backup() {
   esac
 }
 
+# バックアップの名前の形(ほかのファイルを読ませない)
+BACKUP_NAME_PATTERN='^biscuit-[0-9]{8}-[0-9]{6}-[a-z-]+\.tar\.gz$'
+
+# リストアの途中で止まっても、メンテナンスモードとスケジューラーを戻す
+RESTORE_IN_MAINTENANCE=0
+
+restore_cleanup() {
+  if [ "$RESTORE_IN_MAINTENANCE" -eq 1 ]; then
+    in_app php artisan up >/dev/null 2>&1 || warn "メンテナンスモードを解除できませんでした。./biscuit doctor で確かめてください。"
+    RESTORE_IN_MAINTENANCE=0
+  fi
+  compose start scheduler >/dev/null 2>&1 || true
+  rm -rf "$LOCK_DIR"
+}
+
+cmd_restore() {
+  require_installed
+  local target="" yes=0 arg
+  for arg in "$@"; do
+    case "$arg" in
+      --yes|-y) yes=1 ;;
+      *) target="$arg" ;;
+    esac
+  done
+  [ -n "$target" ] || fail "使い方: ./biscuit restore <名前(./biscuit backup list の「ファイル」)か、ホストのバックアップのファイル> [--yes]"
+
+  acquire_lock
+  trap restore_cleanup EXIT
+
+  local name
+  name="$(basename "$target")"
+  [[ "$name" =~ $BACKUP_NAME_PATTERN ]] || fail "バックアップの名前ではありません: $name"
+
+  # ホストのファイル(別のサーバーから写したものなど)は、コンテナの中のバックアップの置き場所に写してから使う
+  if [ -f "$target" ]; then
+    if in_app test -e "$BACKUP_DIR/$name" </dev/null; then
+      info "$name はすでにバックアップの置き場所にあるため、それを使います"
+    else
+      info "$target をバックアップの置き場所に写します"
+      in_app sh -c 'umask 077 && mkdir -p "$1" && cat >"$1/$2"' sh "$BACKUP_DIR" "$name" <"$target" || fail "$target を写せませんでした。"
+    fi
+  fi
+
+  info "$name を確かめます"
+  # docker compose exec は標準入力を読むため、確認の入力を飲み込まないよう切る
+  in_app php artisan biscuit:restore "$name" --check </dev/null || fail "$name からは戻せません。"
+
+  if [ "$yes" -ne 1 ]; then
+    printf '\n  いまのデータベースと画像を、%s の内容にすべて入れ替えます(.env は戻しません)。\n' "$name"
+    printf '  先にいまの状態をバックアップし、戻すあいだはサイトをメンテナンスモードにします。\n\n'
+    local answer
+    read -r -p "  続けるには yes と入力してください: " answer
+    [ "$answer" = "yes" ] || fail "やめました。"
+  fi
+
+  log "restore start $name"
+  info "スケジューラーを止めます(戻すあいだに毎日のバックアップなどを動かさない)"
+  compose stop scheduler >/dev/null 2>&1 || true
+
+  info "いまの状態をバックアップします"
+  local before
+  before="$(in_app php artisan biscuit:backup --reason=pre-restore --no-prune --json | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
+  [ -n "$before" ] || fail "いまの状態をバックアップできなかったため、戻していません。"
+  info "リストアの前のバックアップ: $before"
+
+  in_app php artisan down --retry=60 >/dev/null || fail "メンテナンスモードにできませんでした。"
+  RESTORE_IN_MAINTENANCE=1
+
+  info "$name から戻します"
+  if ! in_app php artisan biscuit:restore "$name" --force; then
+    warn "戻せませんでした。リストアの前の状態($before)に戻します。"
+    log "restore failed $name, rollback to $before"
+    in_app php artisan biscuit:restore "$before" --force \
+      || fail "リストアの前の状態にも戻せませんでした。./biscuit restore $before で、もう一度戻してください(サイトはメンテナンスモードのままです)。"
+    fail "$name からは戻せませんでした(リストアの前の状態に戻しました)。"
+  fi
+
+  restore_cleanup
+  log "restore done $name"
+  info "$name から戻しました。うまく戻っていなければ ./biscuit restore $before で、戻す前の状態にできます。"
+}
+
 main() {
   local command="${1:-help}"
   [ $# -gt 0 ] && shift
@@ -171,6 +254,7 @@ main() {
     status) check_requirements >/dev/null; cmd_status ;;
     doctor) check_requirements >/dev/null; cmd_doctor ;;
     backup) check_requirements >/dev/null; cmd_backup "$@" ;;
+    restore) check_requirements >/dev/null; cmd_restore "$@" ;;
     install) exec "$ROOT/install.sh" "$@" ;;
     help|-h|--help) usage ;;
     *) usage; exit 1 ;;

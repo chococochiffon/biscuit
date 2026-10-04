@@ -22,9 +22,14 @@ class BackupCommandTest extends TestCase
 {
     use RefreshDatabase;
 
+    private static int $runs = 0;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        // PharData は同じプロセスで開いたアーカイブの中身をパスで覚えているため、テストごとに時刻(バックアップの名前)をずらす
+        $this->travelTo(now()->addMinutes(++self::$runs));
 
         Storage::fake('local');
         Storage::fake('public');
@@ -126,6 +131,10 @@ class BackupCommandTest extends TestCase
             array_column(app(BackupService::class)->list(), 'name'),
         );
         $this->assertFileExists("{$directory}/memo.txt");
+
+        // リストアの前は消さない(戻す対象がいちばん古いバックアップでも残す)
+        $this->assertSame(0, Artisan::call('biscuit:backup', ['--reason' => 'pre-restore', '--no-prune' => true]));
+        $this->assertCount(3, app(BackupService::class)->list());
     }
 
     public function test_it_lists_the_backups(): void
