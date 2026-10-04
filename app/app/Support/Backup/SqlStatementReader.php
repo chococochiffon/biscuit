@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Support;
+namespace App\Support\Backup;
 
 use Generator;
 use RuntimeException;
 
 /**
- * バックアップの database.sql(BackupService::dumpDatabase() が書いたもの)を、1 文ずつ取り出す。
+ * バックアップの database.sql(DatabaseDump::export() が書いたもの)を、1 文ずつ取り出す。
  * ファイルを一度に読まず 1 行ずつ読み、引用符(' " `)の中の ; と改行では区切らない。
  * MySQL の文字列はバックスラッシュでエスケープし、SQLite は ' を 2 つ重ねる(どちらも PDO::quote() の形)。
  * 文の外の、行の先頭の -- はコメントとして読み飛ばす。

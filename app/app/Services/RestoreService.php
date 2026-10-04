@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
-use App\Support\SqlStatementReader;
+use App\Support\Backup\DatabaseDump;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use PharData;
 use RecursiveIteratorIterator;
@@ -31,7 +30,7 @@ class RestoreService
      */
     public function inspect(string $name): array
     {
-        $path = $this->path($name);
+        $path = $this->backups->find($name);
 
         try {
             $phar = new PharData($path);
@@ -87,9 +86,9 @@ class RestoreService
         $umask = umask(0077);
 
         try {
-            (new PharData($this->path($name)))->extractTo($work);
+            (new PharData($this->backups->find($name)))->extractTo($work);
 
-            $statements = $this->importDatabase($work.'/database.sql');
+            $statements = (new DatabaseDump)->import($work.'/database.sql');
             $files = $this->replacePublicFiles($work.'/storage/public');
 
             // 古い版のバックアップを今の版のテーブルに合わせる
@@ -103,30 +102,6 @@ class RestoreService
         }
 
         return ['manifest' => $manifest, 'statements' => $statements, 'files' => $files, 'migrated' => $migrated];
-    }
-
-    /**
-     * いまのテーブルをすべて消し(バックアップのあとで作ったテーブルも残さない)、SQL を流す。流した文の数を返す。
-     */
-    private function importDatabase(string $sql): int
-    {
-        $connection = DB::connection();
-        $schema = Schema::connection($connection->getName());
-        $listing = $connection->getDriverName() === 'sqlite' ? 'main' : $connection->getDatabaseName();
-
-        $schema->withoutForeignKeyConstraints(function () use ($schema, $listing) {
-            foreach ($schema->getTableListing($listing, schemaQualified: false) as $table) {
-                $schema->drop($table);
-            }
-        });
-
-        $count = 0;
-        foreach (SqlStatementReader::read($sql, backslashEscapes: $connection->getDriverName() !== 'sqlite') as $statement) {
-            $connection->unprepared($statement);
-            $count++;
-        }
-
-        return $count;
     }
 
     /**
@@ -158,19 +133,5 @@ class RestoreService
         }
 
         return count(File::allFiles($root));
-    }
-
-    private function path(string $name): string
-    {
-        if (! preg_match('/^biscuit-\d{8}-\d{6}-[a-z-]+\.tar\.gz$/', $name)) {
-            throw new RuntimeException("バックアップの名前ではありません: {$name}");
-        }
-
-        $path = $this->backups->directory().'/'.$name;
-        if (! is_file($path)) {
-            throw new RuntimeException("{$name} が見つかりません(./biscuit backup list で名前を確かめてください)。");
-        }
-
-        return $path;
     }
 }

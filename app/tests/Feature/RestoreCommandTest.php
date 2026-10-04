@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\Administrator;
 use App\Models\Article;
 use App\Services\BackupService;
-use App\Support\SqlStatementReader;
+use App\Support\Backup\SqlStatementReader;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;

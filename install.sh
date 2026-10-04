@@ -31,10 +31,7 @@ BISCUIT_VERSION="$(biscuit_version)"
 
 CHOCOCO_REPOSITORY="${CHOCOCO_REPOSITORY:-https://github.com/chococochiffon/chococo.git}"
 CHOCOCO_REF="${CHOCOCO_REF:-v${BISCUIT_VERSION}}"
-CHOCOCO_DIR="$ROOT/frontend/chococo"
-
-# データベースの起動・公開側の応答を待つ時間(秒)
-DB_WAIT_SECONDS=180
+# 公開側の応答を待つ時間(秒)
 FRONT_WAIT_SECONDS=120
 
 usage() {
@@ -63,18 +60,14 @@ prepare() {
     cp "$APP/.env.example" "$APP/.env"
   fi
 
-  export HOST_UID HOST_GID
-  HOST_UID="$(id -u)"
-  HOST_GID="$(id -g)"
-
   info "PHP のイメージを作ります(初回は数分かかります)"
   compose build app
 
   info "PHP の依存関係を入れます"
-  compose run --rm --no-deps -T app composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+  install_php_dependencies
 
   info "管理画面の CSS・JS をビルドします"
-  compose --profile build run --rm -T assets
+  build_admin_assets
 
   # public/ はホストのユーザーのもののため、アップロード画像の公開用のリンク(public/storage)もここで root として作る
   info "ファイルの権限を整えます"
@@ -91,18 +84,6 @@ prepare() {
 
   info "インストーラーを起動します"
   compose up -d app web
-}
-
-wait_for_db() {
-  local container waited=0 health
-  container="$(compose ps -q db)"
-  while [ "$waited" -lt "$DB_WAIT_SECONDS" ]; do
-    health="$(docker inspect -f '{{.State.Health.Status}}' "$container" 2>/dev/null || echo starting)"
-    [ "$health" = "healthy" ] && return 0
-    sleep 3
-    waited=$((waited + 3))
-  done
-  return 1
 }
 
 wait_for_front() {

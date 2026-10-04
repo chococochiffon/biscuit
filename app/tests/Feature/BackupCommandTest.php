@@ -6,6 +6,7 @@ use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\User;
 use App\Services\BackupService;
+use App\Support\Backup\DatabaseDump;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -95,7 +96,7 @@ class BackupCommandTest extends TestCase
         Article::factory()->count(250)->create();
 
         $sql = Storage::disk('local')->path('dump.sql');
-        $summary = app(BackupService::class)->dumpDatabase($sql);
+        $summary = (new DatabaseDump)->export($sql);
 
         $this->assertSame('sqlite', $summary['driver']);
         $this->assertSame(250, DB::table('articles')->count());

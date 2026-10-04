@@ -24,6 +24,13 @@ HOST_LOG="$ROOT/biscuit.log"
 # shellcheck source=docker/production/lib.sh
 . "$ROOT/docker/production/lib.sh"
 
+# バックアップの置き場所(app コンテナの中から見たパス)
+BACKUP_DIR="storage/app/private/backups"
+# バックアップの名前の形(ほかのファイルを読ませない。BackupService::NAME_PATTERN と同じ形)
+BACKUP_NAME_PATTERN='^biscuit-[0-9]{8}-[0-9]{6}-[a-z-]+\.tar\.gz$'
+# 版のタグ(v1.2.3 の形だけ。v1.2.3-rc1 などは使わない)
+VERSION_TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
+
 usage() {
   sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
 }
@@ -126,9 +133,6 @@ cmd_doctor() {
   return "$failed"
 }
 
-# バックアップの置き場所(app コンテナの中から見たパス)
-BACKUP_DIR="storage/app/private/backups"
-
 cmd_backup() {
   require_installed
   local action="${1:-create}"
@@ -166,18 +170,54 @@ cmd_backup() {
   esac
 }
 
-# バックアップの名前の形(ほかのファイルを読ませない)
-BACKUP_NAME_PATTERN='^biscuit-[0-9]{8}-[0-9]{6}-[a-z-]+\.tar\.gz$'
+# yes と入力されなければ止める
+confirm_or_abort() {
+  local answer
+  read -r -p "  続けるには yes と入力してください: " answer
+  [ "$answer" = "yes" ] || fail "やめました。"
+}
 
-# リストアの途中で止まっても、メンテナンスモードとスケジューラーを戻す
-RESTORE_IN_MAINTENANCE=0
+# restore・update の前の準備: スケジューラーを止め(作業のあいだに毎日のバックアップなどを動かさない)、いまの状態をバックアップして
+# (名前は SAFETY_BACKUP に入れる)、メンテナンスモードにする。途中で止まっても finish_maintenance(EXIT の trap)が元に戻す
+SAFETY_BACKUP=""
+IN_MAINTENANCE=0
+SCHEDULER_STOPPED=0
 
-restore_cleanup() {
-  if [ "$RESTORE_IN_MAINTENANCE" -eq 1 ]; then
-    in_app php artisan up >/dev/null 2>&1 || warn "メンテナンスモードを解除できませんでした。./biscuit doctor で確かめてください。"
-    RESTORE_IN_MAINTENANCE=0
+begin_maintenance() {
+  local reason="$1"
+  shift
+  trap finish_maintenance EXIT
+
+  info "スケジューラーを止めます"
+  compose stop scheduler >/dev/null 2>&1 || true
+  SCHEDULER_STOPPED=1
+
+  info "いまの状態をバックアップします"
+  SAFETY_BACKUP="$(in_app php artisan biscuit:backup --reason="$reason" "$@" --json </dev/null | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
+  [ -n "$SAFETY_BACKUP" ] || fail "いまの状態をバックアップできなかったため、何も変えていません。"
+  info "作業の前のバックアップ: $SAFETY_BACKUP"
+
+  in_app php artisan down --retry=60 </dev/null >/dev/null || fail "メンテナンスモードにできませんでした。"
+  IN_MAINTENANCE=1
+}
+
+# 元の状態にも戻せなかったとき: 壊れたサイトを見せず、壊れた状態で毎日のバックアップを動かさない(古い正常なバックアップを
+# 押し出さない)よう、メンテナンスモードもスケジューラーの停止もそのままにして止める
+fail_in_maintenance() {
+  IN_MAINTENANCE=0
+  SCHEDULER_STOPPED=0
+  fail "$1"
+}
+
+finish_maintenance() {
+  if [ "$IN_MAINTENANCE" -eq 1 ]; then
+    in_app php artisan up </dev/null >/dev/null 2>&1 || warn "メンテナンスモードを解除できませんでした。./biscuit doctor で確かめてください。"
+    IN_MAINTENANCE=0
   fi
-  compose start scheduler >/dev/null 2>&1 || true
+  if [ "$SCHEDULER_STOPPED" -eq 1 ]; then
+    compose up -d scheduler >/dev/null 2>&1 || true
+    SCHEDULER_STOPPED=0
+  fi
   rm -rf "$LOCK_DIR"
 }
 
@@ -193,7 +233,6 @@ cmd_restore() {
   [ -n "$target" ] || fail "使い方: ./biscuit restore <名前(./biscuit backup list の「ファイル」)か、ホストのバックアップのファイル> [--yes]"
 
   acquire_lock
-  trap restore_cleanup EXIT
 
   local name
   name="$(basename "$target")"
@@ -205,6 +244,8 @@ cmd_restore() {
       info "$name はすでにバックアップの置き場所にあるため、それを使います"
     else
       info "$target をバックアップの置き場所に写します"
+      # パスはコンテナの中の sh に引数で渡す(ホスト側で展開しない)
+      # shellcheck disable=SC2016
       in_app sh -c 'umask 077 && mkdir -p "$1" && cat >"$1/$2"' sh "$BACKUP_DIR" "$name" <"$target" || fail "$target を写せませんでした。"
     fi
   fi
@@ -216,41 +257,27 @@ cmd_restore() {
   if [ "$yes" -ne 1 ]; then
     printf '\n  いまのデータベースと画像を、%s の内容にすべて入れ替えます(.env は戻しません)。\n' "$name"
     printf '  先にいまの状態をバックアップし、戻すあいだはサイトをメンテナンスモードにします。\n\n'
-    local answer
-    read -r -p "  続けるには yes と入力してください: " answer
-    [ "$answer" = "yes" ] || fail "やめました。"
+    confirm_or_abort
   fi
 
   log "restore start $name"
-  info "スケジューラーを止めます(戻すあいだに毎日のバックアップなどを動かさない)"
-  compose stop scheduler >/dev/null 2>&1 || true
-
-  info "いまの状態をバックアップします"
-  local before
-  before="$(in_app php artisan biscuit:backup --reason=pre-restore --no-prune --json | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
-  [ -n "$before" ] || fail "いまの状態をバックアップできなかったため、戻していません。"
-  info "リストアの前のバックアップ: $before"
-
-  in_app php artisan down --retry=60 >/dev/null || fail "メンテナンスモードにできませんでした。"
-  RESTORE_IN_MAINTENANCE=1
+  # 戻す対象がいちばん古いバックアップでも消さないよう、古いものは消さない
+  begin_maintenance pre-restore --no-prune
+  local before="$SAFETY_BACKUP"
 
   info "$name から戻します"
-  if ! in_app php artisan biscuit:restore "$name" --force; then
+  if ! in_app php artisan biscuit:restore "$name" --force </dev/null; then
     warn "戻せませんでした。リストアの前の状態($before)に戻します。"
     log "restore failed $name, rollback to $before"
-    in_app php artisan biscuit:restore "$before" --force \
-      || fail "リストアの前の状態にも戻せませんでした。./biscuit restore $before で、もう一度戻してください(サイトはメンテナンスモードのままです)。"
+    in_app php artisan biscuit:restore "$before" --force </dev/null \
+      || fail_in_maintenance "リストアの前の状態にも戻せませんでした。./biscuit restore $before で、もう一度戻してください(サイトはメンテナンスモードのまま、スケジューラーは止めたままです)。"
     fail "$name からは戻せませんでした(リストアの前の状態に戻しました)。"
   fi
 
-  restore_cleanup
+  finish_maintenance
   log "restore done $name"
   info "$name から戻しました。うまく戻っていなければ ./biscuit restore $before で、戻す前の状態にできます。"
 }
-
-# 版のタグ(v1.2.3 の形だけ。v1.2.3-rc1 などは使わない)
-VERSION_TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
-CHOCOCO_DIR="$ROOT/frontend/chococo"
 
 # リモートにある版のタグ(古い順)
 remote_version_tags() {
@@ -277,30 +304,15 @@ checkout_version() {
 
 # いまのソースで、イメージ・PHP の依存関係・管理画面の CSS と JS を作り直し、サービスを起動し直す(install.sh と同じ手順)
 rebuild_and_start() {
-  export HOST_UID HOST_GID
-  HOST_UID="$(id -u)"
-  HOST_GID="$(id -g)"
-
   info "イメージを作り直します(数分かかります)"
   compose build app scheduler front >>"$HOST_LOG" 2>&1 || return 1
   info "PHP の依存関係を入れます"
-  compose run --rm --no-deps -T app composer install --no-dev --optimize-autoloader --no-interaction --no-progress >>"$HOST_LOG" 2>&1 || return 1
+  install_php_dependencies >>"$HOST_LOG" 2>&1 || return 1
   info "管理画面の CSS・JS をビルドします"
-  compose --profile build run --rm -T assets >>"$HOST_LOG" 2>&1 || return 1
+  build_admin_assets >>"$HOST_LOG" 2>&1 || return 1
   info "サービスを起動し直します"
   compose up -d db app web front >>"$HOST_LOG" 2>&1 || return 1
-  wait_for_db_healthy || return 1
-}
-
-wait_for_db_healthy() {
-  local waited=0 container
-  container="$(compose ps -q db)"
-  while [ "$waited" -lt 180 ]; do
-    [ "$(docker inspect -f '{{.State.Health.Status}}' "$container" 2>/dev/null)" = "healthy" ] && return 0
-    sleep 3
-    waited=$((waited + 3))
-  done
-  return 1
+  wait_for_db || return 1
 }
 
 # マイグレーションと、設定・ルート・ビューのキャッシュの作り直し
@@ -313,16 +325,24 @@ migrate_and_optimize() {
   fi
 }
 
-# 更新の途中で止まっても、メンテナンスモードとスケジューラーを戻す
-UPDATE_IN_MAINTENANCE=0
+# 自動で更新できるソースか(biscuit・chococo のファイルを書き換えていない)
+require_clean_sources() {
+  [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ] || fail "Biscuit のファイルを書き換えているため、更新できません(git -C $ROOT status で変更を確かめてください)。"
+  [ -d "$CHOCOCO_DIR/.git" ] || fail "公開側(frontend/chococo)がありません。"
+  [ -z "$(git -C "$CHOCOCO_DIR" status --porcelain --untracked-files=no)" ] || fail "公開側(frontend/chococo)のファイルを書き換えているため、更新できません。"
+}
 
-update_cleanup() {
-  if [ "$UPDATE_IN_MAINTENANCE" -eq 1 ]; then
-    in_app php artisan up </dev/null >/dev/null 2>&1 || warn "メンテナンスモードを解除できませんでした。./biscuit doctor で確かめてください。"
-    UPDATE_IN_MAINTENANCE=0
+# 更新先の版を選ぶ($2 を指定したときはその版。なければ $1 と同じメジャー版の最新。メジャー版が上がるもの(Upgrade)は、
+# リリースノートを読んでから --version で選んでもらう)。$3 はリモートの版のタグの一覧
+select_update_target() {
+  local current="$1" requested="$2" tags="$3" target
+  if [ -n "$requested" ]; then
+    target="v${requested#v}"
+    printf '%s\n' "$tags" | grep -qx "$target" || fail "$target という版はありません。"
+  else
+    target="$(printf '%s\n' "$tags" | awk -v major="$(major_of "$current")" -F. '{ m = $1; sub(/^v/, "", m) } m == major' | tail -n 1)"
   fi
-  compose up -d scheduler >/dev/null 2>&1 || true
-  rm -rf "$LOCK_DIR"
+  printf '%s' "${target:-$current}"
 }
 
 cmd_update() {
@@ -342,7 +362,6 @@ cmd_update() {
   done
 
   acquire_lock
-  trap update_cleanup EXIT
 
   # いまの版(タグの上にいて、ファイルを書き換えていないときだけ、自動で更新できる)
   local current head
@@ -352,28 +371,20 @@ cmd_update() {
   if [ -n "$from" ]; then
     # 手で新しいタグに切り替えたあと: いま動いているのは --from の版で、更新先はいまのタグ(失敗したら --from の版に戻す)
     current="v${from#v}"
+    # 形が違うときも、タグがないときも止める
+    # shellcheck disable=SC2015
     [[ "$current" =~ $VERSION_TAG_PATTERN ]] && git -C "$ROOT" rev-parse -q --verify "refs/tags/$current" >/dev/null || fail "--from の $current という版のタグがありません。"
     [ -z "$requested" ] || fail "--from と --version は一緒に使えません(--from のときは、いまのタグ $head に更新します)。"
     requested="$head"
   fi
-  [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ] || fail "Biscuit のファイルを書き換えているため、更新できません(git -C $ROOT status で変更を確かめてください)。"
-  [ -d "$CHOCOCO_DIR/.git" ] || fail "公開側(frontend/chococo)がありません。"
-  [ -z "$(git -C "$CHOCOCO_DIR" status --porcelain --untracked-files=no)" ] || fail "公開側(frontend/chococo)のファイルを書き換えているため、更新できません。"
+  require_clean_sources
 
   info "新しい版を確かめます(いまは $current)"
   local tags target latest
   tags="$(remote_version_tags "$ROOT")"
   [ -n "$tags" ] || fail "版の一覧を取得できませんでした(ネットワークと git -C $ROOT remote -v を確かめてください)。"
   latest="$(printf '%s\n' "$tags" | tail -n 1)"
-
-  if [ -n "$requested" ]; then
-    target="v${requested#v}"
-    printf '%s\n' "$tags" | grep -qx "$target" || fail "$target という版はありません。"
-  else
-    # メジャー版が上がるもの(Upgrade)は、リリースノートを読んでから --version で選んでもらう
-    target="$(printf '%s\n' "$tags" | awk -v major="$(major_of "$current")" -F. '{ m = $1; sub(/^v/, "", m) } m == major' | tail -n 1)"
-    [ -n "$target" ] || target="$current"
-  fi
+  target="$(select_update_target "$current" "$requested" "$tags")" || exit 1
 
   if [ "$target" = "$current" ]; then
     info "最新の版($current)を使っています。"
@@ -400,27 +411,16 @@ cmd_update() {
 
   if [ "$yes" -ne 1 ]; then
     printf '  更新のあいだ(数分〜十数分)は、サイトをメンテナンスモードにします。先にバックアップを作り、失敗したら元に戻します。\n\n'
-    local answer
-    read -r -p "  続けるには yes と入力してください: " answer
-    [ "$answer" = "yes" ] || fail "やめました。"
+    confirm_or_abort
   fi
 
   log "update start $current -> $target"
-  info "スケジューラーを止めます"
-  compose stop scheduler >/dev/null 2>&1 || true
-
-  info "更新の前のバックアップを作ります"
-  local backup
-  backup="$(in_app php artisan biscuit:backup --reason=pre-update --json </dev/null | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
-  [ -n "$backup" ] || fail "バックアップを作れなかったため、更新していません。"
-  info "更新の前のバックアップ: $backup"
-
-  in_app php artisan down --retry=60 </dev/null >/dev/null || fail "メンテナンスモードにできませんでした。"
-  UPDATE_IN_MAINTENANCE=1
+  begin_maintenance pre-update
+  local backup="$SAFETY_BACKUP"
 
   info "$target のソースに切り替えます"
   if checkout_version "$target" && rebuild_and_start && migrate_and_optimize; then
-    update_cleanup
+    finish_maintenance
     log "update done $current -> $target"
     info "$target に更新しました。"
     printf '\n'
@@ -433,7 +433,7 @@ cmd_update() {
   if checkout_version "$current" && rebuild_and_start && in_app php artisan biscuit:restore "$backup" --force </dev/null && migrate_and_optimize; then
     fail "$target には更新できませんでした($current に戻しました)。"
   fi
-  fail "元の版にも戻せませんでした。git -C $ROOT checkout $current のあと ./biscuit restore $backup で戻してください(サイトはメンテナンスモードのままです)。"
+  fail_in_maintenance "元の版にも戻せませんでした。git -C $ROOT checkout $current のあと ./biscuit restore $backup で戻してください(サイトはメンテナンスモードのまま、スケジューラーは止めたままです)。"
 }
 
 main() {
