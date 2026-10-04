@@ -34,17 +34,17 @@ class BackupService
     public const FORMAT = 1;
 
     /** 作るときの理由(manifest.json と、ファイル名の末尾に入れる) */
-    public const REASONS = ['manual', 'daily', 'pre-update'];
+    public const REASONS = ['manual', 'daily', 'pre-update', 'pre-restore'];
 
     /** 1 つの INSERT にまとめる行の数 */
     private const INSERT_ROWS = 100;
 
     /**
-     * バックアップを作り、古いものを消す。
+     * バックアップを作り、古いものを消す($prune が false なら消さない。リストアの前に作るとき、戻す対象を消さないため)。
      *
      * @return array{name: string, path: string, size: int, manifest: array<string, mixed>, pruned: list<string>}
      */
-    public function create(string $reason = 'manual'): array
+    public function create(string $reason = 'manual', bool $prune = true): array
     {
         if (! in_array($reason, self::REASONS, true)) {
             throw new RuntimeException("バックアップの理由 {$reason} は使えません。");
@@ -111,7 +111,7 @@ class BackupService
             'path' => $archive,
             'size' => (int) filesize($archive),
             'manifest' => $manifest,
-            'pruned' => $this->prune(),
+            'pruned' => $prune ? $this->prune() : [],
         ];
     }
 
@@ -223,7 +223,9 @@ class BackupService
                 foreach ($this->createStatements($connection, $table) as $statement) {
                     fwrite($handle, $statement.";\n");
                 }
-                $rows += $this->dumpRows($connection, $table, $handle);
+                if (! in_array($table, $this->transientTables(), true)) {
+                    $rows += $this->dumpRows($connection, $table, $handle);
+                }
             }
 
             fwrite($handle, $driver === 'sqlite' ? "\nPRAGMA foreign_keys = ON;\n" : "\nSET UNIQUE_CHECKS = 1;\nSET FOREIGN_KEY_CHECKS = 1;\n");
@@ -246,6 +248,21 @@ class BackupService
         sort($tables);
 
         return $tables;
+    }
+
+    /**
+     * 構造だけを書き出し、行は書かないテーブル(キャッシュ・ロック・セッション)。戻すと、バックアップを作っていたときの
+     * コマンドのロック(Isolatable)・古いキャッシュ・ログインが一緒に戻ってしまうため。
+     *
+     * @return list<string>
+     */
+    private function transientTables(): array
+    {
+        return array_values(array_filter([
+            config('cache.stores.database.table'),
+            config('cache.stores.database.lock_table') ?: config('cache.stores.database.table').'_locks',
+            config('session.table'),
+        ]));
     }
 
     /**
