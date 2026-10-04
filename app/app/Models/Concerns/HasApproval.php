@@ -12,6 +12,16 @@ use Illuminate\Database\Eloquent\Builder;
 trait HasApproval
 {
     /**
+     * 公開ステータスを変える(保存はしない)。記事は、初めて公開したときの日時も決める独自の changeApproval() を持つ。
+     */
+    public function changeApproval(ArticleApprovalStatus $approval): static
+    {
+        $this->approval = $approval;
+
+        return $this;
+    }
+
+    /**
      * 公開ステータスで絞り込む。
      */
     #[Scope]

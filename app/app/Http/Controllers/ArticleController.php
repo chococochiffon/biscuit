@@ -33,7 +33,7 @@ class ArticleController extends Controller
         ]);
 
         $articles = $this->applyListFilters(Article::query()->with('user'), $filters, $sort)
-            ->when(filled($filters['approval'] ?? null), fn ($query) => $query->where('approval', $filters['approval']))
+            ->when(filled($filters['approval'] ?? null), fn ($query) => $query->withApproval(ArticleApprovalStatus::from($filters['approval'])))
             ->paginate(config('limits.admin_per_page'))
             ->withQueryString();
 
