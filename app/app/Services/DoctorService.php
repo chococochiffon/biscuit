@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Installer\HealthChecker;
 use App\Installer\InstallerManager;
+use Carbon\CarbonImmutable;
 
 /**
  * インストール後の診断(System Doctor)。インストールの確認(HealthChecker)に、インストール済みか・新しい版・エラーのログを足す。
@@ -17,6 +18,7 @@ class DoctorService
         private InstallerManager $installer,
         private UpdateCheckService $updates,
         private SystemStatusService $system,
+        private BackupService $backups,
     ) {}
 
     /**
@@ -26,6 +28,9 @@ class DoctorService
     {
         $update = $this->safely(fn () => $this->updates->availableUpdate($fetchUpdate));
         $errors = $this->safely(fn () => $this->system->recentErrors());
+        $backup = $this->safely(fn () => $this->backups->latest());
+        $backupHours = (int) config('biscuit.backup.warning_hours');
+        $backupAt = $backup === null ? null : CarbonImmutable::parse($backup['created_at']);
 
         return [
             ['key' => 'installed', 'label' => __('インストールを終えている'), 'level' => 'required', 'ok' => $this->installer->isInstalled(), 'detail' => 'v'.config('biscuit.version')],
@@ -43,6 +48,13 @@ class DoctorService
                 'level' => 'recommended',
                 'ok' => ($errors['count'] ?? 0) === 0,
                 'detail' => ($errors['count'] ?? 0) > 0 ? __(':count 件(storage/logs を確かめてください)', ['count' => $errors['count']]) : null,
+            ],
+            [
+                'key' => 'backup',
+                'label' => __('直近 :hours 時間にバックアップを作っている', ['hours' => $backupHours]),
+                'level' => 'recommended',
+                'ok' => $backupAt !== null && $backupAt->greaterThan(now()->subHours($backupHours)),
+                'detail' => $backupAt === null ? __('まだありません(./biscuit backup で作れます)') : $backupAt->format('Y-m-d H:i'),
             ],
         ];
     }

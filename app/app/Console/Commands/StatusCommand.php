@@ -6,6 +6,7 @@ use App\Installer\InstallerManager;
 use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\SinglePage;
+use App\Services\BackupService;
 use App\Services\UpdateCheckService;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -22,7 +23,7 @@ use Throwable;
 #[Description('Biscuit の版・環境・データベースの状態を表示する')]
 class StatusCommand extends Command
 {
-    public function handle(InstallerManager $installer, UpdateCheckService $updates): int
+    public function handle(InstallerManager $installer, UpdateCheckService $updates, BackupService $backups): int
     {
         $status = [
             'version' => (string) config('biscuit.version'),
@@ -31,6 +32,7 @@ class StatusCommand extends Command
             'php' => PHP_VERSION,
             'laravel' => Application::VERSION,
             'database' => $this->databaseStatus(),
+            'latest_backup' => $this->safely(fn () => $backups->latest()['created_at'] ?? null),
             'latest_release' => $this->safely(fn () => $updates->availableUpdate(fetch: false)['version'] ?? null),
         ];
 
@@ -48,6 +50,7 @@ class StatusCommand extends Command
             ['PHP / Laravel', $status['php'].' / '.$status['laravel']],
             ['データベース', $database['connected'] ? '接続できる('.$database['driver'].')' : '接続できない'],
             ['未実行のマイグレーション', $database['connected'] ? (string) $database['pending_migrations'] : '-'],
+            ['最新のバックアップ', $status['latest_backup'] ? str_replace('T', ' ', substr($status['latest_backup'], 0, 16)) : 'まだありません'],
             ['管理者 / 記事 / 固定ページ', $database['connected'] ? "{$database['administrators']} / {$database['articles']} / {$database['single_pages']}" : '-'],
         ]);
 
