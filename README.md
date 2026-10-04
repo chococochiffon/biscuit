@@ -22,7 +22,7 @@ Biscuit は、記事・固定ページ・ページビルダーを持つ CMS で�
 リリースの版(タグ)を指定して取得し、`install.sh` を動かします。公開側(chococo)は、`install.sh` が同じ番号のタグを取得します。
 
 ```
-❯ git clone --branch v1.1.0 https://github.com/chococochiffon/biscuit.git
+❯ git clone --branch v1.2.0 https://github.com/chococochiffon/biscuit.git
 ❯ cd biscuit
 ❯ ./install.sh
 ```
@@ -102,11 +102,11 @@ admin.example.com {
 
 更新の前に診断(`doctor`)とバックアップをし、更新のあいだはメンテナンスモードにします。biscuit と公開側(chococo)を同じ版のタグに切り替え、イメージ・PHP の依存関係・管理画面の CSS と JS を作り直してから、マイグレーションを流します。途中で失敗したときは、元の版のタグと更新の前のバックアップに自動で戻します。Biscuit のファイルを書き換えているとき(タグの上にないとき)は、自動では更新しません。版を下げるときは、`./biscuit restore` で更新の前のバックアップに戻してください。
 
-v1.0.0 には `./biscuit` がないため、v1.0.0 からは、先に新しい版のタグに切り替えてから、残りの更新を `--from` で動かします。
+v1.0.0 には `./biscuit` がないため、v1.0.0 からは、先に新しい版のタグ(最新の版)に切り替えてから、残りの更新を `--from` で動かします。
 
 ```
 ❯ git fetch --tags
-❯ git checkout v1.1.0
+❯ git checkout v1.2.0
 ❯ ./biscuit update --from v1.0.0
 ```
 
