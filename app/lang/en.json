@@ -897,6 +897,7 @@
     "今のバージョン": "Current version",
     "新しいバージョン": "New version",
     "リリースノートを見る": "View release notes",
+    "サーバーで :command を動かすと更新できます(先にバックアップを作り、失敗したら元に戻します)。": "Run :command on the server to update (a backup is made first, and the update is rolled back if it fails).",
     "このメールは、管理画面のスーパー管理者にお送りしています。": "This email is sent to super administrators of the admin panel.",
     "Biscuit の新しいバージョン :version が公開されています(今のバージョン: :current)。": "Biscuit :version is available (current version: :current).",
     "最新 :version": "Latest :version",

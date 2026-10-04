@@ -8,6 +8,8 @@
 #   ./biscuit backup list           いまあるバックアップを表示する
 #   ./biscuit backup copy <名前> <ディレクトリ>  バックアップをホストのディレクトリに写す
 #   ./biscuit restore <名前かファイル>  バックアップからデータベースと画像を戻す(先にいまの状態をバックアップする)
+#   ./biscuit update      新しい版に更新する(同じメジャー版の最新。--version v2.0.0 で版を指定、--check で確かめるだけ)
+#   ./biscuit update --from v1.0.0   手で新しいタグに切り替えたあと、残りの更新をする(./biscuit がない v1.0.0 からの更新)
 #   ./biscuit install     インストーラーを起動する(./install.sh と同じ)
 #   ./biscuit help        この説明を表示する
 #
@@ -23,7 +25,7 @@ HOST_LOG="$ROOT/biscuit.log"
 . "$ROOT/docker/production/lib.sh"
 
 usage() {
-  sed -n '3,13p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # インストールを終えていなければ、インストーラーへ案内して止める
@@ -246,6 +248,194 @@ cmd_restore() {
   info "$name から戻しました。うまく戻っていなければ ./biscuit restore $before で、戻す前の状態にできます。"
 }
 
+# 版のタグ(v1.2.3 の形だけ。v1.2.3-rc1 などは使わない)
+VERSION_TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
+CHOCOCO_DIR="$ROOT/frontend/chococo"
+
+# リモートにある版のタグ(古い順)
+remote_version_tags() {
+  git -C "$1" ls-remote --tags --refs origin 'v*' 2>/dev/null | sed 's|.*refs/tags/||' | grep -E "$VERSION_TAG_PATTERN" | sort -V
+}
+
+# 1 つ目の版が 2 つ目より新しいか
+version_greater() {
+  [ "$1" != "$2" ] && [ "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -n 1)" = "$1" ]
+}
+
+major_of() {
+  printf '%s' "${1#v}" | cut -d. -f1
+}
+
+# biscuit と chococo を、指定した版のタグに切り替える
+checkout_version() {
+  local tag="$1"
+  git -C "$ROOT" fetch -q origin "refs/tags/$tag:refs/tags/$tag" &&
+    git -C "$ROOT" -c advice.detachedHead=false checkout -q "$tag" &&
+    git -C "$CHOCOCO_DIR" fetch -q --depth 1 origin "refs/tags/$tag:refs/tags/$tag" &&
+    git -C "$CHOCOCO_DIR" -c advice.detachedHead=false checkout -q "$tag"
+}
+
+# いまのソースで、イメージ・PHP の依存関係・管理画面の CSS と JS を作り直し、サービスを起動し直す(install.sh と同じ手順)
+rebuild_and_start() {
+  export HOST_UID HOST_GID
+  HOST_UID="$(id -u)"
+  HOST_GID="$(id -g)"
+
+  info "イメージを作り直します(数分かかります)"
+  compose build app scheduler front >>"$HOST_LOG" 2>&1 || return 1
+  info "PHP の依存関係を入れます"
+  compose run --rm --no-deps -T app composer install --no-dev --optimize-autoloader --no-interaction --no-progress >>"$HOST_LOG" 2>&1 || return 1
+  info "管理画面の CSS・JS をビルドします"
+  compose --profile build run --rm -T assets >>"$HOST_LOG" 2>&1 || return 1
+  info "サービスを起動し直します"
+  compose up -d db app web front >>"$HOST_LOG" 2>&1 || return 1
+  wait_for_db_healthy || return 1
+}
+
+wait_for_db_healthy() {
+  local waited=0 container
+  container="$(compose ps -q db)"
+  while [ "$waited" -lt 180 ]; do
+    [ "$(docker inspect -f '{{.State.Health.Status}}' "$container" 2>/dev/null)" = "healthy" ] && return 0
+    sleep 3
+    waited=$((waited + 3))
+  done
+  return 1
+}
+
+# マイグレーションと、設定・ルート・ビューのキャッシュの作り直し
+migrate_and_optimize() {
+  info "データベースをいまのソースの版に合わせます(マイグレーション)"
+  in_app php artisan migrate --force </dev/null || return 1
+  in_app php artisan optimize:clear </dev/null >>"$HOST_LOG" 2>&1 || return 1
+  if [ "$(env_value APP_ENV)" = "production" ]; then
+    in_app php artisan optimize </dev/null >>"$HOST_LOG" 2>&1 || return 1
+  fi
+}
+
+# 更新の途中で止まっても、メンテナンスモードとスケジューラーを戻す
+UPDATE_IN_MAINTENANCE=0
+
+update_cleanup() {
+  if [ "$UPDATE_IN_MAINTENANCE" -eq 1 ]; then
+    in_app php artisan up </dev/null >/dev/null 2>&1 || warn "メンテナンスモードを解除できませんでした。./biscuit doctor で確かめてください。"
+    UPDATE_IN_MAINTENANCE=0
+  fi
+  compose up -d scheduler >/dev/null 2>&1 || true
+  rm -rf "$LOCK_DIR"
+}
+
+cmd_update() {
+  require_installed
+  local requested="" from="" check_only=0 yes=0
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --version) requested="${2:-}"; shift ;;
+      --version=*) requested="${1#--version=}" ;;
+      --from) from="${2:-}"; shift ;;
+      --from=*) from="${1#--from=}" ;;
+      --check) check_only=1 ;;
+      --yes|-y) yes=1 ;;
+      *) fail "知らないオプションです: $1(./biscuit help)" ;;
+    esac
+    shift
+  done
+
+  acquire_lock
+  trap update_cleanup EXIT
+
+  # いまの版(タグの上にいて、ファイルを書き換えていないときだけ、自動で更新できる)
+  local current head
+  head="$(git -C "$ROOT" describe --tags --exact-match 2>/dev/null || true)"
+  [[ "$head" =~ $VERSION_TAG_PATTERN ]] || fail "いまのソースが版のタグの上にないため、自動では更新できません(git -C $ROOT status で確かめてください)。"
+  current="$head"
+  if [ -n "$from" ]; then
+    # 手で新しいタグに切り替えたあと: いま動いているのは --from の版で、更新先はいまのタグ(失敗したら --from の版に戻す)
+    current="v${from#v}"
+    [[ "$current" =~ $VERSION_TAG_PATTERN ]] && git -C "$ROOT" rev-parse -q --verify "refs/tags/$current" >/dev/null || fail "--from の $current という版のタグがありません。"
+    [ -z "$requested" ] || fail "--from と --version は一緒に使えません(--from のときは、いまのタグ $head に更新します)。"
+    requested="$head"
+  fi
+  [ -z "$(git -C "$ROOT" status --porcelain --untracked-files=no)" ] || fail "Biscuit のファイルを書き換えているため、更新できません(git -C $ROOT status で変更を確かめてください)。"
+  [ -d "$CHOCOCO_DIR/.git" ] || fail "公開側(frontend/chococo)がありません。"
+  [ -z "$(git -C "$CHOCOCO_DIR" status --porcelain --untracked-files=no)" ] || fail "公開側(frontend/chococo)のファイルを書き換えているため、更新できません。"
+
+  info "新しい版を確かめます(いまは $current)"
+  local tags target latest
+  tags="$(remote_version_tags "$ROOT")"
+  [ -n "$tags" ] || fail "版の一覧を取得できませんでした(ネットワークと git -C $ROOT remote -v を確かめてください)。"
+  latest="$(printf '%s\n' "$tags" | tail -n 1)"
+
+  if [ -n "$requested" ]; then
+    target="v${requested#v}"
+    printf '%s\n' "$tags" | grep -qx "$target" || fail "$target という版はありません。"
+  else
+    # メジャー版が上がるもの(Upgrade)は、リリースノートを読んでから --version で選んでもらう
+    target="$(printf '%s\n' "$tags" | awk -v major="$(major_of "$current")" -F. '{ m = $1; sub(/^v/, "", m) } m == major' | tail -n 1)"
+    [ -n "$target" ] || target="$current"
+  fi
+
+  if [ "$target" = "$current" ]; then
+    info "最新の版($current)を使っています。"
+    if version_greater "$latest" "$current"; then
+      warn "メジャー版が上がる $latest が出ています。リリースノートで変更点を確かめてから ./biscuit update --version $latest で更新してください。"
+    fi
+    return 0
+  fi
+  version_greater "$target" "$current" || fail "$target は今の版($current)より古いため、更新できません(前の状態に戻すときは ./biscuit restore を使ってください)。"
+  remote_version_tags "$CHOCOCO_DIR" | grep -qx "$target" || fail "公開側(chococo)に $target がまだありません。しばらくしてから、もう一度お試しください。"
+
+  printf '\n  %s → %s\n' "$current" "$target"
+  [ "$(major_of "$target")" != "$(major_of "$current")" ] && warn "メジャー版が上がります。リリースノートで、互換性のない変更と必要な作業を確かめてください。"
+  printf '  リリースノート: https://github.com/%s/releases/tag/%s\n\n' "$(env_value BISCUIT_UPDATE_REPOSITORY | grep . || echo chococochiffon/biscuit)" "$target"
+  [ "$check_only" -eq 1 ] && return 0
+
+  info "更新の前に、診断します"
+  # --from のときはソースが先に新しくなっているため、未実行のマイグレーションは判定に使わない(このあと流す)
+  local ignore=()
+  [ -n "$from" ] && ignore=(--ignore=migrations)
+  if ! in_app php artisan biscuit:doctor --offline ${ignore[@]+"${ignore[@]}"} </dev/null >/dev/null; then
+    fail "診断で問題(✘)が見つかったため、更新しません。./biscuit doctor で確かめてください。"
+  fi
+
+  if [ "$yes" -ne 1 ]; then
+    printf '  更新のあいだ(数分〜十数分)は、サイトをメンテナンスモードにします。先にバックアップを作り、失敗したら元に戻します。\n\n'
+    local answer
+    read -r -p "  続けるには yes と入力してください: " answer
+    [ "$answer" = "yes" ] || fail "やめました。"
+  fi
+
+  log "update start $current -> $target"
+  info "スケジューラーを止めます"
+  compose stop scheduler >/dev/null 2>&1 || true
+
+  info "更新の前のバックアップを作ります"
+  local backup
+  backup="$(in_app php artisan biscuit:backup --reason=pre-update --json </dev/null | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
+  [ -n "$backup" ] || fail "バックアップを作れなかったため、更新していません。"
+  info "更新の前のバックアップ: $backup"
+
+  in_app php artisan down --retry=60 </dev/null >/dev/null || fail "メンテナンスモードにできませんでした。"
+  UPDATE_IN_MAINTENANCE=1
+
+  info "$target のソースに切り替えます"
+  if checkout_version "$target" && rebuild_and_start && migrate_and_optimize; then
+    update_cleanup
+    log "update done $current -> $target"
+    info "$target に更新しました。"
+    printf '\n'
+    in_app php artisan biscuit:doctor --offline </dev/null || warn "更新のあとの診断で問題が見つかりました。✘ の項目を確かめてください。"
+    return 0
+  fi
+
+  warn "更新できませんでした($(basename "$HOST_LOG") を確かめてください)。$current と更新の前のバックアップに戻します。"
+  log "update failed $current -> $target, rollback"
+  if checkout_version "$current" && rebuild_and_start && in_app php artisan biscuit:restore "$backup" --force </dev/null && migrate_and_optimize; then
+    fail "$target には更新できませんでした($current に戻しました)。"
+  fi
+  fail "元の版にも戻せませんでした。git -C $ROOT checkout $current のあと ./biscuit restore $backup で戻してください(サイトはメンテナンスモードのままです)。"
+}
+
 main() {
   local command="${1:-help}"
   [ $# -gt 0 ] && shift
@@ -255,10 +445,13 @@ main() {
     doctor) check_requirements >/dev/null; cmd_doctor ;;
     backup) check_requirements >/dev/null; cmd_backup "$@" ;;
     restore) check_requirements >/dev/null; cmd_restore "$@" ;;
+    update) check_requirements >/dev/null; cmd_update "$@" ;;
     install) exec "$ROOT/install.sh" "$@" ;;
     help|-h|--help) usage ;;
     *) usage; exit 1 ;;
   esac
 }
 
-main "$@"
+# 更新(git の切り替え)で、動いているこのファイル自身が書き換わる。bash はファイルを少しずつ読むため、
+# main を呼んだ行のまま終える(書き換わったあとの中身を続けて読まない)
+main "$@"; exit

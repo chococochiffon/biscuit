@@ -120,7 +120,8 @@ class UpdateCheckTest extends TestCase
         $this->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('data-update-available', false)
-            ->assertSee('最新 1.2.0');
+            ->assertSee('最新 1.2.0')
+            ->assertSee('./biscuit update');
         // ダッシュボードが作ったキャッシュで、ほかの画面の上部にも出す
         $this->get(route('admin.builder-components.index'))->assertOk()->assertSee('data-update-notice', false)->assertSee('data-dismissible="update:1.2.0"', false);
 
@@ -158,6 +159,7 @@ class UpdateCheckTest extends TestCase
         $this->assertStringContainsString('1.2.0', $mail->subject);
         $this->assertStringContainsString('https://github.com/chococochiffon/biscuit/releases/tag/v1.2.0', $html);
         $this->assertStringContainsString('ページビルダーの改善', $html);
+        $this->assertStringContainsString('./biscuit update', $html);
     }
 
     public function test_the_check_is_scheduled_daily(): void
