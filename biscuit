@@ -4,6 +4,9 @@
 #
 #   ./biscuit status      版・URL・コンテナ・データベースの状態を表示する
 #   ./biscuit doctor      動作に問題がないかを診断する(問題があれば終了コード 1)
+#   ./biscuit backup      データベース・画像・.env をバックアップする(新しい 7 個を残す)
+#   ./biscuit backup list           いまあるバックアップを表示する
+#   ./biscuit backup copy <名前> <ディレクトリ>  バックアップをホストのディレクトリに写す
 #   ./biscuit install     インストーラーを起動する(./install.sh と同じ)
 #   ./biscuit help        この説明を表示する
 #
@@ -19,7 +22,7 @@ HOST_LOG="$ROOT/biscuit.log"
 . "$ROOT/docker/production/lib.sh"
 
 usage() {
-  sed -n '3,9p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,12p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # インストールを終えていなければ、インストーラーへ案内して止める
@@ -120,6 +123,46 @@ cmd_doctor() {
   return "$failed"
 }
 
+# バックアップの置き場所(app コンテナの中から見たパス)
+BACKUP_DIR="storage/app/private/backups"
+
+cmd_backup() {
+  require_installed
+  local action="${1:-create}"
+
+  case "$action" in
+    create)
+      acquire_lock
+      info "バックアップを作ります(データベース・画像・.env)"
+      in_app php artisan biscuit:backup --reason=manual || fail "バックアップを作れませんでした。"
+      log "backup created"
+      info "サーバーが壊れたときに備えて、./biscuit backup copy で別の場所にも写してください。"
+      ;;
+    list)
+      in_app php artisan biscuit:backup --list
+      ;;
+    copy)
+      local name="${2:-}" dest="${3:-}"
+      [ -n "$name" ] && [ -n "$dest" ] || fail "使い方: ./biscuit backup copy <名前(./biscuit backup list の「ファイル」)> <写す先のディレクトリ>"
+      # 決まった形の名前だけを受け付ける(ほかのファイルを読ませない)
+      [[ "$name" =~ ^biscuit-[0-9]{8}-[0-9]{6}-[a-z-]+\.tar\.gz$ ]] || fail "バックアップの名前ではありません: $name"
+      [ -d "$dest" ] || fail "写す先のディレクトリがありません: $dest"
+      [ ! -e "$dest/$name" ] || fail "写す先に同じ名前のファイルがあります: $dest/$name"
+      # バックアップは www-data だけが読めるため、コンテナの中で読んで写す。秘密の値が入るため、写したファイルも本人だけが読めるようにする
+      if ! (umask 077 && in_app cat "$BACKUP_DIR/$name" >"$dest/$name"); then
+        rm -f "$dest/$name"
+        fail "写せませんでした($name が見つからないか、読めません)。"
+      fi
+      log "backup copied $name"
+      info "$dest/$name に写しました(.env のパスワード・APP_KEY が入っているため、人に見られない場所に置いてください)。"
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+}
+
 main() {
   local command="${1:-help}"
   [ $# -gt 0 ] && shift
@@ -127,6 +170,7 @@ main() {
   case "$command" in
     status) check_requirements >/dev/null; cmd_status ;;
     doctor) check_requirements >/dev/null; cmd_doctor ;;
+    backup) check_requirements >/dev/null; cmd_backup "$@" ;;
     install) exec "$ROOT/install.sh" "$@" ;;
     help|-h|--help) usage ;;
     *) usage; exit 1 ;;

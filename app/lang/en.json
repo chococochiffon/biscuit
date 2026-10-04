@@ -729,6 +729,8 @@
     "v:version が出ています(./biscuit update で更新)": "v:version is available (update with ./biscuit update)",
     "直近 :hours 時間にエラーが出ていない": "No errors in the last :hours hours",
     ":count 件(storage/logs を確かめてください)": ":count (check storage/logs)",
+    "直近 :hours 時間にバックアップを作っている": "A backup was made in the last :hours hours",
+    "まだありません(./biscuit backup で作れます)": "None yet (create one with ./biscuit backup)",
     "このブラウザでは、インストーラーのビルダーを使えません。": "The installer builder cannot be used in this browser.",
     "ビルダーでトップにブロックを置いてから、もう一度お試しください。": "Place blocks on the top page with the builder, then try again.",
     "ビルダーの内容を公開できません: :message": "The builder content cannot be published: :message",
