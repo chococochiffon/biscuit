@@ -18,7 +18,7 @@ use SplFileInfo;
 use Throwable;
 
 /**
- * バックアップ(./biscuit backup・毎日のスケジュール・これからの更新の前)。データベース・画像(public ディスク)・.env を
+ * バックアップ(./biscuit backup・毎日のスケジュール・更新の前(./biscuit update))。データベース・画像(public ディスク)・.env を
  * 1 つの tar.gz にまとめ、local ディスクの backups/ に 0600 で置く(.env の秘密の値が入るため、www-data だけが読める)。
  * 本番の app イメージには mysqldump・zip がないため、データベースは PHP で SQL に書き出し、PharData で固める
  * (PharData は phar.readonly=1 でも書ける)。古いものは config('biscuit.backup.keep') 世代だけ残して消す。

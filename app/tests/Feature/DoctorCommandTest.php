@@ -51,6 +51,13 @@ class DoctorCommandTest extends TestCase
         $this->artisan('biscuit:doctor --offline')->assertFailed();
     }
 
+    public function test_doctor_can_ignore_a_check(): void
+    {
+        SiteSetting::query()->create(['site_title' => 'x', 'site_icon' => SiteSetting::DEFAULT_SITE_ICON_PATH, 'site_image' => SiteSetting::DEFAULT_SITE_IMAGE_PATH]);
+
+        $this->artisan('biscuit:doctor --offline --ignore=administrator')->assertSuccessful();
+    }
+
     public function test_doctor_outputs_json_with_a_newer_release(): void
     {
         $this->installedSite();

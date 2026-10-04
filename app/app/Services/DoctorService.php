@@ -8,7 +8,7 @@ use Carbon\CarbonImmutable;
 
 /**
  * インストール後の診断(System Doctor)。インストールの確認(HealthChecker)に、インストール済みか・新しい版・エラーのログを足す。
- * ./biscuit doctor(biscuit:doctor)と、これからの更新(./biscuit update)の前の確認で使う。
+ * ./biscuit doctor(biscuit:doctor)と、更新(./biscuit update)の前の確認で使う。
  * 必須(required)の問題があれば、更新などを止める。推奨(recommended)は警告だけ。
  */
 class DoctorService

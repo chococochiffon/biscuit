@@ -12,6 +12,7 @@
                         <span class="text-muted small">({{ $update['published_at']->format('Y/m/d') }})</span>
                     @endif
                     <a href="{{ $update['url'] }}" target="_blank" rel="noopener noreferrer">{{ __('リリースノートを見る') }}</a>
+                    <div class="small text-muted">{{ __('サーバーで :command を動かすと更新できます(先にバックアップを作り、失敗したら元に戻します)。', ['command' => './biscuit update']) }}</div>
                 </div>
             </div>
         @endif
