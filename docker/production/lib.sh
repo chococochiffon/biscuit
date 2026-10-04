@@ -4,6 +4,11 @@
 
 APP="$ROOT/app"
 COMPOSE_FILE="$ROOT/docker/production/compose.yml"
+# 公開側(chococo)のソース(install.sh が取得する。install.sh・./biscuit が使う)
+# shellcheck disable=SC2034
+CHOCOCO_DIR="$ROOT/frontend/chococo"
+# データベースの起動を待つ時間(秒)
+DB_WAIT_SECONDS=180
 # app コンテナの中から見たパス
 LOCK_FILE="storage/app/private/installed"
 
@@ -35,6 +40,36 @@ in_app() {
   else
     compose run --rm --no-deps -T -u www-data app "$@"
   fi
+}
+
+# 管理画面の CSS・JS のビルド(assets サービス)が作るファイルを、ホストのユーザーのものにする
+export_host_ids() {
+  export HOST_UID HOST_GID
+  HOST_UID="$(id -u)"
+  HOST_GID="$(id -g)"
+}
+
+# PHP の依存関係(本番用。開発用のパッケージは入れない)
+install_php_dependencies() {
+  compose run --rm --no-deps -T app composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+}
+
+# 管理画面の CSS・JS をビルドする(ホストに Node.js がなくてよい)
+build_admin_assets() {
+  export_host_ids
+  compose --profile build run --rm -T assets
+}
+
+# データベースのコンテナが healthy になるまで待つ(DB_WAIT_SECONDS 秒で諦める)
+wait_for_db() {
+  local container waited=0
+  container="$(compose ps -q db)"
+  while [ "$waited" -lt "$DB_WAIT_SECONDS" ]; do
+    [ "$(docker inspect -f '{{.State.Health.Status}}' "$container" 2>/dev/null)" = "healthy" ] && return 0
+    sleep 3
+    waited=$((waited + 3))
+  done
+  return 1
 }
 
 # .env の値(シングル・ダブルクォートを外す)

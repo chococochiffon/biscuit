@@ -2,12 +2,11 @@
 
 namespace App\Services;
 
+use App\Support\Backup\DatabaseDump;
 use Carbon\CarbonImmutable;
 use FilesystemIterator;
-use Illuminate\Database\Connection;
-use Illuminate\Support\Facades\DB;
+use Generator;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Phar;
 use PharData;
@@ -20,7 +19,7 @@ use Throwable;
 /**
  * バックアップ(./biscuit backup・毎日のスケジュール・更新の前(./biscuit update))。データベース・画像(public ディスク)・.env を
  * 1 つの tar.gz にまとめ、local ディスクの backups/ に 0600 で置く(.env の秘密の値が入るため、www-data だけが読める)。
- * 本番の app イメージには mysqldump・zip がないため、データベースは PHP で SQL に書き出し、PharData で固める
+ * 本番の app イメージには mysqldump・zip がないため、データベースは DatabaseDump で SQL に書き出し、PharData で固める
  * (PharData は phar.readonly=1 でも書ける)。古いものは config('biscuit.backup.keep') 世代だけ残して消す。
  *
  * 中身: manifest.json(版・日時・理由・件数)・database.sql・env/.env・storage/public/**
@@ -36,8 +35,8 @@ class BackupService
     /** 作るときの理由(manifest.json と、ファイル名の末尾に入れる) */
     public const REASONS = ['manual', 'daily', 'pre-update', 'pre-restore'];
 
-    /** 1 つの INSERT にまとめる行の数 */
-    private const INSERT_ROWS = 100;
+    /** バックアップのファイル名(日時・理由)。./biscuit の BACKUP_NAME_PATTERN と同じ形 */
+    public const NAME_PATTERN = '/^biscuit-(\d{8}-\d{6})-([a-z-]+)\.tar\.gz$/';
 
     /**
      * バックアップを作り、古いものを消す($prune が false なら消さない。リストアの前に作るとき、戻す対象を消さないため)。
@@ -69,7 +68,7 @@ class BackupService
             File::ensureDirectoryExists($work, 0700);
             $this->ensureFreeSpace($directory);
 
-            $database = $this->dumpDatabase($work.'/database.sql');
+            $database = (new DatabaseDump)->export($work.'/database.sql');
 
             $phar = new PharData($tar);
             $phar->addFile($work.'/database.sql', 'database.sql');
@@ -129,7 +128,7 @@ class BackupService
 
         $backups = [];
         foreach (glob($directory.'/biscuit-*.tar.gz') ?: [] as $path) {
-            if (! preg_match('/^biscuit-(\d{8}-\d{6})-([a-z-]+)\.tar\.gz$/', basename($path), $matches)) {
+            if (! preg_match(self::NAME_PATTERN, basename($path), $matches)) {
                 continue;
             }
 
@@ -176,6 +175,23 @@ class BackupService
         return $pruned;
     }
 
+    /**
+     * 名前からバックアップのファイルを探す(決まった形の名前だけを受け付け、置き場所の外を読ませない)。
+     */
+    public function find(string $name): string
+    {
+        if (! preg_match(self::NAME_PATTERN, $name)) {
+            throw new RuntimeException("バックアップの名前ではありません: {$name}");
+        }
+
+        $path = $this->directory(create: false).'/'.$name;
+        if (! is_file($path)) {
+            throw new RuntimeException("{$name} が見つかりません(./biscuit backup list で名前を確かめてください)。");
+        }
+
+        return $path;
+    }
+
     public function directory(bool $create = true): string
     {
         $directory = Storage::disk('local')->path(self::DIRECTORY);
@@ -187,189 +203,43 @@ class BackupService
     }
 
     /**
-     * データベースのすべてのテーブルを、作り直して入れ直す SQL に書き出す。
-     *
-     * @return array{driver: string, tables: int, rows: int}
-     */
-    public function dumpDatabase(string $path): array
-    {
-        $connection = DB::connection();
-        $driver = $connection->getDriverName();
-        if (! in_array($driver, ['mysql', 'mariadb', 'sqlite'], true)) {
-            throw new RuntimeException("データベース {$driver} のバックアップには対応していません。");
-        }
-
-        $handle = fopen($path, 'wb');
-        if ($handle === false) {
-            throw new RuntimeException("{$path} に書き込めません。");
-        }
-
-        $rows = 0;
-        $tables = $this->tables($connection);
-
-        try {
-            fwrite($handle, '-- Biscuit v'.config('biscuit.version').' のバックアップ('.CarbonImmutable::now()->toIso8601String().")\n");
-            if ($driver === 'sqlite') {
-                fwrite($handle, "PRAGMA foreign_keys = OFF;\n");
-            } else {
-                // timestamp 型は接続のタイムゾーンで読み書きされるため、読んだときと同じタイムゾーンで入れ直す
-                $timeZone = (string) $connection->selectOne('select @@session.time_zone as tz')->tz;
-                fwrite($handle, "SET NAMES utf8mb4;\nSET time_zone = ".$connection->getPdo()->quote($timeZone).";\nSET FOREIGN_KEY_CHECKS = 0;\nSET UNIQUE_CHECKS = 0;\n");
-            }
-
-            foreach ($tables as $table) {
-                fwrite($handle, "\n-- {$table}\n");
-                fwrite($handle, 'DROP TABLE IF EXISTS '.$connection->getQueryGrammar()->wrapTable($table).";\n");
-                foreach ($this->createStatements($connection, $table) as $statement) {
-                    fwrite($handle, $statement.";\n");
-                }
-                if (! in_array($table, $this->transientTables(), true)) {
-                    $rows += $this->dumpRows($connection, $table, $handle);
-                }
-            }
-
-            fwrite($handle, $driver === 'sqlite' ? "\nPRAGMA foreign_keys = ON;\n" : "\nSET UNIQUE_CHECKS = 1;\nSET FOREIGN_KEY_CHECKS = 1;\n");
-        } finally {
-            fclose($handle);
-        }
-
-        return ['driver' => $driver, 'tables' => count($tables), 'rows' => $rows];
-    }
-
-    /**
-     * いまのデータベースのテーブル(カスタムページの実行時に作ったテーブルも含む)。
-     *
-     * @return list<string>
-     */
-    private function tables(Connection $connection): array
-    {
-        $schema = $connection->getDriverName() === 'sqlite' ? 'main' : $connection->getDatabaseName();
-        $tables = Schema::connection($connection->getName())->getTableListing($schema, schemaQualified: false);
-        sort($tables);
-
-        return $tables;
-    }
-
-    /**
-     * 構造だけを書き出し、行は書かないテーブル(キャッシュ・ロック・セッション)。戻すと、バックアップを作っていたときの
-     * コマンドのロック(Isolatable)・古いキャッシュ・ログインが一緒に戻ってしまうため。
-     *
-     * @return list<string>
-     */
-    private function transientTables(): array
-    {
-        return array_values(array_filter([
-            config('cache.stores.database.table'),
-            config('cache.stores.database.lock_table') ?: config('cache.stores.database.table').'_locks',
-            config('session.table'),
-        ]));
-    }
-
-    /**
-     * テーブルを作る SQL(SQLite はテーブルのあとにインデックスも)。
-     *
-     * @return list<string>
-     */
-    private function createStatements(Connection $connection, string $table): array
-    {
-        if ($connection->getDriverName() === 'sqlite') {
-            return array_map(
-                fn (object $row) => $row->sql,
-                $connection->select("select sql from sqlite_master where tbl_name = ? and sql is not null order by type = 'index', name", [$table]),
-            );
-        }
-
-        $row = (array) $connection->selectOne('SHOW CREATE TABLE '.$connection->getQueryGrammar()->wrapTable($table));
-
-        return [(string) ($row['Create Table'] ?? array_values($row)[1])];
-    }
-
-    /**
-     * テーブルの行を INSERT に書き出す(生成カラムは入れ直すと失敗するため書かない)。書き出した行の数を返す。
-     *
-     * @param  resource  $handle
-     */
-    private function dumpRows(Connection $connection, string $table, $handle): int
-    {
-        $builder = Schema::connection($connection->getName());
-        $columns = array_values(array_map(
-            fn (array $column) => $column['name'],
-            array_filter($builder->getColumns($table), fn (array $column) => empty($column['generation'])),
-        ));
-        if ($columns === []) {
-            return 0;
-        }
-
-        $grammar = $connection->getQueryGrammar();
-        $prefix = 'INSERT INTO '.$grammar->wrapTable($table).' ('.implode(', ', array_map(fn ($column) => $grammar->wrap($column), $columns)).') VALUES ';
-
-        // 主キーが 1 カラムなら、その順に少しずつ読む(大きいテーブルでもメモリに載せきらない)
-        $primary = collect($builder->getIndexes($table))->first(fn (array $index) => $index['primary']);
-        $query = $connection->table($table)->select($columns);
-        $cursor = $primary !== null && count($primary['columns']) === 1 && in_array($primary['columns'][0], $columns, true)
-            ? $query->lazyById(1000, $primary['columns'][0])
-            : $query->cursor();
-
-        $pdo = $connection->getPdo();
-        $count = 0;
-        $values = [];
-
-        foreach ($cursor as $row) {
-            $values[] = '('.implode(', ', array_map(
-                fn ($value) => match (true) {
-                    $value === null => 'NULL',
-                    is_bool($value) => $value ? '1' : '0',
-                    is_int($value), is_float($value) => (string) $value,
-                    default => $pdo->quote((string) $value),
-                },
-                array_values((array) $row),
-            )).')';
-            $count++;
-
-            if (count($values) >= self::INSERT_ROWS) {
-                fwrite($handle, $prefix.implode(",\n", $values).";\n");
-                $values = [];
-            }
-        }
-
-        if ($values !== []) {
-            fwrite($handle, $prefix.implode(",\n", $values).";\n");
-        }
-
-        return $count;
-    }
-
-    /**
      * 画像など公開のファイル(public ディスク)を storage/public/ に入れる。入れたファイルの数と大きさを返す。
      *
      * @return array{count: int, bytes: int}
      */
     private function addPublicFiles(PharData $phar): array
     {
-        $root = Storage::disk('public')->path('');
         $count = 0;
         $bytes = 0;
 
-        if (! is_dir($root)) {
-            return ['count' => 0, 'bytes' => 0];
-        }
-
-        $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS));
-
-        /** @var SplFileInfo $file */
-        foreach ($iterator as $file) {
-            // シンボリックリンクはたどらない(外のファイルを入れない)。.gitignore などの隠しファイルは入れない
-            if (! $file->isFile() || $file->isLink() || str_starts_with($file->getFilename(), '.')) {
-                continue;
-            }
-
-            $relative = ltrim(str_replace('\\', '/', substr($file->getPathname(), strlen($root))), '/');
+        foreach ($this->publicFiles() as $relative => $file) {
             $phar->addFile($file->getPathname(), 'storage/public/'.$relative);
             $count++;
             $bytes += $file->getSize();
         }
 
         return ['count' => $count, 'bytes' => $bytes];
+    }
+
+    /**
+     * バックアップに入れる公開のファイル(public ディスクからの相対パス => ファイル)。シンボリックリンクはたどらず
+     * (外のファイルを入れない)、.gitignore などの隠しファイルは入れない。
+     *
+     * @return Generator<string, SplFileInfo>
+     */
+    private function publicFiles(): Generator
+    {
+        $root = Storage::disk('public')->path('');
+        if (! is_dir($root)) {
+            return;
+        }
+
+        /** @var SplFileInfo $file */
+        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
+            if ($file->isFile() && ! $file->isLink() && ! str_starts_with($file->getFilename(), '.')) {
+                yield ltrim(str_replace('\\', '/', substr($file->getPathname(), strlen($root))), '/') => $file;
+            }
+        }
     }
 
     /**
@@ -382,26 +252,14 @@ class BackupService
             return;
         }
 
-        $needed = $this->publicBytes() * 2 + 100 * 1024 * 1024;
+        $bytes = 0;
+        foreach ($this->publicFiles() as $file) {
+            $bytes += $file->getSize();
+        }
+
+        $needed = $bytes * 2 + 100 * 1024 * 1024;
         if ($free < $needed) {
             throw new RuntimeException(sprintf('ディスクの空きが足りません(空き %dMB、必要 %dMB)。', intdiv((int) $free, 1048576), intdiv($needed, 1048576)));
         }
-    }
-
-    private function publicBytes(): int
-    {
-        $root = Storage::disk('public')->path('');
-        if (! is_dir($root)) {
-            return 0;
-        }
-
-        $bytes = 0;
-        foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS)) as $file) {
-            if ($file->isFile() && ! $file->isLink()) {
-                $bytes += $file->getSize();
-            }
-        }
-
-        return $bytes;
     }
 }
