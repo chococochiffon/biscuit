@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\ArticleApprovalStatus;
-use App\Enums\AuditAction;
 use App\Http\Controllers\Concerns\HandlesUserApproval;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\API\StoreMyGalleryImageRequest;
@@ -11,7 +10,6 @@ use App\Http\Requests\API\UpdateMyGalleryImageFileRequest;
 use App\Http\Requests\API\UpdateMyGalleryImageRequest;
 use App\Http\Resources\MyGalleryImageResource;
 use App\Models\GalleryImage;
-use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,7 +49,7 @@ class MyGalleryImageController extends Controller
 
         $galleryImages = $this->user($request)->galleryImages()
             ->with('category')
-            ->when(filled($validated['approval'] ?? null), fn ($query) => $query->where('approval', $validated['approval']))
+            ->when(filled($validated['approval'] ?? null), fn ($query) => $query->withApproval(ArticleApprovalStatus::from($validated['approval'])))
             ->latest('updated_at')
             ->latest('id')
             ->paginate(config('limits.api_per_page'));
@@ -160,13 +158,7 @@ class MyGalleryImageController extends Controller
     )]
     public function submit(Request $request, GalleryImage $myGalleryImage): MyGalleryImageResource
     {
-        $this->ensureApproval($myGalleryImage, ArticleApprovalStatus::Draft, __('承認を申請できるのは下書きの画像だけです。'));
-
-        // 前回の差し戻しの理由は、申請し直したら対応済みとみなして消す
-        AuditLogger::updateWithLog($myGalleryImage, fn () => $myGalleryImage->update([
-            'approval' => $this->approvalOnSubmit($this->user($request)),
-            'review_comment' => null,
-        ]), action: AuditAction::StatusChanged);
+        $this->submitForApproval($myGalleryImage, $this->user($request), __('承認を申請できるのは下書きの画像だけです。'));
 
         return new MyGalleryImageResource($myGalleryImage->fresh()->load('category'));
     }
@@ -185,9 +177,7 @@ class MyGalleryImageController extends Controller
     )]
     public function withdraw(GalleryImage $myGalleryImage): MyGalleryImageResource
     {
-        $this->ensureApproval($myGalleryImage, ArticleApprovalStatus::Pending, __('取り下げられるのは承認待ちの画像だけです。'));
-
-        AuditLogger::updateWithLog($myGalleryImage, fn () => $myGalleryImage->update(['approval' => ArticleApprovalStatus::Draft]), action: AuditAction::StatusChanged);
+        $this->withdrawSubmission($myGalleryImage, __('取り下げられるのは承認待ちの画像だけです。'));
 
         return new MyGalleryImageResource($myGalleryImage->fresh()->load('category'));
     }
@@ -208,10 +198,5 @@ class MyGalleryImageController extends Controller
         AuditLogger::deleteWithLog($myGalleryImage);
 
         return response()->json(status: 204);
-    }
-
-    private function user(Request $request): User
-    {
-        return $request->user();
     }
 }

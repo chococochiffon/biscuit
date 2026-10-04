@@ -59,7 +59,7 @@ class GalleryImageController extends Controller
             ->with(['category', 'user'])
             ->when($category === self::UNCATEGORIZED, fn ($query) => $query->whereNull('gallery_category_id'))
             ->when($category !== null && $category !== self::UNCATEGORIZED, fn ($query) => $query->where('gallery_category_id', $category))
-            ->when($approval !== null, fn ($query) => $query->where('approval', $approval))
+            ->when($approval !== null, fn ($query) => $query->withApproval(ArticleApprovalStatus::from($approval)))
             ->orderBy($column, $direction)
             ->orderBy('id', $direction)
             ->paginate(config('limits.admin_per_page'))

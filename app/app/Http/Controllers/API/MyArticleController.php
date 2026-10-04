@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API;
 
 use App\Enums\ArticleApprovalStatus;
-use App\Enums\AuditAction;
 use App\Http\Controllers\Concerns\HandlesUserApproval;
 use App\Http\Controllers\Concerns\SavesArticle;
 use App\Http\Controllers\Controller;
@@ -16,7 +15,6 @@ use App\Http\Resources\TagResource;
 use App\Models\Article;
 use App\Models\ArticlePathOption;
 use App\Models\Tag;
-use App\Models\User;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -58,7 +56,7 @@ class MyArticleController extends Controller
 
         $articles = $this->user($request)->articles()
             ->with('tags')
-            ->when(filled($validated['approval'] ?? null), fn ($query) => $query->where('approval', $validated['approval']))
+            ->when(filled($validated['approval'] ?? null), fn ($query) => $query->withApproval(ArticleApprovalStatus::from($validated['approval'])))
             ->latest('updated_at')
             ->latest('id')
             ->paginate(config('limits.api_per_page'));
@@ -191,15 +189,7 @@ class MyArticleController extends Controller
     )]
     public function submit(Request $request, Article $myArticle): MyArticleResource
     {
-        $this->ensureApproval($myArticle, ArticleApprovalStatus::Draft, __('承認を申請できるのは下書きの記事だけです。'));
-
-        // 承認を飛ばす権限のあるユーザーは、管理者が承認したときと同じくそのまま公開する(初めてなら公開開始日時も決まる)。
-        // 前回の差し戻しの理由は、申請し直したら対応済みとみなして消す
-        $approval = $this->approvalOnSubmit($this->user($request));
-
-        AuditLogger::updateWithLog($myArticle, function () use ($myArticle, $approval) {
-            $myArticle->changeApproval($approval)->fill(['review_comment' => null])->save();
-        }, action: AuditAction::StatusChanged);
+        $this->submitForApproval($myArticle, $this->user($request), __('承認を申請できるのは下書きの記事だけです。'));
 
         return new MyArticleResource($myArticle->fresh()->load('tags'));
     }
@@ -218,9 +208,7 @@ class MyArticleController extends Controller
     )]
     public function withdraw(Article $myArticle): MyArticleResource
     {
-        $this->ensureApproval($myArticle, ArticleApprovalStatus::Pending, __('取り下げられるのは承認待ちの記事だけです。'));
-
-        AuditLogger::updateWithLog($myArticle, fn () => $myArticle->update(['approval' => ArticleApprovalStatus::Draft]), action: AuditAction::StatusChanged);
+        $this->withdrawSubmission($myArticle, __('取り下げられるのは承認待ちの記事だけです。'));
 
         return new MyArticleResource($myArticle->fresh()->load('tags'));
     }
@@ -291,10 +279,5 @@ class MyArticleController extends Controller
     public function searchTags(Request $request): AnonymousResourceCollection
     {
         return TagResource::collection(Tag::query()->suggest(trim((string) $request->query('q', '')))->get());
-    }
-
-    private function user(Request $request): User
-    {
-        return $request->user();
     }
 }
