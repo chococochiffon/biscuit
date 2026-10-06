@@ -33,7 +33,7 @@ class BackupService
     public const FORMAT = 1;
 
     /** 作るときの理由(manifest.json と、ファイル名の末尾に入れる) */
-    public const REASONS = ['manual', 'daily', 'pre-update', 'pre-restore'];
+    public const REASONS = ['manual', 'daily', 'pre-update', 'pre-restore', 'pre-down'];
 
     /** バックアップのファイル名(日時・理由)。./biscuit の BACKUP_NAME_PATTERN と同じ形 */
     public const NAME_PATTERN = '/^biscuit-(\d{8}-\d{6})-([a-z-]+)\.tar\.gz$/';
