@@ -14,7 +14,7 @@ use Throwable;
  * バックアップを作る・一覧を出す(./biscuit backup が app コンテナの中で動かす。毎日のスケジュールも --reason=daily で動かす)。
  * 同時に 2 つ動かさない(Isolatable)。
  */
-#[Signature('biscuit:backup {--reason=manual : 作る理由(manual・daily・pre-update・pre-restore)} {--no-prune : 古いバックアップを消さない} {--list : 作らずに、いまあるバックアップを表示する} {--json : 結果を JSON で出す}')]
+#[Signature('biscuit:backup {--reason=manual : 作る理由(manual・daily・pre-update・pre-restore・pre-down)} {--no-prune : 古いバックアップを消さない} {--list : 作らずに、いまあるバックアップを表示する} {--json : 結果を JSON で出す}')]
 #[Description('データベース・画像・.env をまとめてバックアップする')]
 class BackupCommand extends Command implements Isolatable
 {
@@ -88,6 +88,7 @@ class BackupCommand extends Command implements Isolatable
                 'daily' => '毎日',
                 'pre-update' => '更新の前',
                 'pre-restore' => 'リストアの前',
+                'pre-down' => '削除の前',
                 'manual' => '手動',
                 default => '-',
             },

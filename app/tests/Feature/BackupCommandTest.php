@@ -148,6 +148,11 @@ class BackupCommandTest extends TestCase
         $output = Artisan::output();
         $this->assertStringContainsString($result['name'], $output);
         $this->assertStringContainsString('更新の前', $output);
+
+        // ./biscuit down がコンテナとデータベースを消す前のバックアップ
+        $this->assertSame(0, Artisan::call('biscuit:backup', ['--reason' => 'pre-down', '--no-prune' => true]));
+        $this->assertSame(0, Artisan::call('biscuit:backup', ['--list' => true]));
+        $this->assertStringContainsString('削除の前', Artisan::output());
     }
 
     public function test_it_rejects_an_unknown_reason(): void
