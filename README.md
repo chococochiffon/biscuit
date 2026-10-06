@@ -22,7 +22,7 @@ Biscuit は、記事・固定ページ・ページビルダーを持つ CMS で�
 リリースの版(タグ)を指定して取得し、`install.sh` を動かします。公開側(chococo)は、`install.sh` が同じ番号のタグを取得します。
 
 ```
-❯ git clone --branch v1.2.0 https://github.com/chococochiffon/biscuit.git
+❯ git clone --branch v1.3.0 https://github.com/chococochiffon/biscuit.git
 ❯ cd biscuit
 ❯ ./install.sh
 ```
@@ -106,7 +106,7 @@ v1.0.0 には `./biscuit` がないため、v1.0.0 からは、先に新しい�
 
 ```
 ❯ git fetch --tags
-❯ git checkout v1.2.0
+❯ git checkout v1.3.0
 ❯ ./biscuit update --from v1.0.0
 ```
 
