@@ -1,4 +1,5 @@
 /* ページビルダーのエディタ(resources/js/builder)。管理画面の admin.css に重ねて読み込む */
+@import 'quill/dist/quill.bubble.css';
 
 .builder-app {
     display: flex;
@@ -300,6 +301,38 @@
 .builder-node.is-resizing,
 .builder-node.is-resizing * {
     user-select: none;
+}
+
+/* Canvas の上で文字を直接書き換えている部品 */
+.builder-node.is-editing {
+    outline: 2px solid #198754;
+}
+
+.builder-inline-text {
+    cursor: text;
+    outline: none;
+}
+
+.builder-inline-text:empty::before {
+    color: var(--bs-secondary-color);
+    content: '…';
+}
+
+.builder-inline-richtext .ql-container {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+.builder-inline-richtext .ql-editor {
+    min-height: 3rem;
+    padding: 0;
+    text-align: inherit;
+    overflow: visible;
+    line-height: inherit;
+}
+
+.builder-inline-richtext .ql-bubble .ql-tooltip {
+    z-index: 30;
 }
 
 .builder-preview-placeholder {

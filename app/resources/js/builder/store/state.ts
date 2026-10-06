@@ -33,6 +33,8 @@ export function createEditorState() {
     content: { version: 1, children: [] } as BuilderContent,
     device: 'desktop' as Device,
     selectedId: null as string | null,
+    // Canvas の上で文字を直接書き換えているブロック(見出し・ボタン・テキスト)
+    editingId: null as string | null,
     hoveredId: null as string | null,
     dragging: null as Dragging | null,
     // ドラッグで大きさを変えているブロック(つまみ・値の表示を出し続けるのに使う)

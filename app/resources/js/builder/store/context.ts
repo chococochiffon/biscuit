@@ -90,6 +90,9 @@ export function createEditorContext(api: BuilderApi) {
     if (state.selectedId && !findNode(state.content, state.selectedId)) {
       state.selectedId = null
     }
+    if (state.editingId && !findNode(state.content, state.editingId)) {
+      state.editingId = null
+    }
   }
 
   /**
