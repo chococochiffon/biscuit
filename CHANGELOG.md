@@ -3,6 +3,21 @@
 Biscuit のリリースごとの変更を記録します。版の番号は [セマンティック バージョニング](https://semver.org/lang/ja/) に従い、
 公開側(chococo)も同じ番号のタグで配布します。
 
+## [1.4.0] - 2026-10-06
+
+運用のコマンド `./biscuit` に、コンテナを止める・起動するコマンドを追加しました。
+
+### 追加
+- `./biscuit stop`: コンテナをすべて止める。データベース・画像・設定は残る。止めたコンテナは、PC や Docker を起動し直しても自動では動かない
+- `./biscuit start`: 止めたコンテナを起動し、データベースの起動を待ってサイトと管理画面の URL を表示する
+- どちらも、`install.sh`・`./biscuit update`・`./biscuit restore` などと同時には動かさない
+
+### 変更
+- `./biscuit doctor` でコンテナが止まっているときの案内を、`./biscuit start` に変えた
+
+### 更新のしかた
+v1.1.0 からは、Biscuit を置いたディレクトリで `./biscuit update` を動かしてください。v1.0.0 からは、`git checkout v1.4.0` のあと `./biscuit update --from v1.0.0` で更新できます。
+
 ## [1.3.0] - 2026-10-06
 
 システムのメール(ログインの確認コード・パスワードの再設定・招待・更新のお知らせ・Biscuit からのお知らせ)を、[Resend](https://resend.com/) で送れるようにしました。
@@ -81,6 +96,7 @@ git checkout v1.1.0
 - 環境の確認・データベース・アプリケーション(進み具合の表示)・サイト・メール(試しに送る)・管理者・デザイン(デフォルトかビルダー。プレビュー付き)・完了(必須と推奨の確認)
 - 途中からの再開と、終えた段への戻り。インストール中の公開側は「準備中」を表示する
 
+[1.4.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.4.0
 [1.3.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.3.0
 [1.2.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.2.0
 [1.1.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.1.0

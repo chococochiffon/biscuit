@@ -4,6 +4,8 @@
 #
 #   ./biscuit status      版・URL・コンテナ・データベースの状態を表示する
 #   ./biscuit doctor      動作に問題がないかを診断する(問題があれば終了コード 1)
+#   ./biscuit stop        コンテナをすべて止める(データは残る。止めたままなら、PC・Docker を起動し直しても動かない)
+#   ./biscuit start       止めたコンテナを起動する
 #   ./biscuit backup      データベース・画像・.env をバックアップする(新しい 7 個を残す)
 #   ./biscuit backup list           いまあるバックアップを表示する
 #   ./biscuit backup copy <名前> <ディレクトリ>  バックアップをホストのディレクトリに写す
@@ -32,7 +34,7 @@ BACKUP_NAME_PATTERN='^biscuit-[0-9]{8}-[0-9]{6}-[a-z-]+\.tar\.gz$'
 VERSION_TAG_PATTERN='^v[0-9]+\.[0-9]+\.[0-9]+$'
 
 usage() {
-  sed -n '3,15p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '3,17p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 # インストールを終えていなければ、インストーラーへ案内して止める
@@ -69,7 +71,7 @@ host_checks() {
     if [ "$state" = "running" ]; then
       report ok "コンテナ $service が動いている"
     else
-      report ng "コンテナ $service が動いている" "${state:-ありません}(./install.sh で起動し直せます)"
+      report ng "コンテナ $service が動いている" "${state:-ありません}(./biscuit start で起動できます)"
       failed=1
     fi
   done
@@ -131,6 +133,26 @@ cmd_doctor() {
   fi
   log "doctor failed=$failed"
   return "$failed"
+}
+
+cmd_stop() {
+  require_installed
+  acquire_lock
+  info "コンテナをすべて止めます"
+  compose stop >>"$HOST_LOG" 2>&1 || fail "止められませんでした(ログ: $HOST_LOG)。"
+  log "stopped"
+  info "止めました。データベース・画像・設定は残っています。./biscuit start で起動します。"
+}
+
+cmd_start() {
+  require_installed
+  acquire_lock
+  info "コンテナを起動します"
+  compose up -d db app web front scheduler >>"$HOST_LOG" 2>&1 || fail "起動できませんでした(ログ: $HOST_LOG)。"
+  wait_for_db || fail "データベースが起動しませんでした(ログ: $HOST_LOG)。./biscuit doctor で確かめてください。"
+  log "started"
+  info "起動しました。"
+  printf '\n  サイト:     %s\n  管理画面:   %s/admin\n\n' "$(front_url)" "$(admin_url)"
 }
 
 cmd_backup() {
@@ -443,6 +465,8 @@ main() {
   case "$command" in
     status) check_requirements >/dev/null; cmd_status ;;
     doctor) check_requirements >/dev/null; cmd_doctor ;;
+    stop) check_requirements >/dev/null; cmd_stop ;;
+    start) check_requirements >/dev/null; cmd_start ;;
     backup) check_requirements >/dev/null; cmd_backup "$@" ;;
     restore) check_requirements >/dev/null; cmd_restore "$@" ;;
     update) check_requirements >/dev/null; cmd_update "$@" ;;
