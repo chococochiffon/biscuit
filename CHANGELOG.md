@@ -1,7 +1,25 @@
 # 変更履歴
 
-Biscuit のリリースごとの変更を記録します。版の番号は [セマンティック バージョニング](https://semver.org/lang/ja/) に従い、
-公開側(chococo)も同じ番号のタグで配布します。
+Biscuit のリリースごとの変更を記録します。版の番号は [セマンティック バージョニング](https://semver.org/lang/ja/) の「メジャー.マイナー.パッチ」の形で、
+公開側(chococo)も同じ番号のタグで配布します。どの数字を上げるかは、次のように決めます(v1.4.1 から)。
+
+- メジャー(v2.0.0): 互換性のない変更や、更新のあとに手での作業が要る変更
+- マイナー(v1.5.0): 画面・設定に出る機能の追加
+- パッチ(v1.4.1): 不具合の修正・依存ライブラリの更新・運用のコマンドの小さな追加・ドキュメント
+
+## [1.4.1] - 2026-10-06
+
+運用のコマンド `./biscuit` に、インストールしたものを片付ける `./biscuit down` を追加しました。
+
+### 追加
+- `./biscuit down`: コンテナ・ネットワーク・データベース・イメージをすべて消す(`docker compose down --rmi all --volumes --remove-orphans`)。**データベースの中身(記事・ユーザー・設定など)は消え、元に戻せない。** `yes` の確認(`--yes` で省ける)のあと、先にいまの状態をバックアップしてから消す(とれなければ何も消さない)。画像・`.env`・バックアップのファイルは残る。もう一度使うときは `./install.sh` でインストールし直し、`./biscuit restore <消す前のバックアップ>` でデータを戻せる
+- バックアップの理由に「削除の前」(`pre-down`)を追加した
+
+### 変更
+- 公開側(chococo): 依存ライブラリ source-map-js を 1.2.2 に上げた
+
+### 更新のしかた
+v1.1.0 からは、Biscuit を置いたディレクトリで `./biscuit update` を動かしてください。v1.0.0 からは、`git checkout v1.4.1` のあと `./biscuit update --from v1.0.0` で更新できます。
 
 ## [1.4.0] - 2026-10-06
 
@@ -96,6 +114,7 @@ git checkout v1.1.0
 - 環境の確認・データベース・アプリケーション(進み具合の表示)・サイト・メール(試しに送る)・管理者・デザイン(デフォルトかビルダー。プレビュー付き)・完了(必須と推奨の確認)
 - 途中からの再開と、終えた段への戻り。インストール中の公開側は「準備中」を表示する
 
+[1.4.1]: https://github.com/chococochiffon/biscuit/releases/tag/v1.4.1
 [1.4.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.4.0
 [1.3.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.3.0
 [1.2.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.2.0
