@@ -809,7 +809,7 @@
     "試しに送る宛先": "Test recipient",
     "SMTP のホストには、smtp.example.com のようなホスト名を入れてください。": "Enter a host name such as smtp.example.com.",
     "シングルクォート(')は使えません。": "Single quotes (') cannot be used.",
-    "管理画面のログインでは、確認コードをメールで送ります。メールを送るサーバー(SMTP)を設定し、試しにメールを送って届くことを確かめます。": "Admin login sends a confirmation code by email. Set up the mail server (SMTP) and send a test email to make sure it arrives.",
+    "管理画面のログインでは、確認コードをメールで送ります。メールの送り方(SMTP か Resend)を設定し、試しにメールを送って届くことを確かめます。": "Admin login sends a confirmation code by email. Choose how to send email (SMTP or Resend) and send a test email to make sure it arrives.",
     "STARTTLS(多くは 587 番)": "STARTTLS (usually port 587)",
     "SSL/TLS(多くは 465 番)": "SSL/TLS (usually port 465)",
     "受け取れるメールアドレスを入れてください(管理者のメールアドレスなど)。": "Enter an address that can receive email (such as the administrator's address).",
@@ -1039,5 +1039,13 @@
     "(未公開)": "(unpublished)",
     "(削除されたコンポーネント)": "(Deleted component)",
     "使うコンポーネントを選んでください": "Choose a component to use",
-    "「:name」はまだ公開されていません。": "\":name\" has not been published yet."
+    "「:name」はまだ公開されていません。": "\":name\" has not been published yet.",
+    "試しのメールを送れませんでした。Resend の API キーと、送信元のドメインを Resend で認証したかを確かめてください。(:error)": "Could not send the test email. Check the Resend API key and that the sender's domain is verified in Resend. (:error)",
+    "メールの送り方": "How to send email",
+    "SMTP サーバー": "SMTP server",
+    "Resend(API キー)": "Resend (API key)",
+    "Resend の API キー": "Resend API key",
+    "Resend の API キー(re_ で始まる文字列)を入れてください。": "Enter a Resend API key (a string starting with re_).",
+    "Resend の管理画面の API Keys で作った、送信の権限(Sending access)のキーを入れてください。送信元のメールアドレスのドメインは、先に Resend の Domains で認証しておきます。": "Enter a key with Sending access created under API Keys in the Resend dashboard. Verify the domain of the sender address under Domains in Resend first.",
+    "空のままにすると、今の API キーを使います。": "Leave blank to keep the current API key."
 }

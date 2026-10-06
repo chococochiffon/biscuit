@@ -15,7 +15,7 @@ Biscuit は、記事・固定ページ・ページビルダーを持つ CMS で�
 - Linux・macOS・Windows(WSL2)
 - Docker(Docker Compose v2 を含む)・git・curl。ホストに PHP・Node.js は要りません
 - メモリ 2GB 以上、ディスクの空き 5GB 以上(イメージのビルドに使います)
-- 管理画面のログインは確認コードをメールで送るため、メールを送れる SMTP サーバー
+- 管理画面のログインは確認コードをメールで送るため、メールを送れる SMTP サーバー、または [Resend](https://resend.com/) の API キー(送信元のドメインを Resend で認証しておく)
 
 ### 手順
 
