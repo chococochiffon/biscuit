@@ -3,6 +3,20 @@
 Biscuit のリリースごとの変更を記録します。版の番号は [セマンティック バージョニング](https://semver.org/lang/ja/) に従い、
 公開側(chococo)も同じ番号のタグで配布します。
 
+## [1.3.0] - 2026-10-06
+
+システムのメール(ログインの確認コード・パスワードの再設定・招待・更新のお知らせ・Biscuit からのお知らせ)を、[Resend](https://resend.com/) で送れるようにしました。
+
+### 追加
+- インストーラーのメールの段で、メールの送り方を「SMTP サーバー」か「Resend(API キー)」から選べるようにした。Resend は試しのメールを送れたら、`.env` に `MAIL_MAILER=resend` と `RESEND_API_KEY` を書く。送信元のメールアドレスのドメインは、先に Resend の Domains で認証しておく
+- `./biscuit doctor`・完了の確認で、Resend の API キーがあればメールを設定済みとみなす
+
+### セキュリティ
+- 依存ライブラリ league/commonmark を 2.10.3 に上げ、既知の脆弱性 2 件(GFM の表による DoS・生の HTML の禁止のすり抜け)を直した。Biscuit では通知メールの本文にだけ使っており、外部から自由な Markdown を渡せる入り口はない
+
+### 更新のしかた
+v1.1.0 からは、Biscuit を置いたディレクトリで `./biscuit update` を動かしてください。v1.0.0 からは、`git checkout v1.3.0` のあと `./biscuit update --from v1.0.0` で更新できます。インストール済みの環境で Resend に切り替えるときは、`app/.env` の `MAIL_MAILER=resend`・`RESEND_API_KEY`・`MAIL_FROM_ADDRESS` を書き換えてから、設定のキャッシュを作り直してください(`docker compose --env-file app/.env -f docker/production/compose.yml -p biscuit-production exec app php artisan optimize`)。
+
 ## [1.2.0] - 2026-10-04
 
 内部の整理(リファクタリング)と、運用のコマンドの不具合の修正です。画面と API の動きは変わりません。
@@ -67,6 +81,7 @@ git checkout v1.1.0
 - 環境の確認・データベース・アプリケーション(進み具合の表示)・サイト・メール(試しに送る)・管理者・デザイン(デフォルトかビルダー。プレビュー付き)・完了(必須と推奨の確認)
 - 途中からの再開と、終えた段への戻り。インストール中の公開側は「準備中」を表示する
 
+[1.3.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.3.0
 [1.2.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.2.0
 [1.1.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.1.0
 [1.0.0]: https://github.com/chococochiffon/biscuit/releases/tag/v1.0.0

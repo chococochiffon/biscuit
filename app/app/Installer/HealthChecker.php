@@ -52,7 +52,7 @@ class HealthChecker
 
             $this->recommended('front', __('公開側のサイトに届く'), $this->frontReachable(), (string) config('installer.front_internal_url')),
             $this->recommended('scheduler', __('スケジューラーが動いている'), $this->schedulerRunning(), __('更新の確認・お知らせ・予約公開のメールなどに使います。')),
-            $this->recommended('mail', __('メールを設定した'), $this->mailConfigured(), config('mail.mailers.smtp.host')),
+            $this->recommended('mail', __('メールを設定した'), $this->mailConfigured(), config('mail.default') === 'resend' ? 'Resend' : config('mail.mailers.smtp.host')),
             $this->recommended('storage_link', __('画像の公開用のリンク(public/storage)がある'), is_dir(public_path('storage'))),
             $this->recommended('debug', __('デバッグの表示が無効(APP_DEBUG=false)'), ! config('app.debug')),
             $this->recommended('environment', __('本番の設定(APP_ENV=production)'), app()->environment('production'), app()->environment()),
@@ -81,7 +81,7 @@ class HealthChecker
     }
 
     /**
-     * メールを設定したか(インストール中はメールの段を終えたか、インストール後は SMTP のホストがあるか)。
+     * メールを設定したか(インストール中はメールの段を終えたか、インストール後は SMTP のホストか Resend の API キーがあるか)。
      */
     private function mailConfigured(): bool
     {
@@ -89,7 +89,15 @@ class HealthChecker
             return true;
         }
 
-        return app(InstallerManager::class)->isInstalled() && config('mail.default') === 'smtp' && filled(config('mail.mailers.smtp.host'));
+        if (! app(InstallerManager::class)->isInstalled()) {
+            return false;
+        }
+
+        return match (config('mail.default')) {
+            'smtp' => filled(config('mail.mailers.smtp.host')),
+            'resend' => filled(config('services.resend.key')),
+            default => false,
+        };
     }
 
     private function pendingMigrations(): int

@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 class InstallerStepsTest extends TestCase
@@ -116,7 +117,7 @@ class InstallerStepsTest extends TestCase
      */
     private function mailInput(array $overrides = []): array
     {
-        return ['host' => 'smtp.example.com', 'port' => 587, 'encryption' => 'starttls', 'username' => 'mailer', 'password' => 'p$ss"word', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com', ...$overrides];
+        return ['driver' => 'smtp', 'host' => 'smtp.example.com', 'port' => 587, 'encryption' => 'starttls', 'username' => 'mailer', 'password' => 'p$ss"word', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com', ...$overrides];
     }
 
     public function test_mail_step_sends_a_test_email_and_writes_the_settings(): void
@@ -145,6 +146,50 @@ class InstallerStepsTest extends TestCase
         $this->assertNull(session()->getOldInput('password'));
         $this->assertSame($before, $this->env());
         $this->assertFalse(app(InstallationState::class)->isCompleted(InstallerStep::Mail));
+    }
+
+    public function test_mail_step_can_send_with_resend(): void
+    {
+        Mail::fake();
+        $this->completeUntil(InstallerStep::Mail);
+
+        // SMTP の欄は空でも、Resend を選べば受け付ける
+        $this->post(route('installer.mail.store'), ['driver' => 'resend', 'host' => '', 'port' => '', 'api_key' => 're_test_123', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com'])
+            ->assertRedirect(route('installer.administrator'));
+
+        $this->assertStringContainsString("MAIL_MAILER='resend'", $this->env());
+        $this->assertStringContainsString("RESEND_API_KEY='re_test_123'", $this->env());
+        $this->assertStringContainsString("MAIL_FROM_ADDRESS='no-reply@example.com'", $this->env());
+        $this->assertStringContainsString('MAIL_HOST=mailpit', $this->env());
+        $this->assertNull(config('mail.mailers.installer_test'));
+        $this->assertTrue(app(InstallationState::class)->isCompleted(InstallerStep::Mail));
+    }
+
+    public function test_mail_step_requires_a_resend_api_key(): void
+    {
+        $this->completeUntil(InstallerStep::Mail);
+        $input = ['driver' => 'resend', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com'];
+
+        $this->post(route('installer.mail.store'), $input)->assertSessionHasErrors('api_key');
+        $this->post(route('installer.mail.store'), [...$input, 'api_key' => 'not-a-key'])->assertSessionHasErrors('api_key');
+        $this->post(route('installer.mail.store'), [...$input, 'driver' => 'sendmail', 'api_key' => 're_test_123'])->assertSessionHasErrors('driver');
+        $this->assertFalse(app(InstallationState::class)->isCompleted(InstallerStep::Mail));
+    }
+
+    public function test_mail_step_hides_the_resend_api_key_when_the_test_email_fails(): void
+    {
+        $this->completeUntil(InstallerStep::Mail);
+        $before = $this->env();
+        Mail::shouldReceive('mailer->raw')->andThrow(new RuntimeException('API key re_secret_456 is invalid'));
+        Mail::shouldReceive('purge')->with('installer_test');
+
+        $this->post(route('installer.mail.store'), ['driver' => 'resend', 'api_key' => 're_secret_456', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com'])
+            ->assertRedirect(route('installer.mail'));
+
+        $this->assertStringContainsString('Resend の API キー', (string) session('error'));
+        $this->assertStringNotContainsString('re_secret_456', (string) session('error'));
+        $this->assertNull(session()->getOldInput('api_key'));
+        $this->assertSame($before, $this->env());
     }
 
     public function test_administrator_step_creates_one_super_administrator(): void
@@ -325,6 +370,29 @@ class InstallerStepsTest extends TestCase
         $this->post(route('installer.mail.store'), $this->mailInput(['host' => 'smtp2.example.com', 'password' => '']))->assertRedirect(route('installer.administrator'));
         $this->assertStringContainsString("MAIL_HOST='smtp2.example.com'", $this->env());
         $this->assertStringContainsString("MAIL_PASSWORD='p\$ss\"word'", $this->env());
+    }
+
+    public function test_mail_step_can_be_edited_and_keeps_the_current_resend_api_key(): void
+    {
+        Mail::fake();
+        $this->completeUntil(InstallerStep::Mail);
+        $input = ['driver' => 'resend', 'api_key' => 're_test_123', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com'];
+        $this->post(route('installer.mail.store'), $input)->assertRedirect(route('installer.administrator'));
+
+        // 戻って開くと Resend が選ばれていて、API キーは出さない
+        $this->get(route('installer.mail'))
+            ->assertOk()
+            ->assertSee('value="resend" checked', false)
+            ->assertDontSee('re_test_123')
+            ->assertSee('空のままにすると、今の API キーを使います。');
+
+        $this->post(route('installer.mail.store'), [...$input, 'api_key' => '', 'from_address' => 'info@example.com'])->assertRedirect(route('installer.administrator'));
+        $this->assertStringContainsString("RESEND_API_KEY='re_test_123'", $this->env());
+        $this->assertStringContainsString("MAIL_FROM_ADDRESS='info@example.com'", $this->env());
+
+        // SMTP に切り替えるときは、SMTP の設定を入れ直す
+        $this->post(route('installer.mail.store'), $this->mailInput())->assertRedirect(route('installer.administrator'));
+        $this->assertStringContainsString("MAIL_MAILER='smtp'", $this->env());
     }
 
     public function test_health_checker_separates_required_and_recommended_checks(): void
