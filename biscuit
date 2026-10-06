@@ -5,8 +5,8 @@
 #   ./biscuit status      版・URL・コンテナ・データベースの状態を表示する
 #   ./biscuit doctor      動作に問題がないかを診断する(問題があれば終了コード 1)
 #   ./biscuit stop        コンテナをすべて止める(データは残る。止めたままなら、PC・Docker を起動し直しても動かない)
-#   ./biscuit start       止めたコンテナを起動する(down で消したコンテナも作り直す)
-#   ./biscuit down        コンテナとネットワークを消す(データベース・画像・設定は残る。./biscuit start で作り直す)
+#   ./biscuit start       止めたコンテナを起動する
+#   ./biscuit down        コンテナ・データベース・イメージをすべて消す(先にバックアップする。次は ./install.sh から。--yes で確認を省く)
 #   ./biscuit backup      データベース・画像・.env をバックアップする(新しい 7 個を残す)
 #   ./biscuit backup list           いまあるバックアップを表示する
 #   ./biscuit backup copy <名前> <ディレクトリ>  バックアップをホストのディレクトリに写す
@@ -145,14 +145,52 @@ cmd_stop() {
   info "止めました。データベース・画像・設定は残っています。./biscuit start で起動します。"
 }
 
-# コンテナとネットワークを消す。データベースのボリューム(db-data)は消さない(-v などの引数は受け付けない)
+# コンテナ・ネットワーク・データベースのボリューム(db-data)・イメージをすべて消す(compose down --rmi all --volumes --remove-orphans)。
+# 戻せないため、確認のうえ先にバックアップをとり(ホストの app/storage に置くため消えない)、とれなければ何も消さない。
+# データベースが空になるため、インストール済みのロックとインストーラーの状態も消し、次は ./install.sh から入れ直す
 cmd_down() {
-  require_installed
+  local yes=0 arg
+  for arg in "$@"; do
+    case "$arg" in
+      --yes|-y) yes=1 ;;
+      *) fail "使い方: ./biscuit down [--yes]" ;;
+    esac
+  done
+  [ -f "$APP/.env" ] || fail "app/.env がありません。"
+
+  if [ "$yes" -ne 1 ]; then
+    printf '\n  Biscuit のコンテナ・ネットワーク・データベース・イメージをすべて消します。\n'
+    printf '  記事・ユーザー・設定などのデータベースの中身は消え、元に戻せません(画像・.env・バックアップのファイルは残ります)。\n'
+    printf '  消す前に、いまの状態をバックアップします。\n\n'
+    confirm_or_abort
+  fi
+
   acquire_lock
-  info "コンテナとネットワークを消します"
-  compose down >>"$HOST_LOG" 2>&1 || fail "消せませんでした(ログ: $HOST_LOG)。"
-  log "down"
-  info "消しました。データベース・画像・設定は残っています。./biscuit start で作り直して起動します。"
+
+  local backup=""
+  if is_installed; then
+    info "データベースを起動して、いまの状態をバックアップします"
+    compose up -d db app >>"$HOST_LOG" 2>&1 || fail "データベースを起動できなかったため、何も消していません(ログ: $HOST_LOG)。"
+    wait_for_db || fail "データベースが起動しなかったため、何も消していません(ログ: $HOST_LOG)。"
+    backup="$(in_app php artisan biscuit:backup --reason=pre-down --no-prune --json </dev/null | sed -n 's/.*"name":"\([^"]*\)".*/\1/p')"
+    [ -n "$backup" ] || fail "バックアップをとれなかったため、何も消していません。"
+    info "消す前のバックアップ: $backup"
+  else
+    warn "インストールを終えていないため、バックアップはとりません。"
+  fi
+
+  info "インストール済みの印と、インストーラーの状態を消します"
+  in_app rm -rf "$LOCK_FILE" storage/app/private/installer </dev/null >>"$HOST_LOG" 2>&1 || fail "インストール済みの印を消せなかったため、コンテナは消していません(ログ: $HOST_LOG)。"
+
+  info "コンテナ・ネットワーク・データベース・イメージを消します"
+  # 管理画面の CSS・JS のビルド(assets。プロファイル build)のイメージも消す
+  compose --profile build down --rmi all --volumes --remove-orphans >>"$HOST_LOG" 2>&1 || fail "一部を消せませんでした(ログ: $HOST_LOG)。ほかのコンテナが同じイメージを使っていると、そのイメージは消せません。"
+  log "down backup=${backup:-none}"
+
+  info "消しました。もう一度使うときは ./install.sh でインストールしてください。"
+  if [ -n "$backup" ]; then
+    info "データは、インストールのあとに ./biscuit restore $backup で戻せます。"
+  fi
 }
 
 cmd_start() {
@@ -478,9 +516,7 @@ main() {
     doctor) check_requirements >/dev/null; cmd_doctor ;;
     stop) check_requirements >/dev/null; cmd_stop ;;
     start) check_requirements >/dev/null; cmd_start ;;
-    down)
-      [ $# -eq 0 ] || fail "./biscuit down は引数を受け付けません(データベースは消しません)。"
-      check_requirements >/dev/null; cmd_down ;;
+    down) check_requirements >/dev/null; cmd_down "$@" ;;
     backup) check_requirements >/dev/null; cmd_backup "$@" ;;
     restore) check_requirements >/dev/null; cmd_restore "$@" ;;
     update) check_requirements >/dev/null; cmd_update "$@" ;;
