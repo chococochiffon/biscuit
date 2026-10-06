@@ -7,12 +7,13 @@ import { columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
 import { isHiddenOn, periodState } from '../visibility'
 import BlockPreview from './BlockPreview.vue'
+import QuickBar from './QuickBar.vue'
 import ResizeHandles from './ResizeHandles.vue'
 
 // Canvas のブロック 1 つ。クリックで選択し、マウスを乗せる・選択すると枠と名前を出す。
 // 名前の部分をつかんでドラッグすると別の場所へ移せ、選択中は前後への移動・複製・コピー・削除のボタンも出す。
 // 見出し・ボタン・テキストはダブルクリックで文字をその場で書き換えられる(InlineText・InlineRichText)。
-// 選択中は端につまみを出し、ドラッグで高さ・幅・内側の余白を変えられる(ResizeHandles)。
+// 選択中は右上によく使う項目の操作バー(QuickBar)、端につまみを出し、ドラッグで高さ・幅・内側の余白を変えられる(ResizeHandles)。
 // 表示条件の付いたブロックには右上に印を出し、選んでいる端末で表示しない・表示期間の外のブロックは薄く描く。
 // カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける
 const props = defineProps<{
@@ -123,6 +124,7 @@ async function copy(): Promise<void> {
       <i v-if="period !== 'always'" class="bi bi-clock" :class="`is-${period}`" :title="PERIOD_TITLES[period]" />
     </div>
     <BlockPreview :node="node" class="builder-node-body" :class="node.classes" />
+    <QuickBar v-if="isSelected && !store.state.dragging && !store.state.resizing" :node="node" />
     <ResizeHandles v-if="isSelected && element && !store.state.dragging && !isEditing" :node="node" :host="element" />
   </div>
 </template>

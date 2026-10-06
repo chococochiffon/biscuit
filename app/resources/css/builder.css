@@ -303,6 +303,97 @@
     user-select: none;
 }
 
+/* 選んだブロックの右上に出す操作バー */
+.builder-quickbar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 14;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 2px;
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: #212529;
+    background: #fff;
+    border: 1px solid #0d6efd;
+    border-radius: 0.375rem;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+    transform: translateY(calc(-100% - 0.25rem));
+}
+
+.builder-quickbar-button {
+    position: relative;
+    display: inline-flex;
+    gap: 2px;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.25rem;
+    margin: 0;
+    color: inherit;
+    cursor: pointer;
+    background: transparent;
+    border: 0;
+    border-radius: 0.25rem;
+}
+
+.builder-quickbar-button:hover {
+    background: var(--bs-tertiary-bg);
+}
+
+.builder-quickbar-button.active {
+    color: #fff;
+    background: #0d6efd;
+}
+
+.builder-quickbar-button.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+}
+
+.builder-quickbar-select {
+    height: 1.75rem;
+    padding: 0 0.25rem;
+    font-size: 0.8125rem;
+    background: #fff;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.25rem;
+}
+
+.builder-quickbar-swatch {
+    width: 0.75rem;
+    height: 0.75rem;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 2px;
+}
+
+/* 色の入力欄は見えなくして、ボタン全体のクリックで開く */
+.builder-quickbar-color {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0;
+}
+
+.builder-quickbar-popover {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    right: 0;
+    width: 18rem;
+    padding: 0.5rem;
+    line-height: 1.5;
+    background: #fff;
+    border: 1px solid var(--bs-border-color);
+    border-radius: 0.375rem;
+    box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.15);
+}
+
 /* Canvas の上で文字を直接書き換えている部品 */
 .builder-node.is-editing {
     outline: 2px solid #198754;
