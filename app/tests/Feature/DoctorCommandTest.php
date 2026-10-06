@@ -81,8 +81,20 @@ class DoctorCommandTest extends TestCase
         $checks = collect(json_decode(trim(Artisan::output()), true)['checks'])->keyBy('key');
 
         $this->assertTrue($checks['design']['ok']);
-        // テストのメールの設定(array)は SMTP ではない
+        // テストのメールの設定(array)は SMTP でも Resend でもない
         $this->assertFalse($checks['mail']['ok']);
+    }
+
+    public function test_mail_check_accepts_resend(): void
+    {
+        $this->installedSite();
+        config(['mail.default' => 'resend', 'services.resend.key' => 're_test_123']);
+
+        Artisan::call('biscuit:doctor', ['--offline' => true, '--json' => true]);
+        $mail = collect(json_decode(trim(Artisan::output()), true)['checks'])->firstWhere('key', 'mail');
+
+        $this->assertTrue($mail['ok']);
+        $this->assertSame('Resend', $mail['detail']);
     }
 
     public function test_status_shows_the_version_and_the_database(): void
