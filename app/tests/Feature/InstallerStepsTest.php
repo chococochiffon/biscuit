@@ -16,9 +16,11 @@ use App\Models\LayoutBlock;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderTemplate;
 use App\Models\SiteSetting;
+use App\Providers\AppServiceProvider;
 use App\Support\Builder\BuilderContent;
 use Database\Seeders\InstallSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -49,6 +51,7 @@ class InstallerStepsTest extends TestCase
     protected function tearDown(): void
     {
         @unlink($this->envPath);
+        TrustProxies::flushState();
 
         parent::tearDown();
     }
@@ -66,6 +69,57 @@ class InstallerStepsTest extends TestCase
     private function env(): string
     {
         return (string) file_get_contents($this->envPath);
+    }
+
+    /**
+     * インストールを終えていないとき(TRUSTED_PROXIES がまだない)の設定で、サービスプロバイダーを起動し直す。
+     */
+    private function bootBeforeInstallation(): void
+    {
+        config(['biscuit.trusted_proxies' => []]);
+        (new AppServiceProvider($this->app))->boot();
+    }
+
+    public function test_installer_uses_https_urls_behind_an_https_reverse_proxy(): void
+    {
+        $this->bootBeforeInstallation();
+
+        // HTTPS のリバースプロキシ(プライベートなネットワーク)の裏では、CSS とフォームの送信先も https:// にする。ホスト名は信じない
+        $response = $this->get(route('installer.requirements'), ['X-Forwarded-Proto' => 'https', 'X-Forwarded-Host' => 'evil.example.com'])->assertOk();
+        $response->assertSee('action="https://localhost/install"', false)->assertDontSee('evil.example.com')->assertDontSee('http://localhost/', false);
+    }
+
+    public function test_installer_uses_http_urls_without_a_reverse_proxy(): void
+    {
+        $this->bootBeforeInstallation();
+
+        $this->get(route('installer.requirements'))->assertOk()->assertSee('action="http://localhost/install"', false);
+    }
+
+    public function test_installer_ignores_forwarded_headers_from_outside_the_private_networks(): void
+    {
+        $this->bootBeforeInstallation();
+
+        $this->withServerVariables(['REMOTE_ADDR' => '203.0.113.10'])
+            ->get(route('installer.requirements'), ['X-Forwarded-Proto' => 'https'])
+            ->assertOk()
+            ->assertSee('action="http://localhost/install"', false);
+    }
+
+    public function test_installed_sites_do_not_trust_forwarded_headers_without_trusted_proxies(): void
+    {
+        Storage::disk('local')->put(InstallerManager::LOCK_FILE, '{}');
+        $this->bootBeforeInstallation();
+
+        $this->get(route('admin.login'), ['X-Forwarded-Proto' => 'https'])->assertOk()->assertSee('action="http://localhost/admin/login"', false);
+    }
+
+    public function test_site_step_suggests_the_current_url_as_the_admin_url(): void
+    {
+        $this->bootBeforeInstallation();
+        $this->completeUntil(InstallerStep::Site);
+
+        $this->get(route('installer.site'), ['X-Forwarded-Proto' => 'https'])->assertOk()->assertSee('value="https://localhost"', false);
     }
 
     public function test_site_step_saves_the_site_setting_and_urls(): void
