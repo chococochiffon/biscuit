@@ -7,7 +7,6 @@ use App\Models\PageBuilderTemplate;
 use App\Support\AuditLogger;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\BuilderPresenter;
-use App\Support\Builder\SchemaMigrator;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -35,7 +34,7 @@ class PageBuilderTemplateJsonController extends Controller
             'name' => $request->validated('name'),
             // ビルダーの JSON は空文字を null にしないため、空の説明はここで null にする
             'description' => $request->validated('description') ?: null,
-            'schema_version' => SchemaMigrator::CURRENT_VERSION,
+            'schema_version' => $request->content()['version'],
             'content' => $request->content(),
         ]));
 

@@ -72,7 +72,7 @@ class BuilderValidatorTest extends TestCase
     {
         return [
             '内容がオブジェクトでない' => [fn () => 'not json', null],
-            '未対応の版' => [fn (array $content) => [...$content, 'version' => 2], null],
+            '未対応の版' => [fn (array $content) => [...$content, 'version' => SchemaMigrator::LATEST_VERSION + 1], null],
             'ルートに知らないキー' => [fn (array $content) => [...$content, 'html' => '<p>x</p>'], null],
             '定義にない種類' => [function (array $content) {
                 $content['children'][0]['type'] = 'script';
@@ -303,7 +303,7 @@ class BuilderValidatorTest extends TestCase
 
         $this->assertSame($content, $migrator->migrate($content));
 
-        foreach ([0, SchemaMigrator::CURRENT_VERSION + 1, '1', null] as $version) {
+        foreach ([0, SchemaMigrator::LATEST_VERSION + 1, '1', null] as $version) {
             try {
                 $migrator->migrate([...$content, 'version' => $version]);
                 $this->fail('version '.json_encode($version).' should be rejected');

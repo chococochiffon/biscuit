@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Collection;
  * - global: children(参照するグローバルコンポーネントの公開中の内容のノード。未公開・削除済みなら空)
  * - custom: children(参照する独自コンポーネントの公開中の内容に、差し替えた値を当てはめたノード。未公開・削除済みなら空)
  * - global・custom の css: コンポーネントの公開中の内容の Custom CSS(なければ null。置いたページで読み込む)
+ * - global・custom の version: コンポーネントの公開中の内容の版(children の描き方。ページと版が違うことがある。未公開・削除済みなら null)
  */
 final class BlockDataResolver
 {
@@ -39,8 +40,8 @@ final class BlockDataResolver
             'navigation' => ['items' => self::navigationItems($props)],
             'gallery' => ['images' => GalleryImageResource::collection(self::galleryImages($props))->resolve()],
             'video' => ['embed_url' => is_string($props['url'] ?? null) ? VideoUrl::embedUrl($props['url']) : null],
-            'global' => ['children' => self::globalComponentChildren($props), 'css' => self::componentCss($props)],
-            'custom' => ['children' => self::customComponentChildren($props), 'css' => self::componentCss($props)],
+            'global' => ['children' => self::globalComponentChildren($props), 'css' => self::componentCss($props), 'version' => self::componentVersion($props)],
+            'custom' => ['children' => self::customComponentChildren($props), 'css' => self::componentCss($props), 'version' => self::componentVersion($props)],
             default => null,
         };
     }
@@ -110,6 +111,19 @@ final class BlockDataResolver
         $content = $id === null ? null : PageBuilderComponent::query()->find($id, ['id', 'published_content'])?->published_content;
 
         return CustomCss::normalize($content['css'] ?? null);
+    }
+
+    /**
+     * コンポーネントの公開中の内容の版(未公開・削除済みなら null)。
+     *
+     * @param  array<string, mixed>  $props
+     */
+    public static function componentVersion(array $props): ?int
+    {
+        $id = is_int($props['component'] ?? null) ? $props['component'] : null;
+        $content = $id === null ? null : PageBuilderComponent::query()->find($id, ['id', 'published_content'])?->published_content;
+
+        return is_int($content['version'] ?? null) ? $content['version'] : null;
     }
 
     /**

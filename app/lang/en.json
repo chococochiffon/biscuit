@@ -1117,5 +1117,12 @@
     "見出しの下に、ギャラリーの画像をタイルで並べます。": "Gallery images in tiles below a heading.",
     "見出しの下に、公開中の記事を新しい順に並べます。": "Published articles, newest first, below a heading.",
     "見出しの下に、特徴を 3 列で並べます。": "Three columns of features below a heading.",
-    "ページの末尾の「+ セクションを追加」や、マウスを乗せたセクションの下の境目に出るボタンで、ひな形(見出しと文章・画像と文章・3 つの特徴など)から中身の入ったセクションを置けます。": "Use \"+ Add section\" at the end of the page, or the button that appears at the bottom edge of the section under the mouse, to add a section with content from a preset (heading and text, image and text, three features, and more)."
+    "ページの末尾の「+ セクションを追加」や、マウスを乗せたセクションの下の境目に出るボタンで、ひな形(見出しと文章・画像と文章・3 つの特徴など)から中身の入ったセクションを置けます。": "Use \"+ Add section\" at the end of the page, or the button that appears at the bottom edge of the section under the mouse, to add a section with content from a preset (heading and text, image and text, three features, and more).",
+    "ボックス": "Box",
+    "「:block」の位置がありません。": "The position of \":block\" is missing.",
+    "「:block」の位置の形式が正しくありません。": "The position of \":block\" has an invalid format.",
+    "「:block」のデスクトップの位置がありません。": "The desktop position of \":block\" is missing.",
+    "「:block」の位置(:device)の値が正しくありません。": "The position (:device) of \":block\" is invalid.",
+    "端末「:device」の位置は、同じ並びのブロックのすべてに入れるか、どれにも入れないでください。": "Set the :device position on all blocks in the same area, or on none of them.",
+    "「:block」は位置を持てません(自由配置の中のブロックだけが持てます)。": "\":block\" cannot have a position (only blocks in a free layout can)."
 }
