@@ -44,10 +44,10 @@ class GalleryBlockTest extends TestCase
         $singlePage = SinglePage::factory()->create(['slug' => 'gallery-page', 'use_builder' => true]);
         $builder = PageBuilder::factory()->published()->create([
             'single_page_id' => $singlePage->id,
-            'draft_content' => [
+            'draft_content' => BuilderContent::withDefaultLayout([
                 'version' => SchemaMigrator::CURRENT_VERSION,
                 'children' => [BuilderContent::node('section', children: [BuilderContent::node('gallery', ['category' => $this->illustration->id, 'columns' => 3])])],
-            ],
+            ]),
         ]);
 
         $this->getJson(route('api.resolve', ['path' => '/gallery-page']))
@@ -80,10 +80,10 @@ class GalleryBlockTest extends TestCase
     public function test_category_accepts_an_id_or_null(): void
     {
         $this->actingAsAdmin();
-        $content = fn (mixed $category) => [
+        $content = fn (mixed $category) => BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [BuilderContent::node('section', children: [BuilderContent::node('gallery', ['category' => $category])])],
-        ];
+        ]);
 
         $this->putJson(route('admin.json.builder.top.update'), ['content' => $content(null), 'updated_at' => null])->assertOk();
         $updatedAt = PageBuilder::top()->updated_at->toIso8601String();

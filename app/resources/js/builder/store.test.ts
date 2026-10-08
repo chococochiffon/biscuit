@@ -403,7 +403,7 @@ describe('builder store', () => {
     const { store } = await loadedStore(api)
     const template: BuilderTemplate = { id: 1, name: 'LP', description: null, content: { version: 1, children: [section], css: '.t{}' } } as BuilderTemplate
 
-    store.applyTemplate(template)
+    await store.applyTemplate(template)
     expect(store.state.content.children[0].id).not.toBe(section.id)
     expect(store.state.content.css).toBe('.t{}')
     expect(store.state.selectedId).toBeNull()
@@ -422,7 +422,7 @@ describe('builder store', () => {
 
     // CSS を書けない人は、CSS を置き換えない
     store.state.canEditCss = false
-    store.applyTemplate(template)
+    await store.applyTemplate(template)
     expect(store.state.content.css).toBe('.v{}')
 
     api.importFile.mockRejectedValueOnce(new ApiError(422, { message: '形が違います' }))
@@ -490,14 +490,21 @@ function freeApi(content: BuilderContent = { version: 1, children: [] }) {
 }
 
 describe('builder store(自由配置)', () => {
-  it('何も置いていないページは v2 で始め、v1 のページは v1 のまま', async () => {
+  it('何も置いていないページは v2 で始め、v1 のページは v2 に変換して知らせる(変換は元に戻せない)', async () => {
     const { store } = await loadedStore(freeApi())
     expect(store.state.content.version).toBe(2)
     expect(store.state.registry).toEqual(freeRegistry)
+    expect(store.state.dirty).toBe(false)
 
-    const v1 = await loadedStore(freeApi({ version: 1, children: [createNode(registry, 'section')] }))
-    expect(v1.store.state.content.version).toBe(1)
-    expect(v1.store.state.registry).toEqual(registry)
+    const heading = createNode(registry, 'heading')
+    const v1 = await loadedStore(freeApi({ version: 1, children: [{ ...createNode(registry, 'section'), children: [heading] }] }))
+    expect(v1.store.state.content.version).toBe(2)
+    expect(v1.store.state.registry).toEqual(freeRegistry)
+    // 測れない(画面がない)ときは、上から順に縦に並べる
+    expect(v1.store.state.content.children[0].children![0]).toMatchObject({ id: heading.id, layout: { desktop: { x: 0, y: 16, w: 100 } } })
+    expect(v1.store.state.dirty).toBe(true)
+    expect(v1.store.state.message?.type).toBe('warning')
+    expect(v1.store.state.canUndo).toBe(false)
   })
 
   it('面に置いたブロックは位置を持ち、位置は数値で変えられる', async () => {
@@ -554,16 +561,21 @@ describe('builder store(自由配置)', () => {
     expect(store.state.content.children[0].children).toHaveLength(2)
   })
 
-  it('テンプレートで内容を置き換えると、その版と定義に切り替わる(元に戻すと戻る)', async () => {
+  it('v1 のテンプレートは v2 に変換して使い、測った位置で置く(元に戻すと戻る)', async () => {
     const { store } = await loadedStore(freeApi())
-    const template: BuilderTemplate = { id: 1, name: '会社概要', description: null, node_count: 1, content: { version: 1, children: [createNode(registry, 'section')] } }
+    const section = { ...createNode(registry, 'section'), children: [createNode(registry, 'heading')] }
+    const template: BuilderTemplate = { id: 1, name: '会社概要', description: null, node_count: 2, content: { version: 1, children: [section] } }
+    // テンプレートのブロックは ID を振り直してから測る
+    store.setMeasurer(async () => (id: string) => (id.startsWith('heading_') || id.startsWith('section_')
+      ? { rect: { left: id.startsWith('section_') ? 0 : 120, top: 40, width: id.startsWith('section_') ? 1200 : 600, height: 50 }, content: { left: 0, top: 0, width: 1200, height: 400 } }
+      : null))
 
-    store.applyTemplate(template)
-    expect(store.state.content.version).toBe(1)
-    expect(store.state.registry).toEqual(registry)
-
-    store.undo()
+    await store.applyTemplate(template)
     expect(store.state.content.version).toBe(2)
     expect(store.state.registry).toEqual(freeRegistry)
+    expect(store.state.content.children[0].children![0].layout).toEqual({ desktop: { x: 10, y: 40, w: 50 } })
+
+    store.undo()
+    expect(store.state.content.children).toEqual([])
   })
 })

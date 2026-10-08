@@ -24,6 +24,8 @@ export function createBuilderStore(api: BuilderApi) {
     selectedNode: context.selectedNode,
     // 独自コンポーネントの一番外側が自由配置の面か
     hasFreeRoot: context.hasFreeRoot,
+    // v1 の内容を測る処理を登録する(ConversionStage)
+    setMeasurer: context.setMeasurer,
     ...editingActions(context),
     ...freeLayoutActions(context),
     ...propertyActions(context),

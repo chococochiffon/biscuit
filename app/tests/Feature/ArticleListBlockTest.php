@@ -55,10 +55,10 @@ class ArticleListBlockTest extends TestCase
         $singlePage = SinglePage::factory()->create(['slug' => 'news-page', 'use_builder' => true]);
         $builder = PageBuilder::factory()->published()->create([
             'single_page_id' => $singlePage->id,
-            'draft_content' => [
+            'draft_content' => BuilderContent::withDefaultLayout([
                 'version' => SchemaMigrator::CURRENT_VERSION,
                 'children' => [BuilderContent::node('section', children: [BuilderContent::node('article-list', ['limit' => 2, 'parentPath' => 'news'])])],
-            ],
+            ]),
         ]);
 
         $this->getJson(route('api.resolve', ['path' => '/news-page']))
@@ -89,10 +89,10 @@ class ArticleListBlockTest extends TestCase
     public function test_saving_keeps_only_the_conditions(): void
     {
         $this->actingAsAdmin();
-        $content = [
+        $content = BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [BuilderContent::node('section', children: [BuilderContent::node('article-list', ['showDate' => false, 'layout' => 'list'])])],
-        ];
+        ]);
 
         $this->putJson(route('admin.json.builder.top.update'), ['content' => $content, 'updated_at' => null])->assertOk();
 

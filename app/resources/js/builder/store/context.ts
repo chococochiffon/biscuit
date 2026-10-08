@@ -1,7 +1,8 @@
 import { ApiError, type BuilderApi } from '../api'
 import { createHistory } from '../history'
 import { t } from '../i18n'
-import { syncLayouts } from '../layout'
+import { convertToFree, type Measure } from '../convert'
+import { FREE_LAYOUT_VERSION, syncLayouts } from '../layout'
 import { equalizeColumns, findNode } from '../nodes'
 import type { BuilderContent, BuilderNode, BuilderStatePayload } from '../types'
 import { createEditorState } from './state'
@@ -19,6 +20,37 @@ export function errorMessage(error: unknown, fallback: string): string {
 export function createEditorContext(api: BuilderApi) {
   const state = createEditorState()
   const history = createHistory()
+  // v1 の内容を画面の外で描いて測る処理(ConversionStage が登録する。なければ測らずに変換する)
+  let measurer: ((content: BuilderContent) => Promise<Measure>) | null = null
+
+  function setMeasurer(value: ((content: BuilderContent) => Promise<Measure>) | null): void {
+    measurer = value
+  }
+
+  /**
+   * 行・カラムで流し込む配置(v1)の内容を、自由配置(v2)の内容にする(v2 の内容・v2 の定義がないエディタではそのまま返す)。
+   * 今の見た目を保つため、画面の外で 1200px で描いて測った位置を使う(convert.ts)。
+   */
+  async function toFreeLayout(content: BuilderContent): Promise<BuilderContent> {
+    const registry = state.registries[String(FREE_LAYOUT_VERSION)]
+
+    if (content.version >= FREE_LAYOUT_VERSION || !registry) {
+      return content
+    }
+
+    let measure: Measure = () => null
+
+    if (measurer) {
+      try {
+        measure = await measurer(content)
+      }
+      catch {
+        // 測れなければ、上から順に縦に並べる
+      }
+    }
+
+    return convertToFree(content, registry, measure, hasFreeRoot())
+  }
 
   function syncHistory(): void {
     state.canUndo = history.canUndo()
@@ -210,7 +242,7 @@ export function createEditorContext(api: BuilderApi) {
     return state.selectedId ? findNode(state.content, state.selectedId) : null
   }
 
-  return { api, state, history, syncHistory, syncRegistry, hasFreeRoot, mutate, recordChange, mutateNode, restore, equalizeIfAddedToRow, applyState, replaceContent, handleError, definition, selectedNode }
+  return { api, state, history, syncHistory, syncRegistry, hasFreeRoot, setMeasurer, toFreeLayout, markChanged: changed, mutate, recordChange, mutateNode, restore, equalizeIfAddedToRow, applyState, replaceContent, handleError, definition, selectedNode }
 }
 
 export type EditorContext = ReturnType<typeof createEditorContext>

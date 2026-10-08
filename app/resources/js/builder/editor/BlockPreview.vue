@@ -9,7 +9,7 @@ import ArticleListPreview from './ArticleListPreview.vue'
 import BreadcrumbPreview from './BreadcrumbPreview.vue'
 import DropList from './DropList.vue'
 import FreeSurface from './FreeSurface.vue'
-import { useContentVersion } from './keys'
+import { useContentVersion, usePreviewDevice } from './keys'
 import CustomPreview from './CustomPreview.vue'
 import GlobalPreview from './GlobalPreview.vue'
 import { videoEmbedUrl } from '../video'
@@ -28,9 +28,10 @@ const props = defineProps<{
 }>()
 
 const store = useBuilderStore()
+const device = usePreviewDevice(store)
 
-const style = computed(() => blockStyle(props.node, store.state.device))
-const innerStyle = computed(() => blockStyle(props.node, store.state.device, 'inner'))
+const style = computed(() => blockStyle(props.node, device.value))
+const innerStyle = computed(() => blockStyle(props.node, device.value, 'inner'))
 const children = computed(() => props.node.children ?? [])
 
 const text = (name: string) => (typeof props.node.props[name] === 'string' ? props.node.props[name] as string : '')
@@ -67,7 +68,7 @@ const readonlyClass = computed(() => {
     case 'row':
       return ['row', `g-${int('gap', 3)}`]
     default:
-      return ['builder-preview-column', `col-${columnSpan(props.node, store.state.device)}`]
+      return ['builder-preview-column', `col-${columnSpan(props.node, device.value)}`]
   }
 })
 
@@ -100,7 +101,7 @@ const editing = computed(() => !props.readonly && store.state.editingId === prop
     :class="readonlyClass"
     :style="node.type === 'section' ? sectionStyle : style"
   >
-    <BlockPreview v-for="child in children" :key="child.id" :node="child" :class="child.classes" readonly />
+    <BlockPreview v-for="child in children" :key="child.id" :node="child" :class="child.classes" :data-preview-id="child.id" readonly />
   </component>
   <div v-else-if="readonly && node.type === 'slider'" :style="style">
     <div class="ratio" :class="`ratio-${sliderAspect}`">

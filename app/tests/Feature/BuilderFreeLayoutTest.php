@@ -81,8 +81,8 @@ class BuilderFreeLayoutTest extends TestCase
         $this->assertSame(SchemaMigrator::FREE_LAYOUT_VERSION, $normalized['version']);
         $this->assertSame(['x' => 8.33, 'y' => 96, 'w' => 50], $normalized['children'][0]['children'][0]['layout']['desktop']);
 
-        // v1 の内容は v1 のまま受け付ける
-        $this->assertSame(1, $validator->normalize(BuilderContent::empty())['version']);
+        // v1 の内容は v1 のまま受け付ける(保存のリクエストでは断る)
+        $this->assertSame(1, $validator->normalize(['version' => SchemaMigrator::LEGACY_VERSION, 'children' => []])['version']);
     }
 
     public function test_normalize_orders_devices_and_values_and_trims_numbers(): void
@@ -161,7 +161,7 @@ class BuilderFreeLayoutTest extends TestCase
 
     public function test_registry_for_the_editor_offers_only_the_blocks_of_the_version(): void
     {
-        $v1 = BlockRegistry::toArray();
+        $v1 = BlockRegistry::toArray(version: SchemaMigrator::LEGACY_VERSION);
         $this->assertArrayHasKey('row', $v1['blocks']);
         $this->assertArrayNotHasKey('box', $v1['blocks']);
         $this->assertNotContains('box', $v1['blocks']['section']['children']);
@@ -195,7 +195,7 @@ class BuilderFreeLayoutTest extends TestCase
 
     public function test_components_tell_the_version_of_their_published_content(): void
     {
-        $v1 = PageBuilderComponent::factory()->published()->create();
+        $v1 = PageBuilderComponent::factory()->published()->create(['draft_content' => ['version' => SchemaMigrator::LEGACY_VERSION, 'children' => [BuilderContent::node('section')]]]);
         $v2 = PageBuilderComponent::factory()->create(['draft_content' => self::v2([BuilderContent::node('section')])]);
         $v2->publish();
         $v2->save();
@@ -239,5 +239,17 @@ class BuilderFreeLayoutTest extends TestCase
         $this->getJson(route('admin.json.builder.components.show', $component))
             ->assertOk()
             ->assertJsonPath('registries.2.rootChildren', fn (array $root) => in_array('box', $root, true) && ! in_array('container', $root, true));
+    }
+
+    public function test_saving_v1_content_is_rejected(): void
+    {
+        $this->actingAsAdmin();
+        $legacy = ['version' => SchemaMigrator::LEGACY_VERSION, 'children' => [BuilderContent::node('section', children: [BuilderContent::node('heading')])]];
+
+        $this->putJson(route('admin.json.builder.top.update'), ['content' => $legacy, 'updated_at' => null])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.content.0', '行・カラムで並べる形式の内容は保存できません。画面を読み込み直すと、自由配置に変換します。');
+        $this->postJson(route('admin.json.builder-templates.store'), ['name' => '古い形式', 'content' => $legacy])->assertUnprocessable();
+        $this->assertNull(PageBuilder::top());
     }
 }

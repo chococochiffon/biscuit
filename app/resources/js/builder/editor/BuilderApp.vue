@@ -5,6 +5,7 @@ import { t } from '../i18n'
 import { builderStoreKey, createBuilderStore } from '../store'
 import type { EditorConfig, LayoutBox } from '../types'
 import BuilderCanvas from './BuilderCanvas.vue'
+import ConversionStage from './ConversionStage.vue'
 import { surfaceFrame } from './freeGeometry'
 import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
@@ -259,5 +260,7 @@ onBeforeUnmount(() => {
     <TransferDialog v-if="store.state.transferOpen" />
     <CssDialog v-if="store.state.cssOpen" />
     <HelpDialog v-if="store.state.helpOpen" />
+    <!-- 行・カラムの内容(v1)を自由配置に変換するとき、画面の外で描いて測る -->
+    <ConversionStage />
   </div>
 </template>

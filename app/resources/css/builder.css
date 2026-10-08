@@ -1084,3 +1084,14 @@ body.builder-free-moving * {
     grid-template-columns: 1fr 1fr;
     gap: 0.5rem;
 }
+
+/* 行・カラムの内容(v1)を自由配置に変換するときに、画面の外にデスクトップの幅で描いて測る場所(ConversionStage) */
+.builder-convert-stage {
+    position: fixed;
+    top: 0;
+    left: -100000px;
+    max-width: none;
+    pointer-events: none;
+    visibility: hidden;
+    background: var(--bs-body-bg);
+}

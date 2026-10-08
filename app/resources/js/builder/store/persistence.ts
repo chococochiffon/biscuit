@@ -22,10 +22,17 @@ export function persistenceActions(context: EditorContext) {
       state.canEditCss = payload.can_edit_css
       loadThemeFonts(payload.theme)
       applyState(payload, true)
-      // 何も置いていないページは、自由配置(v2)で始める(v1 のページは v1 のまま編集する)
-      if (state.content.children.length === 0 && state.registries[String(FREE_LAYOUT_VERSION)]) {
-        state.content.version = FREE_LAYOUT_VERSION
+      // 行・カラムで流し込む配置(v1)の内容は、自由配置(v2)に変換して編集する(保存すると v2 になる。公開するまで公開側は v1 のまま)。
+      // 変換は履歴の始まりにする(元に戻すで v1 には戻らない)
+      if (state.content.version < FREE_LAYOUT_VERSION && state.registries[String(FREE_LAYOUT_VERSION)]) {
+        const hadBlocks = state.content.children.length > 0
+        state.content = await context.toFreeLayout(state.content)
         context.syncRegistry()
+
+        if (hadBlocks) {
+          context.markChanged()
+          state.message = { type: 'warning', text: t('この内容を自由配置に変換しました。位置を確かめてから公開してください(公開するまで、公開側は今の見た目のままです)。') }
+        }
       }
       state.loaded = true
     }

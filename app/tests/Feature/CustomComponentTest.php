@@ -25,7 +25,7 @@ class CustomComponentTest extends TestCase
      */
     private function content(array $children): array
     {
-        return ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => $children];
+        return BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => $children]);
     }
 
     /**
@@ -68,7 +68,7 @@ class CustomComponentTest extends TestCase
         $this->getJson(route('admin.json.builder.components.show', $component))
             ->assertOk()
             ->assertJsonPath('page.kind', 'custom')
-            ->assertJsonPath('registry.rootChildren.0', 'container')
+            ->assertJsonPath('registry.rootChildren.0', 'box')
             ->assertJsonMissingPath('registry.blocks.global')
             ->assertJsonMissingPath('registry.blocks.custom')
             ->assertJsonMissingPath('registry.blocks.section')
@@ -86,7 +86,8 @@ class CustomComponentTest extends TestCase
         $heading = BuilderContent::node('heading');
         $heading['exposed'] = ['text' => '見出し'];
 
-        $this->assertSame([], $validator->errors($this->content([$heading, BuilderContent::node('row', children: [BuilderContent::node('column')])]), BuilderContext::CustomComponent));
+        // 行・カラムは v1 の内容だけ(v2 の一番外側は自由配置の面)
+        $this->assertSame([], $validator->errors(['version' => SchemaMigrator::LEGACY_VERSION, 'children' => [$heading, BuilderContent::node('row', children: [BuilderContent::node('column')])]], BuilderContext::CustomComponent));
         $this->assertNotEmpty($validator->errors($this->content([BuilderContent::node('section')]), BuilderContext::CustomComponent));
         $this->assertNotEmpty($validator->errors($this->content([BuilderContent::node('custom')]), BuilderContext::CustomComponent));
         $this->assertNotEmpty($validator->errors($this->content([BuilderContent::node('global')]), BuilderContext::CustomComponent));

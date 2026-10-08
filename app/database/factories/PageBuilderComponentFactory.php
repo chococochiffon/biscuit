@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Enums\BuilderComponentKind;
+use App\Enums\BuilderContext;
 use App\Models\PageBuilderComponent;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\SchemaMigrator;
@@ -25,12 +26,12 @@ class PageBuilderComponentFactory extends Factory
             'name' => fake()->words(2, true),
             'description' => null,
             'schema_version' => SchemaMigrator::CURRENT_VERSION,
-            'draft_content' => [
+            'draft_content' => BuilderContent::withDefaultLayout([
                 'version' => SchemaMigrator::CURRENT_VERSION,
                 'children' => [
                     BuilderContent::node('section', children: [BuilderContent::node('heading', ['text' => fake()->sentence()])]),
                 ],
-            ],
+            ]),
             'published_content' => null,
             'published_at' => null,
         ];
@@ -51,7 +52,7 @@ class PageBuilderComponentFactory extends Factory
 
             return [
                 'kind' => BuilderComponentKind::Custom,
-                'draft_content' => ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [$image, $heading, $text]],
+                'draft_content' => BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [$image, $heading, $text]], BuilderContext::CustomComponent),
             ];
         });
     }

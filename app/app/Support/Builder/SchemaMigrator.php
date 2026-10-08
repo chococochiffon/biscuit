@@ -15,9 +15,15 @@ use InvalidArgumentException;
 final class SchemaMigrator
 {
     /**
+     * 行・カラムで流し込む配置の版。保存はできず(BuilderValidator)、公開中の内容と、エディタが変換する前の内容(テンプレート・版の履歴・
+     * 書き出したファイル)にだけ残る。
+     */
+    public const LEGACY_VERSION = 1;
+
+    /**
      * 新しく作る内容の版(空の下書き・テンプレートなど)。
      */
-    public const CURRENT_VERSION = 1;
+    public const CURRENT_VERSION = 2;
 
     /**
      * 自由配置(ノードの layout)を使う版。

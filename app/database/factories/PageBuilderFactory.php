@@ -25,14 +25,14 @@ class PageBuilderFactory extends Factory
             'page_type' => BuilderPageType::SinglePage,
             'single_page_id' => SinglePage::factory(),
             'schema_version' => SchemaMigrator::CURRENT_VERSION,
-            'draft_content' => [
+            'draft_content' => BuilderContent::withDefaultLayout([
                 'version' => SchemaMigrator::CURRENT_VERSION,
                 'children' => [
                     BuilderContent::node('section', children: [
                         BuilderContent::node('heading', ['text' => fake()->sentence()]),
                     ]),
                 ],
-            ],
+            ]),
             'published_content' => null,
             'published_at' => null,
         ];
