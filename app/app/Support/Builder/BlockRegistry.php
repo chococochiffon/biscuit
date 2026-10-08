@@ -14,6 +14,11 @@ use App\Enums\BuilderContext;
  * video は YouTube・Vimeo の動画の URL だけを受け付ける(VideoUrl)。overrides は独自コンポーネントの差し替えた値(「ノードの ID.項目名」→ 値)。
  * source はエディタで選択肢を登録済みのデータから作る項目(gallery-categories: ギャラリーの分類、global-components: グローバルコンポーネント、
  * custom-components: 独自コンポーネント)。
+ *
+ * 内容の版(SchemaMigrator)によって使えるブロックが違う。v1 の行・カラム・コンテナ・スペーサー(LEGACY_BLOCKS)は v1 だけ、
+ * v2(自由配置)のボックス(FREE_LAYOUT_BLOCKS)は v2 だけで使え、置ける子も使える版のブロックに絞る(allowsChild()・toArray())。
+ * v2 では自由配置の面(FREE_SURFACES と独自コンポーネントの一番外側)の直下のブロックが、位置と大きさ(layout。BuilderLayout)を持つ。
+ * layoutHeight の付いたブロック(画像・ボックス)だけが高さ(layout の h)を持てる。
  */
 final class BlockRegistry
 {
@@ -23,6 +28,27 @@ final class BlockRegistry
      * @var list<string>
      */
     public const ROOT_CHILDREN = ['section', 'global'];
+
+    /**
+     * v1(流し込みの配置)だけで使えるブロック。v2 では自由配置とボックスで置き換える。
+     *
+     * @var list<string>
+     */
+    public const LEGACY_BLOCKS = ['container', 'row', 'column', 'spacer'];
+
+    /**
+     * v2(自由配置)だけで使えるブロック。
+     *
+     * @var list<string>
+     */
+    public const FREE_LAYOUT_BLOCKS = ['box'];
+
+    /**
+     * v2 で、中のブロックを座標で置く面(独自コンポーネントの一番外側も面になる。BuilderContext::hasFreeRoot())。
+     *
+     * @var list<string>
+     */
+    public const FREE_SURFACES = ['section', 'box'];
 
     /**
      * 中に何も置けない基本のブロック。
@@ -40,12 +66,12 @@ final class BlockRegistry
     private const CONTENT_BLOCKS = [...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery', 'custom'];
 
     /**
-     * 独自コンポーネント(BuilderContext::CustomComponent)の一番外側に置けるブロック(カラムの中と同じブロックとコンテナ・行。
+     * 独自コンポーネント(BuilderContext::CustomComponent)の一番外側に置けるブロック(カラムの中と同じブロックとコンテナ・行・ボックス。
      * 独自コンポーネントの中には独自コンポーネントを置けない)。
      *
      * @var list<string>
      */
-    public const CUSTOM_ROOT_CHILDREN = ['container', 'row', ...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
+    public const CUSTOM_ROOT_CHILDREN = ['container', 'row', 'box', ...self::BASIC_BLOCKS, 'video', 'slider', 'article-list', 'navigation', 'breadcrumb', 'gallery'];
 
     /**
      * 余白のスタイル。
@@ -62,9 +88,16 @@ final class BlockRegistry
     private const MARGIN_STYLES = ['marginTop', 'marginBottom'];
 
     /**
+     * 自由配置の面の直下のブロックでは使えないスタイル(上下の外側の余白と幅は、位置と大きさ(layout)で決める)。
+     *
+     * @var list<string>
+     */
+    public const FREE_CHILD_EXCLUDED_STYLES = ['marginTop', 'marginBottom', 'width', 'maxWidth'];
+
+    /**
      * ブロックの種類ごとの定義(表示名は日本語の原文。toArray() で翻訳する)。
      *
-     * @return array<string, array{label: string, category: string, icon: string, children: list<string>, props: array<string, array<string, mixed>>, styles: list<string>}>
+     * @return array<string, array{label: string, category: string, icon: string, children: list<string>, props: array<string, array<string, mixed>>, styles: list<string>, layoutHeight?: bool}>
      */
     public static function definitions(): array
     {
@@ -73,11 +106,23 @@ final class BlockRegistry
                 'label' => 'セクション',
                 'category' => 'layout',
                 'icon' => 'square',
-                'children' => ['container', 'row', ...self::CONTENT_BLOCKS],
+                'children' => ['container', 'row', 'box', ...self::CONTENT_BLOCKS],
                 'props' => [
                     'backgroundImage' => ['label' => '背景画像', 'type' => 'image', 'default' => null],
                 ],
                 'styles' => [...self::SPACING_STYLES, 'minHeight', 'backgroundColor', 'color', 'textAlign'],
+            ],
+            // 自由配置(v2)のまとまり。背景・角丸・枠線を持ち、中も座標で置く。ボックスの中にボックスも置ける。高さ(layout の h)は最小の高さ
+            'box' => [
+                'label' => 'ボックス',
+                'category' => 'layout',
+                'icon' => 'square-half',
+                'children' => ['box', ...self::CONTENT_BLOCKS],
+                'props' => [
+                    'backgroundImage' => ['label' => '背景画像', 'type' => 'image', 'default' => null],
+                ],
+                'styles' => ['paddingTop', 'paddingBottom', 'paddingLeft', 'paddingRight', 'backgroundColor', 'color', 'textAlign', 'borderRadius', 'borderColor', 'borderWidth', 'borderStyle'],
+                'layoutHeight' => true,
             ],
             'container' => [
                 'label' => 'コンテナ',
@@ -144,6 +189,8 @@ final class BlockRegistry
                     'href' => ['label' => 'リンク先', 'type' => 'url', 'default' => null],
                 ],
                 'styles' => [...self::MARGIN_STYLES, 'width', 'maxWidth', 'borderRadius', 'textAlign'],
+                // 自由配置では、高さ(layout の h)を決めるとその高さに切り抜く
+                'layoutHeight' => true,
             ],
             'button' => [
                 'label' => 'ボタン',
@@ -309,7 +356,7 @@ final class BlockRegistry
     /**
      * 指定した種類の定義(未定義なら null)。
      *
-     * @return array{label: string, category: string, icon: string, children: list<string>, props: array<string, array<string, mixed>>, styles: list<string>}|null
+     * @return array{label: string, category: string, icon: string, children: list<string>, props: array<string, array<string, mixed>>, styles: list<string>, layoutHeight?: bool}|null
      */
     public static function get(string $type): ?array
     {
@@ -325,13 +372,49 @@ final class BlockRegistry
     }
 
     /**
-     * 親(null は一番外側)の中に、指定した種類のブロックを置けるか(一番外側に置けるもの・使えるブロックは文脈で変わる)。
+     * 指定した種類のブロックを、その版の内容で使えるか(v1 だけ・v2 だけのブロックがある)。
      */
-    public static function allowsChild(?string $parentType, string $childType, BuilderContext $context = BuilderContext::Page): bool
+    public static function existsIn(string $type, int $version): bool
+    {
+        if (! self::has($type)) {
+            return false;
+        }
+
+        return match (true) {
+            in_array($type, self::LEGACY_BLOCKS, true) => $version < SchemaMigrator::FREE_LAYOUT_VERSION,
+            in_array($type, self::FREE_LAYOUT_BLOCKS, true) => $version >= SchemaMigrator::FREE_LAYOUT_VERSION,
+            default => true,
+        };
+    }
+
+    /**
+     * 親(null は一番外側)の中に、指定した種類のブロックを置けるか(一番外側に置けるもの・使えるブロックは文脈と内容の版で変わる)。
+     */
+    public static function allowsChild(?string $parentType, string $childType, BuilderContext $context = BuilderContext::Page, int $version = SchemaMigrator::CURRENT_VERSION): bool
     {
         $children = $parentType === null ? $context->rootChildren() : (self::get($parentType)['children'] ?? []);
 
-        return $context->allowsBlock($childType) && in_array($childType, $children, true);
+        return $context->allowsBlock($childType) && self::existsIn($childType, $version) && in_array($childType, $children, true);
+    }
+
+    /**
+     * 親(null は一番外側)の直下のブロックを、座標で置くか(v2 の自由配置の面)。
+     */
+    public static function isFreeSurface(?string $parentType, BuilderContext $context, int $version): bool
+    {
+        if ($version < SchemaMigrator::FREE_LAYOUT_VERSION) {
+            return false;
+        }
+
+        return $parentType === null ? $context->hasFreeRoot() : in_array($parentType, self::FREE_SURFACES, true);
+    }
+
+    /**
+     * 指定した種類のブロックが、自由配置で高さ(layout の h)を持てるか。
+     */
+    public static function hasLayoutHeight(string $type): bool
+    {
+        return self::get($type)['layoutHeight'] ?? false;
     }
 
     /**
@@ -345,13 +428,18 @@ final class BlockRegistry
     }
 
     /**
-     * 管理画面のエディタに渡す定義(表示名は現在の言語に翻訳し、置ける親を足す)。文脈で使えないブロック・置ける場所のないブロックは渡さない。
+     * 管理画面のエディタに渡す定義(表示名は現在の言語に翻訳し、置ける親を足す)。文脈・内容の版で使えないブロック・置ける場所のないブロックは渡さない。
+     * 置ける子も、その版で使えるブロックに絞る。
      *
      * @return array{rootChildren: list<string>, blocks: array<string, array<string, mixed>>, styles: array<string, string|list<string>>}
      */
-    public static function toArray(BuilderContext $context = BuilderContext::Page): array
+    public static function toArray(BuilderContext $context = BuilderContext::Page, int $version = SchemaMigrator::CURRENT_VERSION): array
     {
-        $definitions = array_filter(self::definitions(), fn (string $type) => $context->allowsBlock($type), ARRAY_FILTER_USE_KEY);
+        $definitions = array_filter(self::definitions(), fn (string $type) => $context->allowsBlock($type) && self::existsIn($type, $version), ARRAY_FILTER_USE_KEY);
+        $definitions = array_map(fn (array $definition) => [
+            ...$definition,
+            'children' => array_values(array_filter($definition['children'], fn (string $child) => isset($definitions[$child]))),
+        ], $definitions);
         $blocks = [];
 
         foreach ($definitions as $type => $definition) {
@@ -375,7 +463,7 @@ final class BlockRegistry
         }
 
         return [
-            'rootChildren' => $context->rootChildren(),
+            'rootChildren' => array_values(array_filter($context->rootChildren(), fn (string $type) => isset($blocks[$type]))),
             'blocks' => $blocks,
             'styles' => StyleRegistry::kinds(),
         ];

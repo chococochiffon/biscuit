@@ -12,6 +12,9 @@ use App\Support\HtmlSanitizer;
  * errors() はエラーの一覧(空なら正しい)を返し、各エラーには対象のノードの ID(分からなければ null)を含める
  * (エディタがそのノードを選択して知らせる)。normalize() は正しい内容の props に既定値を補い、テキストの HTML を無害化し、
  * 表示条件(Visibility)は指定した項目だけにする。
+ *
+ * 内容の版は v1(流し込みの配置)と v2(自由配置)のどちらも受け付け、その版で使えるブロック・置ける場所で確かめる(BlockRegistry::existsIn())。
+ * v2 では、自由配置の面の直下のブロックだけが位置と大きさ(layout。BuilderLayout)を持ち、上下の外側の余白・幅のスタイルは使えない。
  */
 final class BuilderValidator
 {
@@ -20,7 +23,7 @@ final class BuilderValidator
      *
      * @var list<string>
      */
-    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'exposed', 'classes', 'children'];
+    private const NODE_KEYS = ['id', 'type', 'props', 'styles', 'responsive', 'visibility', 'exposed', 'classes', 'layout', 'children'];
 
     /**
      * 独自コンポーネントの差し替えた値(overrides)のキーの形(ノードの ID.項目名)と、1 つのブロックに入れられる数。
@@ -70,6 +73,11 @@ final class BuilderValidator
     private BuilderContext $context = BuilderContext::Page;
 
     /**
+     * 検証している内容の版(使えるブロックと、自由配置かが変わる)。
+     */
+    private int $version = SchemaMigrator::CURRENT_VERSION;
+
+    /**
      * 内容を検証し、エラーの一覧を返す(空なら正しい)。コンポーネントの内容はその文脈(BuilderContext)で検証する
      * (コンポーネントの中にコンポーネントを置くと、入れ子が終わらなくなるおそれがあるため)。
      *
@@ -86,9 +94,13 @@ final class BuilderValidator
             return [$this->error(null, __('ビルダーの内容の形式が正しくありません。'))];
         }
 
-        if (($content['version'] ?? null) !== SchemaMigrator::CURRENT_VERSION) {
-            return [$this->error(null, __('ビルダーの内容の版(:version)には対応していません。', ['version' => json_encode($content['version'] ?? null)]))];
+        $version = $content['version'] ?? null;
+
+        if (! is_int($version) || $version < 1 || $version > SchemaMigrator::LATEST_VERSION) {
+            return [$this->error(null, __('ビルダーの内容の版(:version)には対応していません。', ['version' => json_encode($version)]))];
         }
+
+        $this->version = $version;
 
         $this->validateChildren($content['children'] ?? null, null, null);
 
@@ -115,7 +127,7 @@ final class BuilderValidator
     public function normalize(array $content): array
     {
         $normalized = [
-            'version' => SchemaMigrator::CURRENT_VERSION,
+            'version' => $content['version'],
             'children' => array_map($this->normalizeNode(...), $content['children']),
         ];
 
@@ -170,6 +182,10 @@ final class BuilderValidator
             $normalized['classes'] = $node['classes'];
         }
 
+        if (isset($node['layout'])) {
+            $normalized['layout'] = BuilderLayout::normalize($node['layout']);
+        }
+
         if ($definition['children'] !== []) {
             $normalized['children'] = array_map($this->normalizeNode(...), $node['children'] ?? []);
         }
@@ -190,6 +206,12 @@ final class BuilderValidator
 
         foreach ($children as $child) {
             $this->validateNode($child, $parentType);
+        }
+
+        if (BlockRegistry::isFreeSurface($parentType, $this->context, $this->version)) {
+            foreach (BuilderLayout::inconsistentDevices($children) as $device) {
+                $this->errors[] = $this->error($parentId, __('端末「:device」の位置は、同じ並びのブロックのすべてに入れるか、どれにも入れないでください。', ['device' => $device]));
+            }
         }
     }
 
@@ -230,7 +252,7 @@ final class BuilderValidator
             return;
         }
 
-        if (! BlockRegistry::allowsChild($parentType, $type, $this->context)) {
+        if (! BlockRegistry::allowsChild($parentType, $type, $this->context, $this->version)) {
             $this->errors[] = $this->error($id, $parentType === null
                 ? __('「:child」はページの直下に置けません。', ['child' => $label])
                 : __('「:child」は「:parent」の中に置けません。', ['child' => $label, 'parent' => __(BlockRegistry::get($parentType)['label'])]));
@@ -245,9 +267,21 @@ final class BuilderValidator
             $this->errors[] = $this->error($id, __('「:block」に「:name」という項目はありません。', ['block' => $label, 'name' => $key]));
         }
 
+        $isFreeChild = BlockRegistry::isFreeSurface($parentType, $this->context, $this->version);
+        // 自由配置の面の直下では、上下の外側の余白と幅は位置と大きさ(layout)で決めるため、スタイルでは使えない
+        $styles = $isFreeChild ? array_values(array_diff($definition['styles'], BlockRegistry::FREE_CHILD_EXCLUDED_STYLES)) : $definition['styles'];
+
         $this->validateProps($node['props'] ?? [], $definition['props'], $id, $label);
-        $this->validateStyles($node['styles'] ?? [], $definition['styles'], $id, $label);
-        $this->validateResponsive($node['responsive'] ?? [], $definition['styles'], $id, $label);
+        $this->validateStyles($node['styles'] ?? [], $styles, $id, $label);
+        $this->validateResponsive($node['responsive'] ?? [], $styles, $id, $label);
+
+        if ($isFreeChild) {
+            foreach (BuilderLayout::errors($node['layout'] ?? null, $type, $label) as $message) {
+                $this->errors[] = $this->error($id, $message);
+            }
+        } elseif (array_key_exists('layout', $node)) {
+            $this->errors[] = $this->error($id, __('「:block」は位置を持てません(自由配置の中のブロックだけが持てます)。', ['block' => $label]));
+        }
 
         foreach (Visibility::errors($node['visibility'] ?? [], $label) as $message) {
             $this->errors[] = $this->error($id, $message);

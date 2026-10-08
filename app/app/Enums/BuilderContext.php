@@ -9,7 +9,7 @@ use App\Support\Builder\BlockRegistry;
  * 一番外側に置けるブロックと、グローバルコンポーネント・独自コンポーネントのブロックを置けるか、差し替えられる項目(exposed)を持てるかが違う。
  * - ページ: 一番外側はセクションとグローバルコンポーネント。中に独自コンポーネントを置ける
  * - グローバルコンポーネント: 一番外側はセクションだけ。グローバルコンポーネントは置けない(入れ子が終わらなくなるため)
- * - 独自コンポーネント: 一番外側はカラムの中と同じブロック(コンテナ・行も)。どちらのコンポーネントも置けない。差し替えられる項目を持てる
+ * - 独自コンポーネント: 一番外側はカラムの中と同じブロック(コンテナ・行・ボックスも。版で使えるものに絞る)。自由配置(v2)では一番外側も座標で置く。どちらのコンポーネントも置けない。差し替えられる項目を持てる
  */
 enum BuilderContext: string
 {
@@ -29,6 +29,14 @@ enum BuilderContext: string
             self::GlobalComponent => ['section'],
             self::CustomComponent => BlockRegistry::CUSTOM_ROOT_CHILDREN,
         };
+    }
+
+    /**
+     * 自由配置(v2)で、一番外側のブロックを座標で置くか(独自コンポーネントは一番外側が 1 つの面になる。ページ・グローバルコンポーネントはセクションを縦に積む)。
+     */
+    public function hasFreeRoot(): bool
+    {
+        return $this === self::CustomComponent;
     }
 
     /**
