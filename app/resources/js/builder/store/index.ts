@@ -2,6 +2,7 @@ import { inject, type InjectionKey } from 'vue'
 import type { BuilderApi } from '../api'
 import { createEditorContext } from './context'
 import { editingActions } from './editing'
+import { freeLayoutActions } from './free'
 import { persistenceActions } from './persistence'
 import { propertyActions } from './properties'
 import { resourceActions } from './resources'
@@ -21,7 +22,10 @@ export function createBuilderStore(api: BuilderApi) {
     features: api.features,
     definition: context.definition,
     selectedNode: context.selectedNode,
+    // 独自コンポーネントの一番外側が自由配置の面か
+    hasFreeRoot: context.hasFreeRoot,
     ...editingActions(context),
+    ...freeLayoutActions(context),
     ...propertyActions(context),
     ...persistenceActions(context),
     ...transferActions(context),

@@ -222,4 +222,22 @@ class BuilderFreeLayoutTest extends TestCase
         $this->postJson(route('admin.json.builder.single-pages.publish', $singlePage), ['updated_at' => $builder->updated_at->toIso8601String()])->assertOk();
         $this->assertSame(2, $builder->fresh()->published_content['version']);
     }
+
+    public function test_editors_receive_the_registry_of_each_version(): void
+    {
+        $this->actingAsAdmin();
+        $component = PageBuilderComponent::factory()->custom()->create();
+
+        $this->getJson(route('admin.json.builder.top.show'))
+            ->assertOk()
+            ->assertJsonPath('registries.1.blocks.row.label', '行')
+            ->assertJsonMissingPath('registries.1.blocks.box')
+            ->assertJsonPath('registries.2.blocks.box.label', 'ボックス')
+            ->assertJsonMissingPath('registries.2.blocks.row')
+            ->assertJsonPath('registries.2.blocks.image.layoutHeight', true);
+
+        $this->getJson(route('admin.json.builder.components.show', $component))
+            ->assertOk()
+            ->assertJsonPath('registries.2.rootChildren', fn (array $root) => in_array('box', $root, true) && ! in_array('container', $root, true));
+    }
 }

@@ -31,7 +31,7 @@ const indicatorStyle = ref<Record<string, string>>({})
 
 // コンポーネントツリーの上でドラッグしているあいだは、Canvas には線を出さない(位置を計算していないため)
 // マウスを乗せているブロックを含む、ページの直下のブロック(その下の境目に「+ セクションを追加」を出す)
-const canAddSection = computed(() => props.isRoot && availableSectionPresets(store.state.registry).length > 0)
+const canAddSection = computed(() => props.isRoot && availableSectionPresets(store.state.registry, store.state.content.version).length > 0)
 const hoveredRootId = computed(() => {
   const id = store.state.hoveredId
 

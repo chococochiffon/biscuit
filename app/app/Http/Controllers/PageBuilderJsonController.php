@@ -49,6 +49,8 @@ class PageBuilderJsonController extends Controller
         return response()->json([
             ...$this->state($this->builderOrNew($singlePage), $singlePage),
             'registry' => BlockRegistry::toArray(),
+            // 内容の版ごとの定義(エディタは編集している内容の版の定義を使う)
+            'registries' => BlockRegistry::toArraysByVersion(),
             'image_base_url' => Storage::disk('public')->url(''),
             // ギャラリーのブロックの分類の選択肢
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),

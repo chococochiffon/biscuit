@@ -28,7 +28,7 @@ export function transferActions(context: EditorContext) {
    * テンプレートの内容で今の内容を置き換える。ブロックには新しい ID を振る。
    */
   function applyTemplate(template: BuilderTemplate): void {
-    replaceContent(template.content.children.map(cloneWithNewIds), template.content.css, t('テンプレート「:name」を使いました。', { name: template.name }))
+    replaceContent({ ...template.content, children: template.content.children.map(cloneWithNewIds) }, t('テンプレート「:name」を使いました。', { name: template.name }))
   }
 
   function loadTemplates(): Promise<BuilderTemplate[] | null> {
@@ -76,7 +76,7 @@ export function transferActions(context: EditorContext) {
       return false
     }
 
-    replaceContent(version.content.children, version.content.css, t(':date の版を下書きに読み込みました。公開側に出すには「公開」を押してください。', { date: label }))
+    replaceContent(version.content, t(':date の版を下書きに読み込みました。公開側に出すには「公開」を押してください。', { date: label }))
 
     return true
   }
@@ -116,7 +116,7 @@ export function transferActions(context: EditorContext) {
       throw new Error(errorMessage(error, t('読み込みに失敗しました。')))
     }
 
-    replaceContent(result.content.children, result.content.css, t('ファイル「:name」を読み込みました。', { name: file.name }))
+    replaceContent(result.content, t('ファイル「:name」を読み込みました。', { name: file.name }))
 
     return result
   }

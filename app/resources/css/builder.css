@@ -912,3 +912,175 @@
     outline: 1px dashed rgba(var(--bs-success-rgb), 0.5);
     outline-offset: -1px;
 }
+
+/* 自由配置(内容の v2)の面: 公開側(chococo の Renderer)と同じく 1 つのマスに子を重ね、位置は CanvasNode の上と左の余白で決める */
+.builder-free {
+    position: relative;
+    display: grid;
+    /* 行は中身に合わせて上に詰める(最小の高さのあるボックスで、縦 1 列のときに 1 行目が引き伸ばされないように) */
+    grid-template: auto / 1fr;
+    align-content: start;
+}
+
+.builder-free > .builder-node,
+.builder-free > .builder-free-item {
+    align-self: start;
+    min-width: 0;
+}
+
+/* セクションの面は、公開側と同じく中身の幅を最大 1200px にして中央に寄せる */
+.builder-section-surface {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.builder-free.is-empty {
+    min-height: 120px;
+}
+
+.builder-free-empty {
+    grid-area: 1 / 1;
+    align-self: center;
+    justify-self: center;
+    font-size: 0.8125rem;
+    color: var(--bs-secondary-color);
+    pointer-events: none;
+}
+
+.builder-free.is-drop-target {
+    outline: 2px dashed #0d6efd;
+    outline-offset: -2px;
+}
+
+.builder-free-root {
+    min-height: 240px;
+}
+
+/* 動かしているときの吸い付いたガイド線と、パレットのブロックを置く場所の見本 */
+.builder-free-guide {
+    position: absolute;
+    z-index: 25;
+    pointer-events: none;
+    background: #d63384;
+}
+
+.builder-free-guide.is-vertical {
+    top: 0;
+    bottom: 0;
+    width: 1px;
+}
+
+.builder-free-guide.is-horizontal {
+    right: 0;
+    left: 0;
+    height: 1px;
+}
+
+.builder-free-ghost {
+    position: absolute;
+    z-index: 20;
+    height: 3rem;
+    pointer-events: none;
+    background: rgba(13, 110, 253, 0.08);
+    border: 2px dashed #0d6efd;
+}
+
+/* 面のブロック: 本体をつかんで動かす。高さを持つ画像はその高さに切り抜き、ボックスは最小の高さ */
+.builder-node.is-free,
+.builder-free-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.builder-node.is-free {
+    cursor: move;
+}
+
+.builder-node.is-free.is-editing {
+    cursor: auto;
+}
+
+.builder-node.is-free > .builder-node-body,
+.builder-free-item > * {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.builder-node.is-free.is-image > .builder-node-body img,
+.builder-free-item.is-image img {
+    width: 100%;
+}
+
+.builder-node.is-free.is-image.has-height > .builder-node-body img,
+.builder-free-item.is-image.has-height img {
+    height: 100%;
+    object-fit: cover;
+}
+
+.builder-node.is-free.is-image.has-height .builder-preview-placeholder {
+    height: 100%;
+}
+
+.builder-preview-box {
+    background-position: center center;
+    background-size: cover;
+}
+
+/* 面のブロックの大きさのつまみ(左右の端で幅、下の端で高さ、右下の角で幅と高さ) */
+.builder-free-handle {
+    position: absolute;
+    z-index: 12;
+    width: 0.625rem;
+    height: 0.625rem;
+    background: #fff;
+    border: 2px solid #0d6efd;
+    border-radius: 2px;
+    touch-action: none;
+}
+
+.builder-free-handle:hover,
+.builder-free-handle.is-active {
+    background: #0d6efd;
+}
+
+.builder-free-handle.is-e {
+    top: 50%;
+    right: 0;
+    cursor: ew-resize;
+    transform: translate(50%, -50%);
+}
+
+.builder-free-handle.is-w {
+    top: 50%;
+    left: 0;
+    cursor: ew-resize;
+    transform: translate(-50%, -50%);
+}
+
+.builder-free-handle.is-s {
+    bottom: 0;
+    left: 50%;
+    cursor: ns-resize;
+    transform: translate(-50%, 50%);
+}
+
+.builder-free-handle.is-se {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+    transform: translate(50%, 50%);
+}
+
+/* ブロックを動かしている間は、文字を選ばない */
+body.builder-free-moving,
+body.builder-free-moving * {
+    cursor: move !important;
+    user-select: none !important;
+}
+
+/* 位置と大きさの入力欄 */
+.builder-layout-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}

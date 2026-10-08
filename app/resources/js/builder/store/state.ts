@@ -15,6 +15,8 @@ export function createEditorState() {
     loadError: false,
     page: null as PageInfo | null,
     registry: { rootChildren: [], blocks: {}, styles: {} } as Registry,
+    // 内容の版ごとの定義(版 → 定義)。registry は編集している内容の版のもの(syncRegistry())
+    registries: {} as Record<string, Registry>,
     imageBaseUrl: '',
     // 編集しているページのパンくず(パンくずのブロックの見本)
     breadcrumbs: [] as Breadcrumb[],
@@ -37,6 +39,9 @@ export function createEditorState() {
     editingId: null as string | null,
     hoveredId: null as string | null,
     dragging: null as Dragging | null,
+    // 自由配置でブロックを動かしているときのガイド線(面の ID(一番外側は root)と、面の左上からの px)と、離すと入る面
+    guides: [] as { surfaceId: string, orientation: 'vertical' | 'horizontal', position: number }[],
+    freeDropSurfaceId: null as string | null,
     // ドラッグで大きさを変えているブロック(つまみ・値の表示を出し続けるのに使う)
     resizing: null as { id: string, label: string } | null,
     dropTarget: null as DropTarget | null,

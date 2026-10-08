@@ -7,7 +7,7 @@ import { useBuilderStore } from '../store'
 // セクションのひな形を選ぶ画面: 「+ セクションを追加」で開き、選んだひな形のセクションを開いたときの位置に置く(元に戻せる)
 const store = useBuilderStore()
 
-const presets = computed(() => availableSectionPresets(store.state.registry))
+const presets = computed(() => availableSectionPresets(store.state.registry, store.state.content.version))
 
 function close(): void {
   store.state.sectionInsertIndex = null

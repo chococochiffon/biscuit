@@ -428,6 +428,23 @@ final class BlockRegistry
     }
 
     /**
+     * 管理画面のエディタに渡す、受け付ける内容の版ごとの定義(版 → toArray())。エディタは編集している内容の版の定義を使う
+     * (v1 のページは v1 のまま編集でき、テンプレート・版の履歴などで内容の版が変わると定義も切り替える)。
+     *
+     * @return array<int, array{rootChildren: list<string>, blocks: array<string, array<string, mixed>>, styles: array<string, string|list<string>>}>
+     */
+    public static function toArraysByVersion(BuilderContext $context = BuilderContext::Page): array
+    {
+        $registries = [];
+
+        foreach (range(1, SchemaMigrator::LATEST_VERSION) as $version) {
+            $registries[$version] = self::toArray($context, $version);
+        }
+
+        return $registries;
+    }
+
+    /**
      * 管理画面のエディタに渡す定義(表示名は現在の言語に翻訳し、置ける親を足す)。文脈・内容の版で使えないブロック・置ける場所のないブロックは渡さない。
      * 置ける子も、その版で使えるブロックに絞る。
      *

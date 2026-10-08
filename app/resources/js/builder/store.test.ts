@@ -473,3 +473,97 @@ describe('builder store', () => {
     expect(store.imageUrl(null)).toBeNull()
   })
 })
+
+// 自由配置(v2)の定義(biscuit の BlockRegistry::toArray(version: 2) のうち、テストに使う部分)
+const freeRegistry: Registry = {
+  rootChildren: ['section'],
+  blocks: {
+    section: block(['box', 'heading']),
+    box: { ...block(['box', 'heading']), layoutHeight: true },
+    heading: block([], { text: { label: '', type: 'string', default: '見出し' } }),
+  },
+  styles: {},
+}
+
+function freeApi(content: BuilderContent = { version: 1, children: [] }) {
+  return fakeApi({ show: vi.fn(async () => ({ ...showPayload(content), registries: { 1: registry, 2: freeRegistry } })) })
+}
+
+describe('builder store(自由配置)', () => {
+  it('何も置いていないページは v2 で始め、v1 のページは v1 のまま', async () => {
+    const { store } = await loadedStore(freeApi())
+    expect(store.state.content.version).toBe(2)
+    expect(store.state.registry).toEqual(freeRegistry)
+
+    const v1 = await loadedStore(freeApi({ version: 1, children: [createNode(registry, 'section')] }))
+    expect(v1.store.state.content.version).toBe(1)
+    expect(v1.store.state.registry).toEqual(registry)
+  })
+
+  it('面に置いたブロックは位置を持ち、位置は数値で変えられる', async () => {
+    const { store } = await loadedStore(freeApi())
+    store.add('section', null, 0)
+    const section = store.state.content.children[0]
+
+    store.add('heading', section.id, 0)
+    store.add('box', section.id, 1, {}, { desktop: { x: 10, y: 200, w: 30 } })
+    const [heading, box] = section.children!
+    expect(heading.layout).toEqual({ desktop: { x: 0, y: 16, w: 60 } })
+    expect(box.layout).toEqual({ desktop: { x: 10, y: 200, w: 30 } })
+    expect(store.isFreeChild(heading.id)).toBe(true)
+    expect(store.isFreeChild(section.id)).toBe(false)
+
+    expect(store.updateLayout(heading.id, 'desktop', { x: 70 })).toBe(true)
+    // 幅の分だけ右を空ける
+    expect(heading.layout!.desktop.x).toBe(40)
+
+    store.undo()
+    expect(store.state.content.children[0].children![0].layout!.desktop.x).toBe(0)
+  })
+
+  it('動かし終えたら別の面へ移し、端末だけの位置は作る・自動に戻すことができる', async () => {
+    const { store } = await loadedStore(freeApi())
+    store.add('section', null, 0)
+    const sectionId = store.state.content.children[0].id
+    store.add('box', sectionId, 0)
+    store.add('heading', sectionId, 1)
+    const [box, heading] = store.state.content.children[0].children!
+
+    const snapshot = store.beginLiveEdit()
+    store.liveEdit(heading.id, (node) => {
+      store.setLiveBox(node, 'desktop', { x: 5, y: 30, w: 50 })
+
+      return true
+    })
+    expect(store.reparentLive(heading.id, box.id, 'desktop', { x: 10, y: 20, w: 80 })).toBe(true)
+    store.endLiveEdit(snapshot, heading.id)
+
+    const moved = store.state.content.children[0].children![0].children![0]
+    expect(moved.layout).toEqual({ desktop: { x: 10, y: 20, w: 80 } })
+    expect(store.state.content.children[0].children).toHaveLength(1)
+
+    // スマートフォンだけの位置を作り、自動に戻す
+    const section = store.state.content.children[0]
+    store.materializeDevice(sectionId, 'mobile', { [section.children![0].id]: { x: 4, y: 16, w: 92, h: 200 } })
+    expect(section.children![0].layout!.mobile).toEqual({ x: 4, y: 16, w: 92, h: 200 })
+    expect(store.resetDeviceLayout(sectionId, 'mobile')).toBe(true)
+    expect(store.state.content.children[0].children![0].layout!.mobile).toBeUndefined()
+
+    store.undo()
+    store.undo()
+    expect(store.state.content.children[0].children).toHaveLength(2)
+  })
+
+  it('テンプレートで内容を置き換えると、その版と定義に切り替わる(元に戻すと戻る)', async () => {
+    const { store } = await loadedStore(freeApi())
+    const template: BuilderTemplate = { id: 1, name: '会社概要', description: null, node_count: 1, content: { version: 1, children: [createNode(registry, 'section')] } }
+
+    store.applyTemplate(template)
+    expect(store.state.content.version).toBe(1)
+    expect(store.state.registry).toEqual(registry)
+
+    store.undo()
+    expect(store.state.content.version).toBe(2)
+    expect(store.state.registry).toEqual(freeRegistry)
+  })
+})

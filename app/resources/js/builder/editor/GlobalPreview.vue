@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, provide } from 'vue'
+import { FREE_LAYOUT_VERSION } from '../layout'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import type { BuilderNode } from '../types'
 import BlockPreview from './BlockPreview.vue'
+import { contentVersionKey } from './keys'
 
 // グローバルコンポーネントのブロックの Canvas の見本。選んだコンポーネントの公開中の内容を、選択・ドラッグを受けずに描く
 // (中身はコンポーネントのエディタで編集する。クリックするとこのブロックが選ばれる)。
@@ -16,6 +18,9 @@ store.loadComponents()
 
 const componentId = computed(() => (typeof props.node.props.component === 'number' ? props.node.props.component : null))
 const component = computed(() => store.state.components?.find(item => item.id === componentId.value) ?? null)
+
+// 中身のセクションは、ページではなく中身の内容の版で描く
+provide(contentVersionKey, computed(() => component.value?.content?.version ?? FREE_LAYOUT_VERSION - 1))
 </script>
 
 <template>

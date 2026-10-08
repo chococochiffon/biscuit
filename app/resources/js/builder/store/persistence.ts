@@ -1,4 +1,5 @@
 import { t } from '../i18n'
+import { FREE_LAYOUT_VERSION } from '../layout'
 import { loadThemeFonts } from '../theme'
 import type { EditorContext } from './context'
 
@@ -12,6 +13,7 @@ export function persistenceActions(context: EditorContext) {
     try {
       const payload = await api.show()
       state.registry = payload.registry
+      state.registries = payload.registries ?? { [String(payload.content.version)]: payload.registry }
       state.imageBaseUrl = payload.image_base_url
       state.breadcrumbs = payload.breadcrumbs
       state.galleryCategories = payload.gallery_categories
@@ -20,6 +22,11 @@ export function persistenceActions(context: EditorContext) {
       state.canEditCss = payload.can_edit_css
       loadThemeFonts(payload.theme)
       applyState(payload, true)
+      // 何も置いていないページは、自由配置(v2)で始める(v1 のページは v1 のまま編集する)
+      if (state.content.children.length === 0 && state.registries[String(FREE_LAYOUT_VERSION)]) {
+        state.content.version = FREE_LAYOUT_VERSION
+        context.syncRegistry()
+      }
       state.loaded = true
     }
     catch {

@@ -2,11 +2,14 @@
 import { computed } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
+import { FREE_LAYOUT_VERSION } from '../layout'
 import { blockStyle, columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
 import ArticleListPreview from './ArticleListPreview.vue'
 import BreadcrumbPreview from './BreadcrumbPreview.vue'
 import DropList from './DropList.vue'
+import FreeSurface from './FreeSurface.vue'
+import { useContentVersion } from './keys'
 import CustomPreview from './CustomPreview.vue'
 import GlobalPreview from './GlobalPreview.vue'
 import { videoEmbedUrl } from '../video'
@@ -17,6 +20,7 @@ import NavigationPreview from './NavigationPreview.vue'
 
 // Canvas に描くブロックの中身。公開側(chococo の components/builder/blocks)と同じ Bootstrap の要素で近い見た目にする。
 // 中にブロックを置ける種類(セクション・コンテナ・行・カラム・スライダー)は、子の並びを DropList で描く。
+// 自由配置(内容の v2)のセクション・ボックスは、中を面(FreeSurface)で描く。
 // readonly のときは選択・ドラッグを受けずに描くだけにする(グローバルコンポーネントの中身の見本)
 const props = defineProps<{
   node: BuilderNode
@@ -41,6 +45,17 @@ const sectionStyle = computed(() => {
 })
 const imageUrl = computed(() => store.imageUrl(props.node.props.src))
 const isContainer = computed(() => ['section', 'container', 'row', 'column'].includes(props.node.type))
+// 自由配置(v2)の内容か(コンポーネントの見本では中身の版)
+const contentVersion = useContentVersion(store)
+const isFree = computed(() => contentVersion.value >= FREE_LAYOUT_VERSION)
+// ボックスの要素のスタイル(背景画像は section と同じく props)
+const boxStyle = computed(() => {
+  const backgroundImage = store.imageUrl(props.node.props.backgroundImage)
+
+  return backgroundImage
+    ? { ...style.value, backgroundImage: `url("${backgroundImage}")`, backgroundSize: 'cover', backgroundPosition: 'center center' }
+    : style.value
+})
 
 // 読み取り専用で描くときの、中にブロックを置ける種類の要素のクラス(行の直下のカラムは幅のクラスをこの要素に付ける)
 const readonlyClass = computed(() => {
@@ -67,9 +82,21 @@ const editing = computed(() => !props.readonly && store.state.editingId === prop
 </script>
 
 <template>
+  <!-- 自由配置(v2)のセクション: 中身の幅を最大 1200px にした面に、ブロックを座標で置く -->
+  <section v-if="isFree && node.type === 'section'" class="builder-preview-section" :style="sectionStyle">
+    <FreeSurface :parent-id="node.id" :children="children" :readonly="readonly" class="builder-section-surface" />
+  </section>
+  <FreeSurface
+    v-else-if="node.type === 'box'"
+    :parent-id="node.id"
+    :children="children"
+    :readonly="readonly"
+    class="builder-preview-box"
+    :style="boxStyle"
+  />
   <component
     :is="node.type === 'section' ? 'section' : 'div'"
-    v-if="readonly && isContainer"
+    v-else-if="readonly && isContainer"
     :class="readonlyClass"
     :style="node.type === 'section' ? sectionStyle : style"
   >
