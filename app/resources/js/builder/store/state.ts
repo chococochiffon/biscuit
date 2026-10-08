@@ -60,6 +60,8 @@ export function createEditorState() {
     lastSavedAt: null as Date | null,
     // ほかの管理者が先に保存した(読み込み直すまで自動保存を止める)
     conflict: false,
+    // セクションのひな形を選ぶ画面を開いているときの、置く位置(ページの直下の何番目か。閉じているときは null)
+    sectionInsertIndex: null as number | null,
     // テンプレートの画面を開いているか
     templatesOpen: false,
     // 版の履歴の画面を開いているか

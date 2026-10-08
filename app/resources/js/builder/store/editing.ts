@@ -1,6 +1,7 @@
 import { t } from '../i18n'
 import { inlineProp } from '../inline'
 import { canPlace, cloneWithNewIds, containsNode, createNode, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from '../nodes'
+import { buildSection } from '../sections'
 import type { EditorContext } from './context'
 
 /**
@@ -99,6 +100,22 @@ export function editingActions(context: EditorContext) {
     state.message = { type: 'warning', text: t('「:block」は、選んでいるブロックの中や後ろには置けません。', { block: definition(type).label }) }
 
     return false
+  }
+
+  /**
+   * ひな形(sections.ts)のセクションを、ページの直下の index の位置に置き、選択する。
+   */
+  function addSection(key: string, index: number): boolean {
+    const node = buildSection(state.registry, key)
+
+    if (!node || !mutate(null, () => insertNode(state.registry, state.content, null, index, node))) {
+      return false
+    }
+    finishInlineEdit()
+    state.selectedId = node.id
+    state.sectionInsertIndex = null
+
+    return true
   }
 
   function move(id: string, parentId: string | null, index: number): boolean {
@@ -282,5 +299,5 @@ export function editingActions(context: EditorContext) {
     endDrag()
   }
 
-  return { select, startInlineEdit, finishInlineEdit, selectParent, add, addNearSelection, move, moveSelectedBy, remove, duplicate, copySelected, paste, undo, redo, canDropInto, drop, endDrag }
+  return { select, startInlineEdit, finishInlineEdit, selectParent, add, addNearSelection, addSection, move, moveSelectedBy, remove, duplicate, copySelected, paste, undo, redo, canDropInto, drop, endDrag }
 }

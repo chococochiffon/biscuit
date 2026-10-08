@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { t } from '../i18n'
+import { availableSectionPresets } from '../sections'
 import { useBuilderStore } from '../store'
 
 // 使い方の画面: ページの組み立て方・ブロックの置き方・大きさの変え方・端末ごとの見た目・保存と公開・キーボードの操作。
@@ -41,6 +42,7 @@ const SHORTCUTS: { keys: string, label: string }[] = [
           <ul>
             <li>{{ t('左のパレットのブロックを、中央の画面へドラッグします。青い線が置く位置です。') }}</li>
             <li>{{ t('パレットのブロックをクリックすると、選んでいるブロックの近くに追加します。') }}</li>
+            <li v-if="availableSectionPresets(store.state.registry).length > 0">{{ t('ページの末尾の「+ セクションを追加」や、マウスを乗せたセクションの下の境目に出るボタンで、ひな形(見出しと文章・画像と文章・3 つの特徴など)から中身の入ったセクションを置けます。') }}</li>
           </ul>
         </section>
 

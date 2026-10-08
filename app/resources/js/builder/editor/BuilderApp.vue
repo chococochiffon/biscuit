@@ -8,6 +8,7 @@ import BuilderCanvas from './BuilderCanvas.vue'
 import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
+import SectionDialog from './SectionDialog.vue'
 import TemplateDialog from './TemplateDialog.vue'
 import CssDialog from './CssDialog.vue'
 import HelpDialog from './HelpDialog.vue'
@@ -60,7 +61,7 @@ function confirmLeave(event: BeforeUnloadEvent): void {
 }
 
 function dialogOpen(): boolean {
-  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen || store.state.helpOpen
+  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen || store.state.helpOpen || store.state.sectionInsertIndex !== null
 }
 
 // キーボードの操作: Ctrl+S で下書き保存。入力欄の外では Ctrl+Z/Ctrl+Shift+Z(Ctrl+Y)で元に戻す/やり直す、
@@ -70,7 +71,7 @@ function handleKeydown(event: KeyboardEvent): void {
   const withModifier = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
 
-  // テンプレート・版の履歴・書き出しと読み込みの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
+  // セクションの追加・テンプレート・版の履歴・書き出しと読み込みの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
   if (dialogOpen()) {
     if (event.key === 'Escape') {
       store.state.templatesOpen = false
@@ -78,6 +79,7 @@ function handleKeydown(event: KeyboardEvent): void {
       store.state.transferOpen = false
       store.state.cssOpen = false
       store.state.helpOpen = false
+      store.state.sectionInsertIndex = null
     }
 
     return
@@ -207,6 +209,7 @@ onBeforeUnmount(() => {
       <BuilderCanvas />
       <PropertyPanel />
     </div>
+    <SectionDialog v-if="store.state.sectionInsertIndex !== null" />
     <TemplateDialog v-if="store.state.templatesOpen" />
     <VersionDialog v-if="store.state.versionsOpen" />
     <TransferDialog v-if="store.state.transferOpen" />

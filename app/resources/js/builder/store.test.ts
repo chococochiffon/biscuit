@@ -12,7 +12,8 @@ function block(children: string[], props: BlockDefinition['props'] = {}): BlockD
 const registry: Registry = {
   rootChildren: ['section'],
   blocks: {
-    section: block(['row', 'heading']),
+    section: block(['container', 'row', 'heading']),
+    container: block(['row', 'heading']),
     row: block(['column']),
     column: block(['heading'], { span: { label: '', type: 'int', default: 12, min: 1, max: 12 } }),
     heading: block([], { text: { label: '', type: 'string', default: '見出し' } }),
@@ -156,6 +157,25 @@ describe('builder store', () => {
     expect(store.state.canRedo).toBe(true)
     store.redo()
     expect(store.state.content.children[0].children).toHaveLength(1)
+  })
+
+  it('ひな形のセクションを位置を指定して置き、選ぶ。元に戻せる', async () => {
+    const { store } = await loadedStore()
+    store.add('section', null, 0)
+    store.state.sectionInsertIndex = 0
+
+    expect(store.addSection('blank', 0)).toBe(true)
+    const added = store.state.content.children[0]
+    expect(store.state.content.children).toHaveLength(2)
+    expect(added.children![0].type).toBe('container')
+    expect(store.state.selectedId).toBe(added.id)
+    expect(store.state.sectionInsertIndex).toBeNull()
+
+    // 定義にないブロックを使うひな形は置かない
+    expect(store.addSection('text', 0)).toBe(false)
+
+    store.undo()
+    expect(store.state.content.children).toHaveLength(1)
   })
 
   it('行にカラムを足すと幅をそろえる', async () => {
