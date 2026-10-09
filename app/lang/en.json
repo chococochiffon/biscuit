@@ -1084,5 +1084,12 @@
     "入力欄の中では、元に戻す・コピーなどは入力欄の操作になります。Mac では Ctrl の代わりに Command を使います。": "Inside an input field, undo, copy, and similar keys work on the field. On a Mac, use Command instead of Ctrl.",
     "文字を編集": "Edit text",
     "ダブルクリック": "Double-click",
-    "見出し・ボタン・テキストをダブルクリックすると、文字をその場で書き換えられます。テキストは文字を選ぶと書式のバーが出ます。ほかの場所をクリックすると終わります。": "Double-click a heading, button, or text block to edit its text in place. For text blocks, selecting text shows a formatting bar. Click elsewhere to finish."
+    "見出し・ボタン・テキストをダブルクリックすると、文字をその場で書き換えられます。テキストは文字を選ぶと書式のバーが出ます。ほかの場所をクリックすると終わります。": "Double-click a heading, button, or text block to edit its text in place. For text blocks, selecting text shows a formatting bar. Click elsewhere to finish.",
+    "操作バー": "Quick toolbar",
+    "ボタンの見た目": "Button style",
+    "画像を差し替える": "Replace image",
+    "背景画像を変える": "Change background image",
+    "背景画像を外す": "Remove background image",
+    "太字": "Bold",
+    "選んだブロックの右上に出る操作バーで、揃え・色・太字・リンク・画像の差し替え・背景色などをすぐ変えられます。": "The quick toolbar at the top right of the selected block lets you quickly change alignment, colors, bold, links, images, background color, and more."
 }
