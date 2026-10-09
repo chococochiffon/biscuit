@@ -11,6 +11,8 @@ import CustomPreview from './CustomPreview.vue'
 import GlobalPreview from './GlobalPreview.vue'
 import { videoEmbedUrl } from '../video'
 import GalleryPreview from './GalleryPreview.vue'
+import InlineRichText from './InlineRichText.vue'
+import InlineText from './InlineText.vue'
 import NavigationPreview from './NavigationPreview.vue'
 
 // Canvas に描くブロックの中身。公開側(chococo の components/builder/blocks)と同じ Bootstrap の要素で近い見た目にする。
@@ -60,6 +62,8 @@ const videoUrl = computed(() => videoEmbedUrl(props.node.props.url))
 const sliderAspect = computed(() => text('aspect') || '16x9')
 const firstSlideUrl = computed(() => store.imageUrl(children.value[0]?.props.src))
 const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}`)
+// Canvas の上で文字を直接書き換えているか(読み取り専用の見本では書き換えない)
+const editing = computed(() => !props.readonly && store.state.editingId === props.node.id)
 </script>
 
 <template>
@@ -124,10 +128,12 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
       <i class="bi bi-image" /> {{ t('画像を選んでください') }}
     </div>
   </div>
+  <InlineText v-else-if="editing && node.type === 'heading'" :node="node" prop="text" :tag="headingTag" :style="style" />
   <component :is="headingTag" v-else-if="node.type === 'heading'" :style="style">
     {{ text('text') || t('(空の見出し)') }}
   </component>
   <!-- eslint-disable-next-line vue/no-v-html -- エディタで入力した本文(保存時に biscuit が無害化する) -->
+  <InlineRichText v-else-if="editing && node.type === 'text'" :node="node" :style="style" />
   <div v-else-if="node.type === 'text'" class="rich-content" :style="style" v-html="text('html') || `<p class='text-secondary'>${t('(空のテキスト)')}</p>`" />
   <div v-else-if="node.type === 'image'" :style="style">
     <img v-if="imageUrl" :src="imageUrl" :alt="text('alt')" class="img-fluid" :style="innerStyle">
@@ -136,7 +142,8 @@ const headingTag = computed(() => `h${Math.min(6, Math.max(1, int('level', 2)))}
     </div>
   </div>
   <div v-else-if="node.type === 'button'" :style="style">
-    <span class="btn" :class="`btn-${text('variant') || 'primary'}`" :style="innerStyle">{{ text('text') }}</span>
+    <InlineText v-if="editing" :node="node" prop="text" tag="span" class="btn" :class="`btn-${text('variant') || 'primary'}`" :style="innerStyle" />
+    <span v-else class="btn" :class="`btn-${text('variant') || 'primary'}`" :style="innerStyle">{{ text('text') }}</span>
   </div>
   <div v-else-if="node.type === 'spacer'" class="builder-preview-spacer" :style="{ height: `${int('height', 32)}px` }" />
   <hr v-else-if="node.type === 'divider'" class="builder-preview-divider" :style="style">

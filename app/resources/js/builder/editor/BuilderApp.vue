@@ -45,6 +45,13 @@ function scheduleAutoSave(): void {
 
 watch(() => store.state.revision, scheduleAutoSave)
 
+// 直接書き換えているブロックとは別のブロックを選んだら(パレットからの追加・貼り付けなども)、書き換えを終える
+watch(() => store.state.selectedId, (id) => {
+  if (store.state.editingId !== null && store.state.editingId !== id) {
+    store.finishInlineEdit()
+  }
+})
+
 // 保存していない変更があるまま画面を離れようとしたら確かめる
 function confirmLeave(event: BeforeUnloadEvent): void {
   if (store.state.dirty) {
@@ -83,7 +90,7 @@ function handleKeydown(event: KeyboardEvent): void {
     return
   }
 
-  if (target?.closest('input, textarea, select, [contenteditable="true"]')) {
+  if (target?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')) {
     return
   }
 
@@ -114,7 +121,7 @@ function handleKeydown(event: KeyboardEvent): void {
 function isClipboardForEditor(event: ClipboardEvent): boolean {
   const target = event.target as HTMLElement | null
 
-  return !dialogOpen() && event.clipboardData !== null && !target?.closest?.('input, textarea, select, [contenteditable="true"]')
+  return !dialogOpen() && event.clipboardData !== null && !target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
 }
 
 function handleCopy(event: ClipboardEvent, cut: boolean): void {

@@ -1081,5 +1081,8 @@
     "選んだブロックのコピー・切り取り・貼り付け": "Copy, cut, or paste the selected block",
     "選んだブロックを削除": "Delete the selected block",
     "ひとつ外側のブロックを選ぶ": "Select the parent block",
-    "入力欄の中では、元に戻す・コピーなどは入力欄の操作になります。Mac では Ctrl の代わりに Command を使います。": "Inside an input field, undo, copy, and similar keys work on the field. On a Mac, use Command instead of Ctrl."
+    "入力欄の中では、元に戻す・コピーなどは入力欄の操作になります。Mac では Ctrl の代わりに Command を使います。": "Inside an input field, undo, copy, and similar keys work on the field. On a Mac, use Command instead of Ctrl.",
+    "文字を編集": "Edit text",
+    "ダブルクリック": "Double-click",
+    "見出し・ボタン・テキストをダブルクリックすると、文字をその場で書き換えられます。テキストは文字を選ぶと書式のバーが出ます。ほかの場所をクリックすると終わります。": "Double-click a heading, button, or text block to edit its text in place. For text blocks, selecting text shows a formatting bar. Click elsewhere to finish."
 }

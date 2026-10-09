@@ -1,4 +1,5 @@
 import { t } from '../i18n'
+import { inlineProp } from '../inline'
 import { canPlace, cloneWithNewIds, containsNode, createNode, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from '../nodes'
 import type { EditorContext } from './context'
 
@@ -9,13 +10,44 @@ export function editingActions(context: EditorContext) {
   const { state, history, mutate, equalizeIfAddedToRow, definition, selectedNode } = context
 
   function select(id: string | null): void {
+    // 直接書き換えているブロックから離れたら、書き換えを終える
+    if (state.editingId !== null && state.editingId !== id) {
+      finishInlineEdit()
+    }
     state.selectedId = id
+  }
+
+  /**
+   * Canvas の上で、ブロックの文字を直接書き換え始める(見出し・ボタン・テキストだけ)。始めたら true。
+   */
+  function startInlineEdit(id: string): boolean {
+    const node = findNode(state.content, id)
+
+    if (!node || !inlineProp(node)) {
+      return false
+    }
+
+    state.selectedId = id
+    state.editingId = id
+
+    return true
+  }
+
+  /**
+   * 直接の書き換えを終える。右のパネルの入力欄を作り直して、書き換えた値を出す。
+   */
+  function finishInlineEdit(): void {
+    if (state.editingId !== null) {
+      state.editingId = null
+      state.restoreCount++
+    }
   }
 
   /**
    * 選択中のブロックの親を選ぶ(ページの直下なら選択を外す)。
    */
   function selectParent(): void {
+    finishInlineEdit()
     if (state.selectedId) {
       state.selectedId = findLocation(state.content, state.selectedId)?.parent?.id ?? null
     }
@@ -250,5 +282,5 @@ export function editingActions(context: EditorContext) {
     endDrag()
   }
 
-  return { select, selectParent, add, addNearSelection, move, moveSelectedBy, remove, duplicate, copySelected, paste, undo, redo, canDropInto, drop, endDrag }
+  return { select, startInlineEdit, finishInlineEdit, selectParent, add, addNearSelection, move, moveSelectedBy, remove, duplicate, copySelected, paste, undo, redo, canDropInto, drop, endDrag }
 }

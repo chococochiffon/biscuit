@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
+import { inlineProp } from '../inline'
 import { useBuilderStore } from '../store'
 import { columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
@@ -10,6 +11,7 @@ import ResizeHandles from './ResizeHandles.vue'
 
 // Canvas のブロック 1 つ。クリックで選択し、マウスを乗せる・選択すると枠と名前を出す。
 // 名前の部分をつかんでドラッグすると別の場所へ移せ、選択中は前後への移動・複製・コピー・削除のボタンも出す。
+// 見出し・ボタン・テキストはダブルクリックで文字をその場で書き換えられる(InlineText・InlineRichText)。
 // 選択中は端につまみを出し、ドラッグで高さ・幅・内側の余白を変えられる(ResizeHandles)。
 // 表示条件の付いたブロックには右上に印を出し、選んでいる端末で表示しない・表示期間の外のブロックは薄く描く。
 // カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける
@@ -34,6 +36,16 @@ const PERIOD_TITLES = {
   active: t('表示する期間を指定しています。'),
   ended: t('表示期間を過ぎています(公開側には出ません)。'),
 }
+// 文字を直接書き換えられるブロック(見出し・ボタン・テキスト)。ダブルクリックか、名前の横のボタンで始める
+const canInlineEdit = computed(() => inlineProp(props.node) !== null)
+const isEditing = computed(() => store.state.editingId === props.node.id)
+
+function startInlineEdit(): void {
+  if (canInlineEdit.value && !isEditing.value) {
+    store.startInlineEdit(props.node.id)
+  }
+}
+
 const columnClass = computed(() => (props.node.type === 'column' ? `col-${columnSpan(props.node, store.state.device)}` : ''))
 
 function startDrag(event: DragEvent): void {
@@ -68,9 +80,10 @@ async function copy(): Promise<void> {
   <div
     ref="element"
     class="builder-node"
-    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'is-resizing': store.state.resizing?.id === node.id, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
+    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'is-editing': isEditing, 'is-resizing': store.state.resizing?.id === node.id, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
     :data-node-id="node.id"
     @click.stop="store.select(node.id)"
+    @dblclick.stop="startInlineEdit"
     @mouseover.stop="store.state.hoveredId = node.id"
   >
     <div v-if="isSelected || isHovered || isDragging" class="builder-node-bar" @click.stop>
@@ -85,6 +98,9 @@ async function copy(): Promise<void> {
         <i class="bi bi-grip-vertical" />{{ definition?.label ?? node.type }}
       </span>
       <template v-if="isSelected">
+        <button v-if="canInlineEdit && !isEditing" type="button" class="builder-node-button" :title="t('文字を編集') + ' (' + t('ダブルクリック') + ')'" @click="startInlineEdit">
+          <i class="bi bi-pencil" />
+        </button>
         <button type="button" class="builder-node-button" :title="t('前へ移動')" @click="store.moveSelectedBy(-1)">
           <i class="bi bi-arrow-up" />
         </button>
@@ -107,6 +123,6 @@ async function copy(): Promise<void> {
       <i v-if="period !== 'always'" class="bi bi-clock" :class="`is-${period}`" :title="PERIOD_TITLES[period]" />
     </div>
     <BlockPreview :node="node" class="builder-node-body" :class="node.classes" />
-    <ResizeHandles v-if="isSelected && element && !store.state.dragging" :node="node" :host="element" />
+    <ResizeHandles v-if="isSelected && element && !store.state.dragging && !isEditing" :node="node" :host="element" />
   </div>
 </template>
