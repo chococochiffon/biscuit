@@ -6,7 +6,7 @@
 <img src="https://img.shields.io/badge/-Docker-1488C6.svg?logo=docker&style=plastic" alt="">
 </p>
 
-Biscuit は、記事・固定ページ・ページビルダーを持つ CMS です。管理画面と API を Laravel(このリポジトリ)が、公開側のサイトを Nuxt の [chococo](https://github.com/chococochiffon/chococo) が受け持ちます。変更履歴は [CHANGELOG.md](CHANGELOG.md) にあります。
+Biscuit は、記事・固定ページ・ページビルダーを持つ CMS です。管理画面と API を Laravel(このリポジトリ)が、公開側のサイトを Nuxt の [chococo](https://github.com/chococochiffon/chococo) が受け持ちます。変更履歴は [CHANGELOG.md](CHANGELOG.md)、ページビルダーの使い方は [docs/builder.md](docs/builder.md) にあります。
 
 ## インストール(インストーラー)
 

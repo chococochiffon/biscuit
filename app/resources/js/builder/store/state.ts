@@ -64,6 +64,8 @@ export function createEditorState() {
     versionsOpen: false,
     // 書き出し・読み込みの画面を開いているか
     transferOpen: false,
+    // 使い方の画面を開いているか
+    helpOpen: false,
   })
 }
 
