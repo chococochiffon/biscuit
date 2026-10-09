@@ -18,6 +18,7 @@ use App\Models\PageBuilderTemplate;
 use App\Models\SiteSetting;
 use App\Providers\AppServiceProvider;
 use App\Support\Builder\BuilderContent;
+use App\Support\Builder\SchemaMigrator;
 use Database\Seeders\InstallSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Middleware\TrustProxies;
@@ -292,7 +293,7 @@ class InstallerStepsTest extends TestCase
         Storage::disk('public')->assertExists(SiteSetting::DEFAULT_SITE_ICON_PATH);
     }
 
-    public function test_design_step_creates_the_default_template_as_builder_content(): void
+    public function test_design_step_default_does_not_use_the_builder_on_the_top_page(): void
     {
         $this->seed(InstallSeeder::class);
         SiteSetting::query()->create(['site_title' => 'ビスケット商店', 'description' => '<b>手作り</b>のお菓子', 'site_icon' => SiteSetting::DEFAULT_SITE_ICON_PATH, 'site_image' => SiteSetting::DEFAULT_SITE_IMAGE_PATH]);
@@ -300,13 +301,15 @@ class InstallerStepsTest extends TestCase
 
         $this->post(route('installer.design.store'), ['design' => 'default'])->assertRedirect(route('installer.finalize'));
 
+        // トップにビルダーは使わず、デフォルトのひな形は公開しないで下書きに入れておく
         $builder = PageBuilder::top();
-        $this->assertTrue($builder->isPublished());
-        $this->assertSame(1, $builder->versions()->count());
-        $this->assertTrue(SiteSetting::current()->top_use_builder);
+        $this->assertFalse($builder->isPublished());
+        $this->assertSame(0, $builder->versions()->count());
+        $this->assertSame(SchemaMigrator::CURRENT_VERSION, $builder->draft_content['version']);
+        $this->assertFalse(SiteSetting::current()->top_use_builder);
         $this->assertTrue(LayoutBlock::query()->exists());
 
-        $nodes = iterator_to_array(BuilderContent::nodes($builder->published_content), false);
+        $nodes = iterator_to_array(BuilderContent::nodes($builder->draft_content), false);
         $texts = array_column(array_column($nodes, 'props'), 'text');
         $this->assertContains('ビスケット商店', $texts);
         $this->assertContains('新着記事', $texts);

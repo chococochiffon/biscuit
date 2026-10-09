@@ -819,7 +819,7 @@
     ":min 文字以上。初期のパスワード・よく使われるパスワードと、メールアドレス・表示名と同じ値は使えません。": "At least :min characters. Initial or commonly used passwords and the same value as the email address or display name are not allowed.",
     "サイトの見た目を決めます。": "Choose how the site looks.",
     "デフォルトのデザインを使う": "Use the default design",
-    "ヘッダー(サイト名・メニュー)、トップの大きな見出し(サイト名・説明)と新着記事、フッター(コピーライト)を用意します。インストールのあとに、管理画面のビルダーとレイアウト管理で自由に直せます。": "Creates a header (site name and menu), a large heading on the top page (site name and description) with the latest articles, and a footer (copyright). You can change them freely later with the builder and layout settings.",
+    "ヘッダー(サイト名・メニュー)とフッター(コピーライト)を用意し、トップは公開側の標準の表示(スライダー・呼び出しコンテンツ)にします。トップのビルダーには、大きな見出し(サイト名・説明)と新着記事の下書きを用意します。管理画面のビルダーで公開し、サイト設定の「トップでページビルダーを使う」を「使う」にすると、トップに表示されます。": "Creates a header (site name and menu) and a footer (copyright), and the top page uses the standard public display (slider and call contents). A draft with a large heading (site name and description) and the latest articles is prepared in the top page builder. To show it on the top page, publish it in the admin builder and set \"Use the page builder on the top page\" in the site settings to \"Use\".",
     "ビルダーで作る": "Build with the builder",
     "データベースに接続できる": "Database is reachable",
     "テーブルを用意した(マイグレーション)": "Tables are ready (migration)",

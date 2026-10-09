@@ -17,10 +17,12 @@ use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 /**
- * デザインの段: デフォルトテンプレート(installDefault())か、インストーラーのビルダーで作ったトップ(installBuilder())でサイトの見た目を作る。デフォルトの画面も Blade に書かず、ユーザーがビルダーで作るのと同じ
- * ビルダーの JSON(resources/installer/templates/default.json)にし、インストールのあとにビルダーでそのまま直せるようにする。
- * - ヘッダー(サイト名・ナビメニュー)・フッター(コピーライト・SNS リンク)は、レイアウト管理の初期値(LayoutSeeder)
- * - トップは Hero(サイト名・説明)と新着記事を、トップのビルダーの公開済みの内容にし、サイト設定でトップにビルダーを使う
+ * デザインの段: デフォルトのデザイン(installDefault())か、インストーラーのビルダーで作ったトップ(installBuilder())でサイトの見た目を作る。
+ * - ヘッダー(サイト名・ナビメニュー)・フッター(コピーライト・SNS リンク)は、どちらもレイアウト管理の初期値(LayoutSeeder)
+ * - デフォルトのデザインは、トップにビルダーを使わない(サイト設定の top_use_builder は false。公開側のトップは chococo の既定の表示)。
+ *   トップのビルダーには、Hero(サイト名・説明)と新着記事のひな形(resources/installer/templates/default.json)を下書きとして入れておき、
+ *   インストールのあとに管理画面のビルダーで直して公開し、サイト設定で使うにできるようにする
+ * - ビルダーで作ったトップは公開し、サイト設定でトップにビルダーを使う
  * テンプレートの {{site_title}}・{{site_description}}・{{latest_articles}} は差し込み、ブロックの ID は振り直す。
  */
 class TemplateInstaller
@@ -39,10 +41,18 @@ class TemplateInstaller
             throw new RuntimeException('Invalid default template: '.json_encode($errors, JSON_UNESCAPED_UNICODE));
         }
 
-        $builder = PageBuilder::top() ?? PageBuilder::newEmpty(BuilderPageType::Top);
-        $builder->draft_content = $this->validator->normalize($content);
-        $this->publishTop($builder, null);
-        InstallerLog::info('デフォルトテンプレートでトップとレイアウトを作りました。');
+        $this->seedLayout();
+
+        DB::transaction(function () use ($content) {
+            $builder = PageBuilder::top() ?? PageBuilder::newEmpty(BuilderPageType::Top);
+            $builder->draft_content = $this->validator->normalize($content);
+            $builder->schema_version = SchemaMigrator::CURRENT_VERSION;
+            $builder->save();
+            SiteSetting::current()?->update(['top_use_builder' => false]);
+        });
+
+        $this->state->markCompleted(InstallerStep::Design);
+        InstallerLog::info('デフォルトのデザインでレイアウトを作り、トップのビルダーに下書きを入れました(トップにビルダーは使わない)。');
     }
 
     /**
@@ -73,22 +83,27 @@ class TemplateInstaller
     /**
      * レイアウトの初期値(ヘッダー・フッター)を入れ、トップの下書きを公開してトップにビルダーを使い、デザインの段を済みにする。
      */
-    private function publishTop(PageBuilder $builder, ?Administrator $administrator): void
+    private function publishTop(PageBuilder $builder, Administrator $administrator): void
     {
-        Artisan::call('db:seed', ['--class' => LayoutSeeder::class, '--force' => true]);
+        $this->seedLayout();
 
         DB::transaction(function () use ($builder, $administrator) {
             $builder->publish();
             $builder->save();
-            $version = $builder->recordVersion($administrator?->id);
+            $version = $builder->recordVersion($administrator->id);
             SiteSetting::current()?->update(['top_use_builder' => true]);
-
-            if ($administrator !== null) {
-                AuditLogger::record(AuditAction::Published, $builder, BuilderPageType::Top->label(), metadata: ['version' => $version->id], actor: $administrator);
-            }
+            AuditLogger::record(AuditAction::Published, $builder, BuilderPageType::Top->label(), metadata: ['version' => $version->id], actor: $administrator);
         });
 
         $this->state->markCompleted(InstallerStep::Design);
+    }
+
+    /**
+     * レイアウトの初期値(ヘッダー・フッター)。部品が登録済みなら入れない(LayoutSeeder)。
+     */
+    private function seedLayout(): void
+    {
+        Artisan::call('db:seed', ['--class' => LayoutSeeder::class, '--force' => true]);
     }
 
     /**
