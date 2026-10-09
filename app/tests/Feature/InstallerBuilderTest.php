@@ -167,8 +167,22 @@ class InstallerBuilderTest extends TestCase
 
         $this->post(route('installer.design.store'), ['design' => 'default'])->assertRedirect(route('installer.finalize'));
 
-        $this->assertTrue(PageBuilder::top()->isPublished());
+        $this->assertFalse(PageBuilder::top()->isPublished());
+        $this->assertFalse(SiteSetting::current()->top_use_builder);
         $this->assertTrue(app(InstallationState::class)->isCompleted(InstallerStep::Design));
+    }
+
+    public function test_going_back_to_the_default_design_stops_using_the_builder_on_the_top_page(): void
+    {
+        $this->createAdministrator();
+        $this->putJson(route('installer.design.builder.json.update'), ['content' => $this->content()])->assertOk();
+        $this->post(route('installer.design.store'), ['design' => 'builder'])->assertRedirect(route('installer.finalize'));
+        $this->assertTrue(SiteSetting::current()->top_use_builder);
+
+        // デザインの段は戻って直せる。デフォルトにしたらトップにビルダーを使わない
+        $this->post(route('installer.design.store'), ['design' => 'default'])->assertRedirect(route('installer.finalize'));
+
+        $this->assertFalse(SiteSetting::current()->top_use_builder);
     }
 
     public function test_the_builder_is_closed_after_the_installation(): void
