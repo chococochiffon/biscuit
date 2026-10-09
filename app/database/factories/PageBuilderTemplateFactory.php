@@ -23,12 +23,12 @@ class PageBuilderTemplateFactory extends Factory
             'name' => fake()->words(2, true),
             'description' => fake()->sentence(),
             'schema_version' => SchemaMigrator::CURRENT_VERSION,
-            'content' => [
+            'content' => BuilderContent::withDefaultLayout([
                 'version' => SchemaMigrator::CURRENT_VERSION,
                 'children' => [
                     BuilderContent::node('section', children: [BuilderContent::node('heading', ['text' => fake()->sentence()])]),
                 ],
-            ],
+            ]),
         ];
     }
 }

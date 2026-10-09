@@ -23,12 +23,12 @@ class PageBuilderVersionTest extends TestCase
      */
     private function content(string $heading = '見出し'): array
     {
-        return [
+        return BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
                 BuilderContent::node('section', children: [BuilderContent::node('heading', ['text' => $heading])]),
             ],
-        ];
+        ]);
     }
 
     private function publishTop(PageBuilder $builder, string $heading): void

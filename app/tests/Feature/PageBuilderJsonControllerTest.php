@@ -24,12 +24,12 @@ class PageBuilderJsonControllerTest extends TestCase
      */
     private function content(string $heading = '見出し'): array
     {
-        return [
+        return BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
                 BuilderContent::node('section', children: [BuilderContent::node('heading', ['text' => $heading])]),
             ],
-        ];
+        ]);
     }
 
     public function test_guests_cannot_use_the_builder_json(): void
@@ -53,7 +53,7 @@ class PageBuilderJsonControllerTest extends TestCase
             ->assertJsonPath('page.id', $singlePage->id)
             ->assertJsonPath('page.title', '会社概要')
             ->assertJsonPath('page.use_builder', false)
-            ->assertJsonPath('content', ['version' => 1, 'children' => []])
+            ->assertJsonPath('content', ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => []])
             ->assertJsonPath('published', false)
             ->assertJsonPath('updated_at', null)
             ->assertJsonPath('registry.rootChildren', ['section', 'global'])
@@ -65,10 +65,10 @@ class PageBuilderJsonControllerTest extends TestCase
     public function test_show_returns_empty_props_and_styles_as_json_objects(): void
     {
         $this->actingAsAdmin();
-        PageBuilder::factory()->top()->create(['draft_content' => [
+        PageBuilder::factory()->top()->create(['draft_content' => BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [BuilderContent::node('section', children: [BuilderContent::node('divider')])],
-        ]]);
+        ])]);
 
         $json = $this->getJson(route('admin.json.builder.top.show'))->assertOk()->getContent();
 
@@ -111,6 +111,7 @@ class PageBuilderJsonControllerTest extends TestCase
             BuilderContent::node('heading', ['text' => '  前後に空白  ']),
             BuilderContent::node('text', ['html' => '<p onclick="alert(1)">本文<script>alert(1)</script></p>']),
         ]);
+        $content = BuilderContent::withDefaultLayout($content);
 
         $this->putJson(route('admin.json.builder.top.update'), ['content' => $content, 'updated_at' => null])->assertOk();
 

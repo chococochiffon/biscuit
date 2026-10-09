@@ -7,6 +7,18 @@ export type ResponsiveDevice = Exclude<Device, 'desktop'>
 
 export type BuilderStyles = Record<string, string>
 
+// 自由配置(内容の v2)のブロックの位置と大きさ(biscuit の Support\Builder\BuilderLayout)。
+// x・w は面の中身の幅に対する %(小数 2 桁まで)、y・h は px の整数。h は定義に layoutHeight のあるブロック(画像・ボックス)だけが持つ
+export interface LayoutBox {
+  x: number
+  y: number
+  w: number
+  h?: number
+}
+
+// 端末ごとの位置(デスクトップは必須。タブレットはなければデスクトップの値、スマートフォンはなければ縦 1 列に並べる)
+export type BuilderLayout = { desktop: LayoutBox } & Partial<Record<ResponsiveDevice, LayoutBox>>
+
 export interface BuilderNode {
   // 種類_ULID(例: heading_01K8...)
   id: string
@@ -20,6 +32,8 @@ export interface BuilderNode {
   exposed?: Record<string, string>
   // 追加のクラス名(Custom CSS から狙う。スーパー管理者だけが変えられる)
   classes?: string[]
+  // 自由配置(v2)の面(セクション・ボックス・独自コンポーネントの一番外側)の直下のブロックだけが持つ
+  layout?: BuilderLayout
   // 中にブロックを置ける種類だけが持つ
   children?: BuilderNode[]
 }
@@ -65,6 +79,8 @@ export interface BlockDefinition {
   styles: string[]
   // null はページの直下
   allowedParents: (string | null)[]
+  // 自由配置で高さ(layout の h)を持てるか(画像・ボックス)
+  layoutHeight?: boolean
 }
 
 // biscuit の BlockRegistry::toArray()
@@ -104,6 +120,8 @@ export interface Breadcrumb {
 
 export interface ShowPayload extends BuilderStatePayload {
   registry: Registry
+  // 内容の版ごとの定義(版 → 定義。編集している内容の版の定義を使う)
+  registries?: Record<string, Registry>
   image_base_url: string
   // 編集しているページのパンくず(トップは空)
   breadcrumbs: Breadcrumb[]
@@ -198,6 +216,8 @@ export type Dragging =
 
 // ドロップ先(parentId が null ならページの直下)。from は入れる位置を示している場所(Canvas とコンポーネントツリー)
 export interface DropTarget {
+  // 自由配置の面に新しいブロックを置くときの位置(離した場所)
+  layout?: BuilderLayout
   parentId: string | null
   index: number
   from?: 'canvas' | 'tree'

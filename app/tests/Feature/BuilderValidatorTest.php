@@ -21,7 +21,7 @@ class BuilderValidatorTest extends TestCase
     private static function content(): array
     {
         return [
-            'version' => SchemaMigrator::CURRENT_VERSION,
+            'version' => SchemaMigrator::LEGACY_VERSION,
             'children' => [
                 BuilderContent::node('section', styles: ['paddingTop' => '48px'], children: [
                     BuilderContent::node('container', children: [
@@ -46,7 +46,7 @@ class BuilderValidatorTest extends TestCase
     {
         $leaves = array_map(fn (string $type) => BuilderContent::node($type), ['heading', 'text', 'image', 'button', 'spacer', 'divider', 'video', 'article-list', 'navigation', 'breadcrumb', 'gallery']);
         $content = [
-            'version' => SchemaMigrator::CURRENT_VERSION,
+            'version' => SchemaMigrator::LEGACY_VERSION,
             'children' => [
                 BuilderContent::node('section', children: [
                     ...$leaves,
@@ -72,7 +72,7 @@ class BuilderValidatorTest extends TestCase
     {
         return [
             '内容がオブジェクトでない' => [fn () => 'not json', null],
-            '未対応の版' => [fn (array $content) => [...$content, 'version' => 2], null],
+            '未対応の版' => [fn (array $content) => [...$content, 'version' => SchemaMigrator::LATEST_VERSION + 1], null],
             'ルートに知らないキー' => [fn (array $content) => [...$content, 'html' => '<p>x</p>'], null],
             '定義にない種類' => [function (array $content) {
                 $content['children'][0]['type'] = 'script';
@@ -251,7 +251,7 @@ class BuilderValidatorTest extends TestCase
     public function test_rejects_too_many_blocks(): void
     {
         config(['limits.builder_nodes' => 3]);
-        $content = BuilderContent::empty();
+        $content = ['version' => SchemaMigrator::LEGACY_VERSION, 'children' => []];
         $content['children'][] = BuilderContent::node('section', children: array_map(fn () => BuilderContent::node('spacer'), range(1, 3)));
 
         $this->assertSame('ブロックの数が多すぎます(最大 3 個)。', (new BuilderValidator)->errors($content)[0]['message']);
@@ -263,7 +263,7 @@ class BuilderValidatorTest extends TestCase
         $button = BuilderContent::node('button');
         $button['props'] = ['text' => '送信'];
         $section = BuilderContent::node('section', children: [$text, $button], responsive: ['tablet' => [], 'mobile' => ['paddingTop' => '8px']]);
-        $content = ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [$section]];
+        $content = ['version' => SchemaMigrator::LEGACY_VERSION, 'children' => [$section]];
 
         $validator = new BuilderValidator;
         $this->assertSame([], $validator->errors($content));
@@ -278,7 +278,7 @@ class BuilderValidatorTest extends TestCase
 
     public function test_block_registry_exports_definitions_for_the_editor(): void
     {
-        $registry = BlockRegistry::toArray();
+        $registry = BlockRegistry::toArray(version: SchemaMigrator::LEGACY_VERSION);
 
         $this->assertSame(['section', 'global'], $registry['rootChildren']);
         $this->assertSame([null], $registry['blocks']['section']['allowedParents']);
@@ -303,7 +303,7 @@ class BuilderValidatorTest extends TestCase
 
         $this->assertSame($content, $migrator->migrate($content));
 
-        foreach ([0, SchemaMigrator::CURRENT_VERSION + 1, '1', null] as $version) {
+        foreach ([0, SchemaMigrator::LATEST_VERSION + 1, '1', null] as $version) {
             try {
                 $migrator->migrate([...$content, 'version' => $version]);
                 $this->fail('version '.json_encode($version).' should be rejected');

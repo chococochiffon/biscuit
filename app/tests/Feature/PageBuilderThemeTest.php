@@ -75,8 +75,8 @@ class PageBuilderThemeTest extends TestCase
 
     public function test_block_colors_accept_theme_colors(): void
     {
-        $heading = BuilderContent::node('heading', styles: ['color' => 'theme:primary', 'marginTop' => '8px']);
-        $content = ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [BuilderContent::node('section', styles: ['backgroundColor' => 'theme:light'], children: [$heading])]];
+        $heading = BuilderContent::node('heading', styles: ['color' => 'theme:primary', 'fontSize' => '24px']);
+        $content = BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [BuilderContent::node('section', styles: ['backgroundColor' => 'theme:light'], children: [$heading])]]);
 
         $this->assertSame([], (new BuilderValidator)->errors($content));
 

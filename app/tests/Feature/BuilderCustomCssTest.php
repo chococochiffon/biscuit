@@ -26,7 +26,7 @@ class BuilderCustomCssTest extends TestCase
      */
     private function content(array $children = [], ?string $css = null): array
     {
-        return ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => $children, ...($css === null ? [] : ['css' => $css])];
+        return BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => $children, ...($css === null ? [] : ['css' => $css])]);
     }
 
     public function test_accepts_safe_css(): void
@@ -133,6 +133,7 @@ class BuilderCustomCssTest extends TestCase
         $added = BuilderContent::node('text');
         $added['classes'] = ['added'];
         $changed['children'][0]['children'][] = $added;
+        $changed = BuilderContent::withDefaultLayout($changed);
         $this->putJson(route('admin.json.builder.single-pages.update', $singlePage), ['content' => $changed, 'updated_at' => $builder->updated_at->toIso8601String()])->assertOk();
 
         $draft = $builder->fresh()->draft_content;

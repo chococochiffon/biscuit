@@ -14,11 +14,13 @@ const props = defineProps<{
   node: BuilderNode
   // CanvasNode の要素(位置の基準。中のブロックの要素は .builder-node-body)
   host: HTMLElement
+  // 出すつまみ(省略するとすべて。自由配置のブロックは内側の余白だけ)
+  kinds?: ResizeKind[]
 }>()
 
 const store = useBuilderStore()
 
-const targets = computed(() => resizeTargets(props.node, store.definition(props.node.type)))
+const targets = computed(() => resizeTargets(props.node, store.definition(props.node.type)).filter(item => !props.kinds || props.kinds.includes(item.kind)))
 const target = (kind: ResizeKind) => targets.value.find(item => item.kind === kind)
 
 // つまみの位置(host の左上からの px)。ブロックの大きさ・スタイルが変わるたびに測り直す

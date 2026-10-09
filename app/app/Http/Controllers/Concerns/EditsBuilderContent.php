@@ -48,7 +48,7 @@ trait EditsBuilderContent
 
         DB::transaction(function () use ($builder, $content, $label, $afterSave) {
             $builder->draft_content = $content;
-            $builder->schema_version = SchemaMigrator::CURRENT_VERSION;
+            $builder->schema_version = $content['version'];
             $builder->save();
 
             if ($afterSave !== null) {
@@ -80,7 +80,7 @@ trait EditsBuilderContent
             $publishedNodes = $builder->isPublished() ? $this->countNodes($builder->published_content) : null;
 
             $builder->draft_content = $validator->normalize($draft);
-            $builder->schema_version = SchemaMigrator::CURRENT_VERSION;
+            $builder->schema_version = $builder->draft_content['version'];
             $builder->publish();
             $builder->save();
             $version = $builder->recordVersion(Auth::guard('admin')->id());

@@ -8,7 +8,7 @@ use stdClass;
 
 /**
  * ページビルダーの内容(ノードの木)を、管理画面のエディタ・公開側に返す形に整える。
- * どちらも SchemaMigrator で今の版にそろえ、props・styles・responsive は空でも JSON のオブジェクト({})で返す
+ * どちらも SchemaMigrator で変換できるところまで新しい版にそろえ(v1 は v1 のまま)、props・styles・responsive は空でも JSON のオブジェクト({})で返す
  * (PHP では空のオブジェクトが空の配列になり、そのままでは [] で返ってしまうため)。
  * 公開側に返すときは、画像の項目を公開ディスク基準のパスから公開 URL に置き換え、CMS のデータを表示するブロック(記事一覧・ナビゲーション)には
  * 取得の条件どおりのデータを data に入れる(保存する内容には条件だけを持ち、データは返すときに BlockDataResolver で取得する)。
@@ -138,6 +138,11 @@ final class BuilderPresenter
             $presented['visibility'] = ['hideOn' => $visibility['hideOn']];
         } elseif (! $forPublic && $visibility !== []) {
             $presented['visibility'] = self::object($visibility);
+        }
+
+        // 自由配置(v2)の位置と大きさ(端末ごと)
+        if (($node['layout'] ?? []) !== []) {
+            $presented['layout'] = self::object(array_map(self::object(...), $node['layout']));
         }
 
         // ブロックの追加のクラス名(Custom CSS から狙う)

@@ -2,6 +2,7 @@
 
 namespace App\Support\Builder;
 
+use App\Enums\BuilderContext;
 use Generator;
 use Illuminate\Support\Str;
 
@@ -9,7 +10,8 @@ use Illuminate\Support\Str;
  * ページビルダーの内容(ノードの木の JSON)を組み立てる・たどるための処理。
  *
  * 内容は { "version": 1, "children": [ノード, ...] } の形で、ノードは
- * { "id": "種類_ULID", "type": 種類, "props": {...}, "styles": {...}, "responsive"?: { "tablet"?: {...}, "mobile"?: {...} }, "children"?: [...] }。
+ * { "id": "種類_ULID", "type": 種類, "props": {...}, "styles": {...}, "responsive"?: { "tablet"?: {...}, "mobile"?: {...} }, "layout"?: {...}, "children"?: [...] }。
+ * layout は自由配置(v2)の面の直下のブロックの位置と大きさ(BuilderLayout)。
  * children は中にブロックを置ける種類(BlockRegistry の children が空でないもの)だけが持つ。
  */
 final class BuilderContent
@@ -22,6 +24,13 @@ final class BuilderContent
     /**
      * 画像の props に入れられるパス(public ディスクの image/ 配下の画像。.. などで外へ出られないよう、ディレクトリ名に . を許さない)。
      */
+    /**
+     * withDefaultLayout() で縦に並べるときの間と、高さの見込み(px)。
+     */
+    private const STACK_GAP = 16;
+
+    private const ESTIMATED_HEIGHT = 80;
+
     public const IMAGE_PATH_PATTERN = '#\Aimage/(?:[A-Za-z0-9_\-]+/)*[A-Za-z0-9_\-]+\.(?:png|jpe?g|gif|webp)\z#';
 
     /**
@@ -49,9 +58,10 @@ final class BuilderContent
      * @param  array<string, string>  $styles
      * @param  list<array<string, mixed>>  $children
      * @param  array<string, array<string, string>>  $responsive
+     * @param  array<string, array<string, int|float>>  $layout  自由配置(v2)の位置と大きさ(BuilderLayout)
      * @return array<string, mixed>
      */
-    public static function node(string $type, array $props = [], array $styles = [], array $children = [], array $responsive = []): array
+    public static function node(string $type, array $props = [], array $styles = [], array $children = [], array $responsive = [], array $layout = []): array
     {
         $node = [
             'id' => self::newId($type),
@@ -64,11 +74,54 @@ final class BuilderContent
             $node['responsive'] = $responsive;
         }
 
+        if ($layout !== []) {
+            $node['layout'] = $layout;
+        }
+
         if ((BlockRegistry::get($type)['children'] ?? []) !== []) {
             $node['children'] = $children;
         }
 
         return $node;
+    }
+
+    /**
+     * 自由配置(v2)の面の直下で位置を持たないブロックに、上から順に縦に並べた位置(幅いっぱい・高さの見込み ESTIMATED_HEIGHT ごと)を入れる
+     * (シーダー・テスト用。エディタでは layout.ts の syncLayouts() が同じように補う)。v1 の内容はそのまま返す。
+     *
+     * @param  array<string, mixed>  $content
+     * @return array<string, mixed>
+     */
+    public static function withDefaultLayout(array $content, BuilderContext $context = BuilderContext::Page): array
+    {
+        $version = $content['version'] ?? SchemaMigrator::CURRENT_VERSION;
+
+        $place = function (array $children, ?string $parentType) use (&$place, $context, $version): array {
+            $free = BlockRegistry::isFreeSurface($parentType, $context, $version);
+            $y = self::STACK_GAP;
+
+            foreach ($children as $index => $node) {
+                if ($free && ! isset($node['layout'])) {
+                    $node['layout'] = ['desktop' => ['x' => 0, 'y' => $y, 'w' => 100]];
+                }
+
+                if ($free) {
+                    $y = max($y, $node['layout']['desktop']['y'] + ($node['layout']['desktop']['h'] ?? self::ESTIMATED_HEIGHT) + self::STACK_GAP);
+                }
+
+                if (isset($node['children'])) {
+                    $node['children'] = $place($node['children'], $node['type']);
+                }
+
+                $children[$index] = $node;
+            }
+
+            return $children;
+        };
+
+        $content['children'] = $place($content['children'] ?? [], null);
+
+        return $content;
     }
 
     /**

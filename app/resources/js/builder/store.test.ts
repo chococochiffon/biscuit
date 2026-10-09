@@ -12,7 +12,8 @@ function block(children: string[], props: BlockDefinition['props'] = {}): BlockD
 const registry: Registry = {
   rootChildren: ['section'],
   blocks: {
-    section: block(['row', 'heading']),
+    section: block(['container', 'row', 'heading']),
+    container: block(['row', 'heading']),
     row: block(['column']),
     column: block(['heading'], { span: { label: '', type: 'int', default: 12, min: 1, max: 12 } }),
     heading: block([], { text: { label: '', type: 'string', default: '見出し' } }),
@@ -156,6 +157,25 @@ describe('builder store', () => {
     expect(store.state.canRedo).toBe(true)
     store.redo()
     expect(store.state.content.children[0].children).toHaveLength(1)
+  })
+
+  it('ひな形のセクションを位置を指定して置き、選ぶ。元に戻せる', async () => {
+    const { store } = await loadedStore()
+    store.add('section', null, 0)
+    store.state.sectionInsertIndex = 0
+
+    expect(store.addSection('blank', 0)).toBe(true)
+    const added = store.state.content.children[0]
+    expect(store.state.content.children).toHaveLength(2)
+    expect(added.children![0].type).toBe('container')
+    expect(store.state.selectedId).toBe(added.id)
+    expect(store.state.sectionInsertIndex).toBeNull()
+
+    // 定義にないブロックを使うひな形は置かない
+    expect(store.addSection('text', 0)).toBe(false)
+
+    store.undo()
+    expect(store.state.content.children).toHaveLength(1)
   })
 
   it('行にカラムを足すと幅をそろえる', async () => {
@@ -383,7 +403,7 @@ describe('builder store', () => {
     const { store } = await loadedStore(api)
     const template: BuilderTemplate = { id: 1, name: 'LP', description: null, content: { version: 1, children: [section], css: '.t{}' } } as BuilderTemplate
 
-    store.applyTemplate(template)
+    await store.applyTemplate(template)
     expect(store.state.content.children[0].id).not.toBe(section.id)
     expect(store.state.content.css).toBe('.t{}')
     expect(store.state.selectedId).toBeNull()
@@ -402,7 +422,7 @@ describe('builder store', () => {
 
     // CSS を書けない人は、CSS を置き換えない
     store.state.canEditCss = false
-    store.applyTemplate(template)
+    await store.applyTemplate(template)
     expect(store.state.content.css).toBe('.v{}')
 
     api.importFile.mockRejectedValueOnce(new ApiError(422, { message: '形が違います' }))
@@ -451,5 +471,111 @@ describe('builder store', () => {
     expect(store.imageUrl('image/builder/a.png')).toBe('https://admin.example.com/storage/image/builder/a.png')
     expect(store.imageUrl('')).toBeNull()
     expect(store.imageUrl(null)).toBeNull()
+  })
+})
+
+// 自由配置(v2)の定義(biscuit の BlockRegistry::toArray(version: 2) のうち、テストに使う部分)
+const freeRegistry: Registry = {
+  rootChildren: ['section'],
+  blocks: {
+    section: block(['box', 'heading']),
+    box: { ...block(['box', 'heading']), layoutHeight: true },
+    heading: block([], { text: { label: '', type: 'string', default: '見出し' } }),
+  },
+  styles: {},
+}
+
+function freeApi(content: BuilderContent = { version: 1, children: [] }) {
+  return fakeApi({ show: vi.fn(async () => ({ ...showPayload(content), registries: { 1: registry, 2: freeRegistry } })) })
+}
+
+describe('builder store(自由配置)', () => {
+  it('何も置いていないページは v2 で始め、v1 のページは v2 に変換して知らせる(変換は元に戻せない)', async () => {
+    const { store } = await loadedStore(freeApi())
+    expect(store.state.content.version).toBe(2)
+    expect(store.state.registry).toEqual(freeRegistry)
+    expect(store.state.dirty).toBe(false)
+
+    const heading = createNode(registry, 'heading')
+    const v1 = await loadedStore(freeApi({ version: 1, children: [{ ...createNode(registry, 'section'), children: [heading] }] }))
+    expect(v1.store.state.content.version).toBe(2)
+    expect(v1.store.state.registry).toEqual(freeRegistry)
+    // 測れない(画面がない)ときは、上から順に縦に並べる
+    expect(v1.store.state.content.children[0].children![0]).toMatchObject({ id: heading.id, layout: { desktop: { x: 0, y: 16, w: 100 } } })
+    expect(v1.store.state.dirty).toBe(true)
+    expect(v1.store.state.message?.type).toBe('warning')
+    expect(v1.store.state.canUndo).toBe(false)
+  })
+
+  it('面に置いたブロックは位置を持ち、位置は数値で変えられる', async () => {
+    const { store } = await loadedStore(freeApi())
+    store.add('section', null, 0)
+    const section = store.state.content.children[0]
+
+    store.add('heading', section.id, 0)
+    store.add('box', section.id, 1, {}, { desktop: { x: 10, y: 200, w: 30 } })
+    const [heading, box] = section.children!
+    expect(heading.layout).toEqual({ desktop: { x: 0, y: 16, w: 60 } })
+    expect(box.layout).toEqual({ desktop: { x: 10, y: 200, w: 30 } })
+    expect(store.isFreeChild(heading.id)).toBe(true)
+    expect(store.isFreeChild(section.id)).toBe(false)
+
+    expect(store.updateLayout(heading.id, 'desktop', { x: 70 })).toBe(true)
+    // 幅の分だけ右を空ける
+    expect(heading.layout!.desktop.x).toBe(40)
+
+    store.undo()
+    expect(store.state.content.children[0].children![0].layout!.desktop.x).toBe(0)
+  })
+
+  it('動かし終えたら別の面へ移し、端末だけの位置は作る・自動に戻すことができる', async () => {
+    const { store } = await loadedStore(freeApi())
+    store.add('section', null, 0)
+    const sectionId = store.state.content.children[0].id
+    store.add('box', sectionId, 0)
+    store.add('heading', sectionId, 1)
+    const [box, heading] = store.state.content.children[0].children!
+
+    const snapshot = store.beginLiveEdit()
+    store.liveEdit(heading.id, (node) => {
+      store.setLiveBox(node, 'desktop', { x: 5, y: 30, w: 50 })
+
+      return true
+    })
+    expect(store.reparentLive(heading.id, box.id, 'desktop', { x: 10, y: 20, w: 80 })).toBe(true)
+    store.endLiveEdit(snapshot, heading.id)
+
+    const moved = store.state.content.children[0].children![0].children![0]
+    expect(moved.layout).toEqual({ desktop: { x: 10, y: 20, w: 80 } })
+    expect(store.state.content.children[0].children).toHaveLength(1)
+
+    // スマートフォンだけの位置を作り、自動に戻す
+    const section = store.state.content.children[0]
+    store.materializeDevice(sectionId, 'mobile', { [section.children![0].id]: { x: 4, y: 16, w: 92, h: 200 } })
+    expect(section.children![0].layout!.mobile).toEqual({ x: 4, y: 16, w: 92, h: 200 })
+    expect(store.resetDeviceLayout(sectionId, 'mobile')).toBe(true)
+    expect(store.state.content.children[0].children![0].layout!.mobile).toBeUndefined()
+
+    store.undo()
+    store.undo()
+    expect(store.state.content.children[0].children).toHaveLength(2)
+  })
+
+  it('v1 のテンプレートは v2 に変換して使い、測った位置で置く(元に戻すと戻る)', async () => {
+    const { store } = await loadedStore(freeApi())
+    const section = { ...createNode(registry, 'section'), children: [createNode(registry, 'heading')] }
+    const template: BuilderTemplate = { id: 1, name: '会社概要', description: null, node_count: 2, content: { version: 1, children: [section] } }
+    // テンプレートのブロックは ID を振り直してから測る
+    store.setMeasurer(async () => (id: string) => (id.startsWith('heading_') || id.startsWith('section_')
+      ? { rect: { left: id.startsWith('section_') ? 0 : 120, top: 40, width: id.startsWith('section_') ? 1200 : 600, height: 50 }, content: { left: 0, top: 0, width: 1200, height: 400 } }
+      : null))
+
+    await store.applyTemplate(template)
+    expect(store.state.content.version).toBe(2)
+    expect(store.state.registry).toEqual(freeRegistry)
+    expect(store.state.content.children[0].children![0].layout).toEqual({ desktop: { x: 10, y: 40, w: 50 } })
+
+    store.undo()
+    expect(store.state.content.children).toEqual([])
   })
 })

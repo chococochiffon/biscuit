@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Enums\BuilderContext;
 use App\Support\Builder\BuilderValidator;
+use App\Support\Builder\SchemaMigrator;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
@@ -13,6 +14,7 @@ use Illuminate\Validation\Validator;
  * ノードを特定できるエラーは nodes.{ノードの ID}、それ以外は content のキーで返す(エディタがそのノードを選択して知らせる)。
  * updated_at は画面を開いた(または最後に保存した)ときの更新日時で、ほかの管理者が先に保存していないかの確認に使う。
  * 内容は送られたとおりに検証するため、空文字の null への変換と前後の空白の削除は bootstrap/app.php で止めている。
+ * 行・カラムで流し込む配置(v1)の内容は保存しない(エディタが開いたときに自由配置(v2)へ変換する。公開中の v1 はそのまま公開側に出る)。
  */
 class SavePageBuilderRequest extends FormRequest
 {
@@ -47,6 +49,12 @@ class SavePageBuilderRequest extends FormRequest
         return [
             function (Validator $validator) {
                 if ($validator->errors()->has('content')) {
+                    return;
+                }
+
+                if ($this->input('content.version') === SchemaMigrator::LEGACY_VERSION) {
+                    $validator->errors()->add('content', __('行・カラムで並べる形式の内容は保存できません。画面を読み込み直すと、自由配置に変換します。'));
+
                     return;
                 }
 

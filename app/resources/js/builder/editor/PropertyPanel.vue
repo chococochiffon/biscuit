@@ -9,6 +9,8 @@ import VisibilityFields from '../fields/VisibilityFields.vue'
 import ClassesField from '../fields/ClassesField.vue'
 import CustomFields from '../fields/CustomFields.vue'
 import ExposeField from '../fields/ExposeField.vue'
+import LayoutFields from '../fields/LayoutFields.vue'
+import { FREE_CHILD_EXCLUDED_STYLES } from '../layout'
 import { isExposable } from '../custom'
 import { styleGroups } from '../fields/styleLabels'
 
@@ -22,10 +24,13 @@ const definition = computed(() => (node.value ? store.definition(node.value.type
 const ancestors = computed(() => (node.value ? ancestorsOf(store.state.content, node.value.id) : []))
 const tab = ref<'content' | 'style' | 'visibility'>('content')
 
+// 自由配置の面の直下のブロックか(位置と大きさの欄を出し、上下の外側の余白・幅のスタイルは出さない)
+const isFreeChild = computed(() => (node.value ? store.isFreeChild(node.value.id) : false))
+
 // ブロックで使えるスタイルを、まとまりごとに並べる
 const groups = computed(() =>
   styleGroups()
-    .map(group => ({ ...group, styles: group.styles.filter(name => definition.value?.styles.includes(name)) }))
+    .map(group => ({ ...group, styles: group.styles.filter(name => definition.value?.styles.includes(name) && !(isFreeChild.value && FREE_CHILD_EXCLUDED_STYLES.includes(name))) }))
     .filter(group => group.styles.length > 0),
 )
 
@@ -94,6 +99,7 @@ const errors = computed(() => (node.value ? store.state.errors[`nodes.${node.val
             {{ t('空欄の項目は、大きい画面の値を引き継ぎます。') }}
           </template>
         </p>
+        <LayoutFields v-if="isFreeChild" :key="fieldKey('layout')" :node="node" />
         <section v-for="group in groups" :key="group.label" class="mb-3">
           <h3 class="builder-panel-heading">{{ group.label }}</h3>
           <StyleField

@@ -1,8 +1,10 @@
 import { ApiError, type BuilderApi } from '../api'
 import { createHistory } from '../history'
 import { t } from '../i18n'
+import { convertToFree, type Measure } from '../convert'
+import { FREE_LAYOUT_VERSION, syncLayouts } from '../layout'
 import { equalizeColumns, findNode } from '../nodes'
-import type { BuilderNode, BuilderStatePayload } from '../types'
+import type { BuilderContent, BuilderNode, BuilderStatePayload } from '../types'
 import { createEditorState } from './state'
 
 /**
@@ -18,10 +20,62 @@ export function errorMessage(error: unknown, fallback: string): string {
 export function createEditorContext(api: BuilderApi) {
   const state = createEditorState()
   const history = createHistory()
+  // v1 の内容を画面の外で描いて測る処理(ConversionStage が登録する。なければ測らずに変換する)
+  let measurer: ((content: BuilderContent) => Promise<Measure>) | null = null
+
+  function setMeasurer(value: ((content: BuilderContent) => Promise<Measure>) | null): void {
+    measurer = value
+  }
+
+  /**
+   * 行・カラムで流し込む配置(v1)の内容を、自由配置(v2)の内容にする(v2 の内容・v2 の定義がないエディタではそのまま返す)。
+   * 今の見た目を保つため、画面の外で 1200px で描いて測った位置を使う(convert.ts)。
+   */
+  async function toFreeLayout(content: BuilderContent): Promise<BuilderContent> {
+    const registry = state.registries[String(FREE_LAYOUT_VERSION)]
+
+    if (content.version >= FREE_LAYOUT_VERSION || !registry) {
+      return content
+    }
+
+    let measure: Measure = () => null
+
+    if (measurer) {
+      try {
+        measure = await measurer(content)
+      }
+      catch {
+        // 測れなければ、上から順に縦に並べる
+      }
+    }
+
+    return convertToFree(content, registry, measure, hasFreeRoot())
+  }
 
   function syncHistory(): void {
     state.canUndo = history.canUndo()
     state.canRedo = history.canRedo()
+  }
+
+  /**
+   * 編集している内容の版の定義を使う(テンプレート・版の履歴・元に戻すなどで内容の版が変わることがある)。
+   */
+  function syncRegistry(): void {
+    state.registry = state.registries[String(state.content.version)] ?? state.registry
+  }
+
+  /**
+   * 独自コンポーネントの一番外側が自由配置の面か(独自コンポーネントのエディタだけ)。
+   */
+  function hasFreeRoot(): boolean {
+    return state.page?.kind === 'custom'
+  }
+
+  /**
+   * 内容を自由配置の決まりにそろえる(v2 の内容だけ。面の直下のブロックの位置・端末ごとの位置のそろいなど。layout.ts)。
+   */
+  function normalizeLayouts(): void {
+    syncLayouts(state.content, state.registry, hasFreeRoot())
   }
 
   function changed(): void {
@@ -41,6 +95,7 @@ export function createEditorContext(api: BuilderApi) {
       return false
     }
 
+    normalizeLayouts()
     history.record(snapshot, key)
     syncHistory()
     changed()
@@ -52,6 +107,7 @@ export function createEditorContext(api: BuilderApi) {
    * すでに変えた内容を、snapshot(変える前の内容)から 1 回の操作として履歴に積む(ドラッグで大きさを変えたあとなど)。
    */
   function recordChange(snapshot: string): void {
+    normalizeLayouts()
     history.record(snapshot, null)
     syncHistory()
     changed()
@@ -77,6 +133,7 @@ export function createEditorContext(api: BuilderApi) {
    */
   function restore(snapshot: string): void {
     state.content = JSON.parse(snapshot)
+    syncRegistry()
     state.restoreCount++
     clearMissingSelection()
     syncHistory()
@@ -118,6 +175,7 @@ export function createEditorContext(api: BuilderApi) {
 
     if (replaceContent) {
       state.content = payload.content
+      syncRegistry()
       state.dirty = false
       clearMissingSelection()
     }
@@ -125,10 +183,15 @@ export function createEditorContext(api: BuilderApi) {
 
   /**
    * 内容を置き換える(テンプレート・版・ファイルの読み込み。元に戻せる)。選択を外して、message を出す。
+   * 内容の版も置き換え、その版の定義に切り替える(v1 のテンプレートを使うと v1 のページになる)。
    * Custom CSS は書ける人のときだけ置き換える(ほかの管理者の保存では biscuit が今の CSS を保つため、画面だけ変わらないようにする)。
    */
-  function replaceContent(children: BuilderNode[], css: string | undefined, message: string): void {
+  function replaceContent(content: Pick<BuilderContent, 'version' | 'children' | 'css'>, message: string): void {
+    const { children, css } = content
+
     mutate(null, () => {
+      state.content.version = content.version
+      syncRegistry()
       state.content.children = children
 
       if (state.canEditCss) {
@@ -179,7 +242,7 @@ export function createEditorContext(api: BuilderApi) {
     return state.selectedId ? findNode(state.content, state.selectedId) : null
   }
 
-  return { api, state, history, syncHistory, mutate, recordChange, mutateNode, restore, equalizeIfAddedToRow, applyState, replaceContent, handleError, definition, selectedNode }
+  return { api, state, history, syncHistory, syncRegistry, hasFreeRoot, setMeasurer, toFreeLayout, markChanged: changed, mutate, recordChange, mutateNode, restore, equalizeIfAddedToRow, applyState, replaceContent, handleError, definition, selectedNode }
 }
 
 export type EditorContext = ReturnType<typeof createEditorContext>

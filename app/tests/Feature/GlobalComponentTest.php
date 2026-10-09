@@ -24,7 +24,7 @@ class GlobalComponentTest extends TestCase
      */
     private function content(array $children): array
     {
-        return ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => $children];
+        return BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => $children]);
     }
 
     /**

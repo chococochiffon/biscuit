@@ -3,11 +3,14 @@ import { onBeforeUnmount, onMounted, provide, watch } from 'vue'
 import { createApi } from '../api'
 import { t } from '../i18n'
 import { builderStoreKey, createBuilderStore } from '../store'
-import type { EditorConfig } from '../types'
+import type { EditorConfig, LayoutBox } from '../types'
 import BuilderCanvas from './BuilderCanvas.vue'
+import ConversionStage from './ConversionStage.vue'
+import { surfaceFrame } from './freeGeometry'
 import BuilderToolbar from './BuilderToolbar.vue'
 import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
+import SectionDialog from './SectionDialog.vue'
 import TemplateDialog from './TemplateDialog.vue'
 import CssDialog from './CssDialog.vue'
 import HelpDialog from './HelpDialog.vue'
@@ -60,7 +63,7 @@ function confirmLeave(event: BeforeUnloadEvent): void {
 }
 
 function dialogOpen(): boolean {
-  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen || store.state.helpOpen
+  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen || store.state.helpOpen || store.state.sectionInsertIndex !== null
 }
 
 // キーボードの操作: Ctrl+S で下書き保存。入力欄の外では Ctrl+Z/Ctrl+Shift+Z(Ctrl+Y)で元に戻す/やり直す、
@@ -70,7 +73,7 @@ function handleKeydown(event: KeyboardEvent): void {
   const withModifier = event.ctrlKey || event.metaKey
   const key = event.key.toLowerCase()
 
-  // テンプレート・版の履歴・書き出しと読み込みの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
+  // セクションの追加・テンプレート・版の履歴・書き出しと読み込みの画面を開いているあいだは、Esc で閉じるだけにする(後ろのブロックを消したりしない)
   if (dialogOpen()) {
     if (event.key === 'Escape') {
       store.state.templatesOpen = false
@@ -78,6 +81,7 @@ function handleKeydown(event: KeyboardEvent): void {
       store.state.transferOpen = false
       store.state.cssOpen = false
       store.state.helpOpen = false
+      store.state.sectionInsertIndex = null
     }
 
     return
@@ -106,6 +110,12 @@ function handleKeydown(event: KeyboardEvent): void {
     return
   }
 
+  if (event.key.startsWith('Arrow') && !withModifier && nudgeSelected(event)) {
+    event.preventDefault()
+
+    return
+  }
+
   if ((event.key === 'Delete' || event.key === 'Backspace') && store.state.selectedId) {
     event.preventDefault()
     store.remove(store.state.selectedId)
@@ -113,6 +123,43 @@ function handleKeydown(event: KeyboardEvent): void {
   else if (event.key === 'Escape') {
     store.selectParent()
   }
+}
+
+// 矢印キー: 自由配置のブロックを 1px(Shift と一緒なら 10px)動かす。入力欄の中・文字を書き換えている間は動かさない。
+// スマートフォンで縦 1 列に並べている面では動かさない(ドラッグで、その端末だけの位置にしてから動かす)。動かしたら true
+function nudgeSelected(event: KeyboardEvent): boolean {
+  const target = event.target as HTMLElement | null
+  const id = store.state.selectedId
+
+  if (!id || store.state.editingId !== null || target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || !store.isFreeChild(id)) {
+    return false
+  }
+
+  const device = store.state.device
+  const node = store.selectedNode()
+  const box = device === 'desktop' ? node?.layout?.desktop : node?.layout?.[device]
+  const surface = document.querySelector<HTMLElement>(`[data-node-id="${id}"]`)?.parentElement
+
+  if (!box || !surface) {
+    return false
+  }
+
+  const step = event.shiftKey ? 10 : 1
+  const width = surfaceFrame(surface).width
+  const moves: Record<string, Partial<LayoutBox>> = {
+    ArrowLeft: { x: box.x - (step / width) * 100 },
+    ArrowRight: { x: box.x + (step / width) * 100 },
+    ArrowUp: { y: box.y - step },
+    ArrowDown: { y: box.y + step },
+  }
+
+  if (!(event.key in moves)) {
+    return false
+  }
+
+  store.updateLayout(id, device, moves[event.key])
+
+  return true
 }
 
 // コピー・切り取り・貼り付け(Ctrl+C/Ctrl+X/Ctrl+V): 入力欄の外では、選択中のブロックを(子ごと)システムのクリップボードに入れ、
@@ -207,10 +254,13 @@ onBeforeUnmount(() => {
       <BuilderCanvas />
       <PropertyPanel />
     </div>
+    <SectionDialog v-if="store.state.sectionInsertIndex !== null" />
     <TemplateDialog v-if="store.state.templatesOpen" />
     <VersionDialog v-if="store.state.versionsOpen" />
     <TransferDialog v-if="store.state.transferOpen" />
     <CssDialog v-if="store.state.cssOpen" />
     <HelpDialog v-if="store.state.helpOpen" />
+    <!-- 行・カラムの内容(v1)を自由配置に変換するとき、画面の外で描いて測る -->
+    <ConversionStage />
   </div>
 </template>

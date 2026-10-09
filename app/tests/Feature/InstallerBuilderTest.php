@@ -64,10 +64,10 @@ class InstallerBuilderTest extends TestCase
      */
     private function content(string $heading = 'ようこそ'): array
     {
-        return [
+        return BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [BuilderContent::node('section', children: [BuilderContent::node('heading', ['text' => $heading])])],
-        ];
+        ]);
     }
 
     public function test_the_session_that_created_the_administrator_can_build_and_publish_the_top_page(): void

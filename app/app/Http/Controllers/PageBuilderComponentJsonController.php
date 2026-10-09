@@ -48,6 +48,7 @@ class PageBuilderComponentJsonController extends Controller
         return response()->json([
             ...$this->state($pageBuilderComponent),
             'registry' => BlockRegistry::toArray($pageBuilderComponent->kind->context()),
+            'registries' => BlockRegistry::toArraysByVersion($pageBuilderComponent->kind->context()),
             'image_base_url' => Storage::disk('public')->url(''),
             'gallery_categories' => GalleryCategory::query()->ordered()->get(['id', 'name']),
             'timezone' => config('app.timezone'),

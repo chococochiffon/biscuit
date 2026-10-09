@@ -2,11 +2,14 @@
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { inlineProp } from '../inline'
+import { deviceBox, isStacked, layoutStyle } from '../layout'
 import { useBuilderStore } from '../store'
 import { columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
 import { isHiddenOn, periodState } from '../visibility'
 import BlockPreview from './BlockPreview.vue'
+import FreeResizeHandles from './FreeResizeHandles.vue'
+import { startFreeMove, type FreePlacement } from './freeMove'
 import QuickBar from './QuickBar.vue'
 import ResizeHandles from './ResizeHandles.vue'
 
@@ -15,9 +18,12 @@ import ResizeHandles from './ResizeHandles.vue'
 // 見出し・ボタン・テキストはダブルクリックで文字をその場で書き換えられる(InlineText・InlineRichText)。
 // 選択中は右上によく使う項目の操作バー(QuickBar)、端につまみを出し、ドラッグで高さ・幅・内側の余白を変えられる(ResizeHandles)。
 // 表示条件の付いたブロックには右上に印を出し、選んでいる端末で表示しない・表示期間の外のブロックは薄く描く。
-// カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける
+// カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける。
+// 自由配置の面(FreeSurface)の直下のブロック(placement があるもの)は、この要素を面の中の位置に置き、ブロックの本体・名前の部分をドラッグして動かす
+// (HTML5 のドラッグではなく freeMove.ts)。大きさは FreeResizeHandles で変え、名前の横のボタンは前面へ・背面へになる
 const props = defineProps<{
   node: BuilderNode
+  placement?: FreePlacement
 }>()
 
 const store = useBuilderStore()
@@ -48,6 +54,33 @@ function startInlineEdit(): void {
 }
 
 const columnClass = computed(() => (props.node.type === 'column' ? `col-${columnSpan(props.node, store.state.device)}` : ''))
+
+// 自由配置の面の中の位置(公開側と同じ置き方)と、高さを持つか(画像はその高さに切り抜き、ボックスは最小の高さ)
+const isFree = computed(() => props.placement !== undefined)
+const freeStyle = computed(() => (props.placement ? layoutStyle(props.node, props.placement.siblings, store.state.device) : undefined))
+const hasFreeHeight = computed(() => {
+  if (!props.placement) {
+    return false
+  }
+
+  return (isStacked(props.placement.siblings, store.state.device) ? props.node.layout?.desktop : deviceBox(props.node, store.state.device))?.h !== undefined
+})
+
+/**
+ * 自由配置のブロックを、本体・名前の部分のドラッグで動かす(文字を書き換えている間・つまみ・ボタン・入力欄の上では動かさない)。
+ */
+function onPointerDown(event: PointerEvent): void {
+  const target = event.target as HTMLElement | null
+
+  if (!props.placement || !element.value || event.button !== 0 || isEditing.value
+    || target?.closest('.builder-node-button, .builder-quickbar, .builder-free-handle, .builder-resize-handle, .builder-resize-padding, input, textarea, select, [contenteditable="true"]')) {
+    return
+  }
+
+  // 中の自由配置のブロックが先に受けたら、外側のブロックは動かさない
+  event.stopPropagation()
+  startFreeMove(store, props.node, element.value, props.placement, event)
+}
 
 function startDrag(event: DragEvent): void {
   event.stopPropagation()
@@ -81,8 +114,10 @@ async function copy(): Promise<void> {
   <div
     ref="element"
     class="builder-node"
-    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'is-editing': isEditing, 'is-resizing': store.state.resizing?.id === node.id, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
+    :class="[columnClass, { 'is-free': isFree, 'has-height': hasFreeHeight, 'is-image': node.type === 'image', 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'is-editing': isEditing, 'is-resizing': store.state.resizing?.id === node.id, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
     :data-node-id="node.id"
+    :style="freeStyle"
+    @pointerdown="onPointerDown"
     @click.stop="store.select(node.id)"
     @dblclick.stop="startInlineEdit"
     @mouseover.stop="store.state.hoveredId = node.id"
@@ -90,7 +125,7 @@ async function copy(): Promise<void> {
     <div v-if="isSelected || isHovered || isDragging" class="builder-node-bar" @click.stop>
       <span
         class="builder-node-handle"
-        draggable="true"
+        :draggable="!isFree"
         :title="t('ドラッグして移動')"
         @dragstart="startDrag"
         @dragend="store.endDrag()"
@@ -102,12 +137,23 @@ async function copy(): Promise<void> {
         <button v-if="canInlineEdit && !isEditing" type="button" class="builder-node-button" :title="t('文字を編集') + ' (' + t('ダブルクリック') + ')'" @click="startInlineEdit">
           <i class="bi bi-pencil" />
         </button>
-        <button type="button" class="builder-node-button" :title="t('前へ移動')" @click="store.moveSelectedBy(-1)">
-          <i class="bi bi-arrow-up" />
-        </button>
-        <button type="button" class="builder-node-button" :title="t('後ろへ移動')" @click="store.moveSelectedBy(1)">
-          <i class="bi bi-arrow-down" />
-        </button>
+        <template v-if="isFree">
+          <!-- 自由配置では、並びの後ろほど前面に重なる -->
+          <button type="button" class="builder-node-button" :title="t('1 つ前面へ')" @click="store.moveSelectedBy(1)">
+            <i class="bi bi-layer-forward" />
+          </button>
+          <button type="button" class="builder-node-button" :title="t('1 つ背面へ')" @click="store.moveSelectedBy(-1)">
+            <i class="bi bi-layer-backward" />
+          </button>
+        </template>
+        <template v-else>
+          <button type="button" class="builder-node-button" :title="t('前へ移動')" @click="store.moveSelectedBy(-1)">
+            <i class="bi bi-arrow-up" />
+          </button>
+          <button type="button" class="builder-node-button" :title="t('後ろへ移動')" @click="store.moveSelectedBy(1)">
+            <i class="bi bi-arrow-down" />
+          </button>
+        </template>
         <button type="button" class="builder-node-button" :title="t('複製')" @click="store.duplicate(node.id)">
           <i class="bi bi-copy" />
         </button>
@@ -125,6 +171,10 @@ async function copy(): Promise<void> {
     </div>
     <BlockPreview :node="node" class="builder-node-body" :class="node.classes" />
     <QuickBar v-if="isSelected && !store.state.dragging && !store.state.resizing" :node="node" />
-    <ResizeHandles v-if="isSelected && element && !store.state.dragging && !isEditing" :node="node" :host="element" />
+    <template v-if="isSelected && element && !store.state.dragging && !isEditing">
+      <!-- 自由配置のブロックは位置と大きさのつまみと、内側の余白の帯(ボックス)だけ -->
+      <FreeResizeHandles v-if="placement" :node="node" :host="element" :placement="placement" />
+      <ResizeHandles :node="node" :host="element" :kinds="placement ? ['paddingTop', 'paddingBottom'] : undefined" />
+    </template>
   </div>
 </template>
