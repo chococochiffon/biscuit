@@ -49,6 +49,15 @@ export function createEditorContext(api: BuilderApi) {
   }
 
   /**
+   * すでに変えた内容を、snapshot(変える前の内容)から 1 回の操作として履歴に積む(ドラッグで大きさを変えたあとなど)。
+   */
+  function recordChange(snapshot: string): void {
+    history.record(snapshot, null)
+    syncHistory()
+    changed()
+  }
+
+  /**
    * 1 つのブロックを変える操作(項目・スタイル・表示条件など)。変えたら、そのブロックのエラーを消す。
    */
   function mutateNode(id: string, key: string, operation: (node: BuilderNode) => boolean): boolean {
@@ -167,7 +176,7 @@ export function createEditorContext(api: BuilderApi) {
     return state.selectedId ? findNode(state.content, state.selectedId) : null
   }
 
-  return { api, state, history, syncHistory, mutate, mutateNode, restore, equalizeIfAddedToRow, applyState, replaceContent, handleError, definition, selectedNode }
+  return { api, state, history, syncHistory, mutate, recordChange, mutateNode, restore, equalizeIfAddedToRow, applyState, replaceContent, handleError, definition, selectedNode }
 }
 
 export type EditorContext = ReturnType<typeof createEditorContext>

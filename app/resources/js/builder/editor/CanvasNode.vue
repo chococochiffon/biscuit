@@ -1,14 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import { columnSpan } from '../styles'
 import type { BuilderNode } from '../types'
 import { isHiddenOn, periodState } from '../visibility'
 import BlockPreview from './BlockPreview.vue'
+import ResizeHandles from './ResizeHandles.vue'
 
 // Canvas のブロック 1 つ。クリックで選択し、マウスを乗せる・選択すると枠と名前を出す。
 // 名前の部分をつかんでドラッグすると別の場所へ移せ、選択中は前後への移動・複製・コピー・削除のボタンも出す。
+// 選択中は端につまみを出し、ドラッグで高さ・幅・内側の余白を変えられる(ResizeHandles)。
 // 表示条件の付いたブロックには右上に印を出し、選んでいる端末で表示しない・表示期間の外のブロックは薄く描く。
 // カラムは行(Bootstrap の .row)の直下に並ぶため、この要素に幅のクラス(col-*)を付ける
 const props = defineProps<{
@@ -16,6 +18,7 @@ const props = defineProps<{
 }>()
 
 const store = useBuilderStore()
+const element = ref<HTMLElement | null>(null)
 
 const definition = computed(() => store.definition(props.node.type))
 const isSelected = computed(() => store.state.selectedId === props.node.id)
@@ -63,8 +66,9 @@ async function copy(): Promise<void> {
 
 <template>
   <div
+    ref="element"
     class="builder-node"
-    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
+    :class="[columnClass, { 'is-selected': isSelected, 'is-hovered': isHovered && !isSelected, 'is-dragging': isDragging, 'is-resizing': store.state.resizing?.id === node.id, 'has-error': hasError, 'is-hidden-here': hiddenHere, 'is-out-of-period': period === 'scheduled' || period === 'ended' }]"
     :data-node-id="node.id"
     @click.stop="store.select(node.id)"
     @mouseover.stop="store.state.hoveredId = node.id"
@@ -102,6 +106,7 @@ async function copy(): Promise<void> {
       <i v-if="node.visibility.hideOn?.length" class="bi bi-eye-slash" :title="hiddenHere ? t('この端末では表示しません。') : t('表示しない端末を指定しています。')" />
       <i v-if="period !== 'always'" class="bi bi-clock" :class="`is-${period}`" :title="PERIOD_TITLES[period]" />
     </div>
-    <BlockPreview :node="node" :class="node.classes" />
+    <BlockPreview :node="node" class="builder-node-body" :class="node.classes" />
+    <ResizeHandles v-if="isSelected && element && !store.state.dragging" :node="node" :host="element" />
   </div>
 </template>

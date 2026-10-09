@@ -1047,5 +1047,10 @@
     "Resend の API キー": "Resend API key",
     "Resend の API キー(re_ で始まる文字列)を入れてください。": "Enter a Resend API key (a string starting with re_).",
     "Resend の管理画面の API Keys で作った、送信の権限(Sending access)のキーを入れてください。送信元のメールアドレスのドメインは、先に Resend の Domains で認証しておきます。": "Enter a key with Sending access created under API Keys in the Resend dashboard. Verify the domain of the sender address under Domains in Resend first.",
-    "空のままにすると、今の API キーを使います。": "Leave blank to keep the current API key."
+    "空のままにすると、今の API キーを使います。": "Leave blank to keep the current API key.",
+    "高さ": "Height",
+    "ドラッグして上の余白を変える": "Drag to change the top padding",
+    "ドラッグして下の余白を変える": "Drag to change the bottom padding",
+    "ドラッグして高さを変える": "Drag to change the height",
+    "ドラッグして幅を変える": "Drag to change the width"
 }
