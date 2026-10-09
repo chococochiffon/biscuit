@@ -9,17 +9,20 @@ use App\Installer\InstallerStep;
 use App\Installer\SiteInstaller;
 use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
  * インストーラーのサイトの段(サイト名・説明・言語・タイムゾーン・公開側と管理画面の URL)。
- * URL の既定値は install.sh が .env に入れた値(既定のポート)。
+ * 公開側の URL の既定値は install.sh が .env に入れた値(既定のポート)、管理画面の URL の既定値はいま開いている URL。
  */
 class SiteController extends Controller
 {
-    public function show(InstallerManager $installer): View
+    public function show(Request $request, InstallerManager $installer): View
     {
         $setting = SiteSetting::current();
+        // まだ決めていなければ、いま開いている URL(リバースプロキシの裏なら、プロキシが伝える http か https)を初期値にする
+        $configured = $installer->state()->isCompleted(InstallerStep::Site);
 
         return view('installer.site', [
             'installer' => $installer,
@@ -30,7 +33,7 @@ class SiteController extends Controller
                 'locale' => old('locale', config('app.locale')),
                 'timezone' => old('timezone', config('app.timezone')),
                 'front_url' => old('front_url', $setting?->front_url ?? config('app.front_url')),
-                'admin_url' => old('admin_url', config('app.url')),
+                'admin_url' => old('admin_url', $configured ? config('app.url') : $request->getSchemeAndHttpHost()),
             ],
         ]);
     }

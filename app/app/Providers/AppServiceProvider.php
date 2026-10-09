@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Installer\InstallerManager;
+use App\Installer\SiteInstaller;
 use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\GalleryImage;
@@ -22,6 +24,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -44,6 +47,12 @@ class AppServiceProvider extends ServiceProvider
         // HTTPS を割り当てる外側のリバースプロキシを信じる(config/biscuit.php の trusted_proxies。設定のキャッシュのあとも効くよう、ここで渡す)
         if (config('biscuit.trusted_proxies') !== []) {
             TrustProxies::at(config('biscuit.trusted_proxies'));
+        } elseif (! $this->isInstalled()) {
+            // インストールを終えるまでは TRUSTED_PROXIES がまだない(サイトの段で書く)ため、プライベートなネットワークのプロキシが付ける
+            // http か https か(X-Forwarded-Proto・Port)だけを信じる。信じないと、HTTPS のリバースプロキシの裏で CSS・フォームの送信先が
+            // http:// になり、ブラウザが読み込み・送信を止める。ホスト名(X-Forwarded-Host)は信じない
+            TrustProxies::at(explode(',', SiteInstaller::PRIVATE_NETWORKS));
+            TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_PORT);
         }
 
         // ページビルダーの版(page_builder_versions.versionable_type)に保存する対象の種類の名前(クラス名を保存しない)
@@ -119,5 +128,13 @@ class AppServiceProvider extends ServiceProvider
         View::composer('layouts.admin', AnnouncementNoticeComposer::class);
         View::composer(['layouts.admin', 'admin.articles.index'], PendingArticleComposer::class);
         View::composer(['layouts.admin', 'admin.gallery_images.index'], PendingGalleryImageComposer::class);
+    }
+
+    /**
+     * インストールを終えたか(ロックファイルだけを見る。毎回のリクエストで DB に問い合わせない)。
+     */
+    private function isInstalled(): bool
+    {
+        return config('installer.assume_installed') || Storage::disk('local')->exists(InstallerManager::LOCK_FILE);
     }
 }
