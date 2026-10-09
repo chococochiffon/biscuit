@@ -35,6 +35,8 @@ export function createEditorState() {
     selectedId: null as string | null,
     hoveredId: null as string | null,
     dragging: null as Dragging | null,
+    // ドラッグで大きさを変えているブロック(つまみ・値の表示を出し続けるのに使う)
+    resizing: null as { id: string, label: string } | null,
     dropTarget: null as DropTarget | null,
     published: false,
     publishedAt: null as string | null,
@@ -62,6 +64,8 @@ export function createEditorState() {
     versionsOpen: false,
     // 書き出し・読み込みの画面を開いているか
     transferOpen: false,
+    // 使い方の画面を開いているか
+    helpOpen: false,
   })
 }
 

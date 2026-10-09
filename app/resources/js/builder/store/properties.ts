@@ -1,7 +1,8 @@
 import { setExposed, setOverride } from '../custom'
+import { findNode } from '../nodes'
 import { setNodeStyle } from '../styles'
 import { formatDateTime, setVisibility } from '../visibility'
-import type { BuilderVisibility } from '../types'
+import type { BuilderNode, BuilderVisibility } from '../types'
 import type { EditorContext } from './context'
 
 /**
@@ -9,7 +10,7 @@ import type { EditorContext } from './context'
  * どれも元に戻せ、続けて同じ項目を変える操作は 1 回にまとめる(mutate の key)。
  */
 export function propertyActions(context: EditorContext) {
-  const { state, mutate, mutateNode } = context
+  const { state, mutate, mutateNode, recordChange } = context
 
   function updateProp(id: string, name: string, value: unknown): void {
     mutateNode(id, `prop:${id}:${name}`, (node) => {
@@ -100,5 +101,33 @@ export function propertyActions(context: EditorContext) {
     delete state.errors.content
   }
 
-  return { updateProp, updateStyle, updateClasses, updateExposed, updateOverride, updateVisibility, now, updateCss }
+  /**
+   * 画面で値を動かし続ける操作(ドラッグで大きさを変えるなど)を始める。返した写しを endLiveEdit に渡す。
+   */
+  function beginLiveEdit(): string {
+    return JSON.stringify(state.content)
+  }
+
+  /**
+   * 動かしている間の変更。履歴は積まず、すぐ Canvas に出す。
+   */
+  function liveEdit(id: string, operation: (node: BuilderNode) => boolean): void {
+    const node = findNode(state.content, id)
+
+    if (node) {
+      operation(node)
+    }
+  }
+
+  /**
+   * 動かし終えたら、変わっていれば 1 回の操作として履歴に積む(元に戻すと動かす前に戻る)。
+   */
+  function endLiveEdit(snapshot: string, id: string): void {
+    if (JSON.stringify(state.content) !== snapshot) {
+      recordChange(snapshot)
+      delete state.errors[`nodes.${id}`]
+    }
+  }
+
+  return { updateProp, updateStyle, updateClasses, updateExposed, updateOverride, updateVisibility, now, updateCss, beginLiveEdit, liveEdit, endLiveEdit }
 }

@@ -10,6 +10,7 @@ import LeftPanel from './LeftPanel.vue'
 import PropertyPanel from './PropertyPanel.vue'
 import TemplateDialog from './TemplateDialog.vue'
 import CssDialog from './CssDialog.vue'
+import HelpDialog from './HelpDialog.vue'
 import TransferDialog from './TransferDialog.vue'
 import VersionDialog from './VersionDialog.vue'
 
@@ -52,7 +53,7 @@ function confirmLeave(event: BeforeUnloadEvent): void {
 }
 
 function dialogOpen(): boolean {
-  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen
+  return store.state.templatesOpen || store.state.versionsOpen || store.state.transferOpen || store.state.cssOpen || store.state.helpOpen
 }
 
 // キーボードの操作: Ctrl+S で下書き保存。入力欄の外では Ctrl+Z/Ctrl+Shift+Z(Ctrl+Y)で元に戻す/やり直す、
@@ -69,6 +70,7 @@ function handleKeydown(event: KeyboardEvent): void {
       store.state.versionsOpen = false
       store.state.transferOpen = false
       store.state.cssOpen = false
+      store.state.helpOpen = false
     }
 
     return
@@ -146,8 +148,27 @@ function handlePaste(event: ClipboardEvent): void {
   }
 }
 
+// 使い方の画面は、このブラウザで初めてエディタを開いたときだけ自動で開く(覚えておけないブラウザでは開かない)
+const HELP_SEEN_KEY = 'biscuit.builder.helpSeen'
+
+function openHelpOnFirstVisit(): void {
+  try {
+    if (window.localStorage.getItem(HELP_SEEN_KEY) === null) {
+      window.localStorage.setItem(HELP_SEEN_KEY, '1')
+      store.state.helpOpen = true
+    }
+  }
+  catch {
+    // 保存できないブラウザ(プライベートなウィンドウなど)では、ツールバーの「使い方」から開く
+  }
+}
+
 onMounted(() => {
-  store.load()
+  store.load().then(() => {
+    if (store.state.loaded) {
+      openHelpOnFirstVisit()
+    }
+  })
   window.addEventListener('beforeunload', confirmLeave)
   window.addEventListener('keydown', handleKeydown)
   window.addEventListener('copy', handleCopyEvent)
@@ -183,5 +204,6 @@ onBeforeUnmount(() => {
     <VersionDialog v-if="store.state.versionsOpen" />
     <TransferDialog v-if="store.state.transferOpen" />
     <CssDialog v-if="store.state.cssOpen" />
+    <HelpDialog v-if="store.state.helpOpen" />
   </div>
 </template>

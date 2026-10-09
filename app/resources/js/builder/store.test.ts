@@ -93,6 +93,36 @@ describe('builder store', () => {
     expect(failed.state.loadError).toBe(true)
   })
 
+  it('ドラッグで動かし続けた変更は、離したときに 1 回の操作として履歴に積む', async () => {
+    const { store } = await loadedStore()
+    store.add('section', null, 0)
+    const id = store.state.content.children[0].id
+    const revision = store.state.revision
+
+    const snapshot = store.beginLiveEdit()
+    for (const height of ['100px', '150px', '200px']) {
+      store.liveEdit(id, (node) => {
+        node.styles.minHeight = height
+
+        return true
+      })
+    }
+    // 動かしている間は履歴を積まず、保存の合図(revision)も進めない
+    expect(store.state.revision).toBe(revision)
+
+    store.endLiveEdit(snapshot, id)
+    expect(store.state.content.children[0].styles.minHeight).toBe('200px')
+    expect(store.state.revision).toBe(revision + 1)
+
+    store.undo()
+    expect(store.state.content.children[0].styles.minHeight).toBeUndefined()
+
+    // 何も変えずに離したら、履歴を積まない
+    const unchanged = store.beginLiveEdit()
+    store.endLiveEdit(unchanged, id)
+    expect(store.state.canRedo).toBe(true)
+  })
+
   it('追加・移動・削除・複製と、元に戻す・やり直す', async () => {
     const { store } = await loadedStore()
 
