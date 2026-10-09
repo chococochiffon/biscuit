@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, provide } from 'vue'
+import { FREE_LAYOUT_VERSION } from '../layout'
 import { applyOverrides } from '../custom'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import type { BuilderNode } from '../types'
 import BlockPreview from './BlockPreview.vue'
+import FreeSurface from './FreeSurface.vue'
+import { contentVersionKey } from './keys'
 
 // 独自コンポーネントのブロックの Canvas の見本。部品の公開中の内容に差し替えた値を当てはめて、選択・ドラッグを受けずに描く
 // (部品の中身は部品のエディタで編集し、差し替えた値は右のプロパティで入力する。クリックするとこのブロックが選ばれる)
@@ -17,6 +20,10 @@ store.loadComponents()
 
 const componentId = computed(() => (typeof props.node.props.component === 'number' ? props.node.props.component : null))
 const component = computed(() => store.state.components?.find(item => item.id === componentId.value && item.kind === 'custom') ?? null)
+// 中身は部品の内容の版で描く(v2 なら一番外側が自由配置の面)
+const version = computed(() => component.value?.content?.version ?? FREE_LAYOUT_VERSION - 1)
+provide(contentVersionKey, version)
+
 const children = computed(() =>
   component.value?.content ? applyOverrides(component.value.content.children, (props.node.props.values as Record<string, unknown> | undefined) ?? {}) : [],
 )
@@ -34,6 +41,7 @@ const children = computed(() =>
     <div v-else-if="children.length === 0" class="builder-preview-placeholder">
       <i class="bi bi-boxes" /> {{ t('「:name」はまだ公開されていません。', { name: component.name }) }}
     </div>
+    <FreeSurface v-else-if="version >= FREE_LAYOUT_VERSION" :parent-id="null" :children="children" readonly />
     <template v-else>
       <BlockPreview v-for="child in children" :key="child.id" :node="child" :class="child.classes" readonly />
     </template>

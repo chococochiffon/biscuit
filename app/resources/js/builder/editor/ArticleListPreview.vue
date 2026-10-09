@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import type { ArticleSummary, BuilderNode } from '../types'
+import { usePreviewDevice } from './keys'
 
 // 記事一覧のブロックの Canvas の見本。取得の条件どおりの公開中の記事を biscuit から取ってきて、公開側(chococo)に近い形で並べる。
 // 条件を入力している途中で何度も取得しないよう、少し待ってから取得する
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>()
 
 const store = useBuilderStore()
+const device = usePreviewDevice(store)
 const articles = ref<ArticleSummary[] | null>(null)
 
 const condition = computed(() => JSON.stringify([props.node.props.limit, props.node.props.order, props.node.props.parentPath, props.node.props.tag]))
@@ -22,7 +24,7 @@ const showDate = computed(() => props.node.props.showDate !== false)
 const columns = computed(() => {
   const desktop = typeof props.node.props.columns === 'number' ? props.node.props.columns : 3
 
-  return store.state.device === 'desktop' ? desktop : store.state.device === 'tablet' ? Math.min(2, desktop) : 1
+  return device.value === 'desktop' ? desktop : device.value === 'tablet' ? Math.min(2, desktop) : 1
 })
 
 let timer: ReturnType<typeof setTimeout> | undefined

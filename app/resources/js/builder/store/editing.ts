@@ -1,5 +1,8 @@
 import { t } from '../i18n'
+import { inlineProp } from '../inline'
 import { canPlace, cloneWithNewIds, containsNode, createNode, findLocation, findNode, findPastePosition, insertNode, moveNode, parseClipboard, removeNode, serializeClipboard } from '../nodes'
+import { buildSection } from '../sections'
+import type { BuilderLayout } from '../types'
 import type { EditorContext } from './context'
 
 /**
@@ -9,13 +12,44 @@ export function editingActions(context: EditorContext) {
   const { state, history, mutate, equalizeIfAddedToRow, definition, selectedNode } = context
 
   function select(id: string | null): void {
+    // 直接書き換えているブロックから離れたら、書き換えを終える
+    if (state.editingId !== null && state.editingId !== id) {
+      finishInlineEdit()
+    }
     state.selectedId = id
+  }
+
+  /**
+   * Canvas の上で、ブロックの文字を直接書き換え始める(見出し・ボタン・テキストだけ)。始めたら true。
+   */
+  function startInlineEdit(id: string): boolean {
+    const node = findNode(state.content, id)
+
+    if (!node || !inlineProp(node)) {
+      return false
+    }
+
+    state.selectedId = id
+    state.editingId = id
+
+    return true
+  }
+
+  /**
+   * 直接の書き換えを終える。右のパネルの入力欄を作り直して、書き換えた値を出す。
+   */
+  function finishInlineEdit(): void {
+    if (state.editingId !== null) {
+      state.editingId = null
+      state.restoreCount++
+    }
   }
 
   /**
    * 選択中のブロックの親を選ぶ(ページの直下なら選択を外す)。
    */
   function selectParent(): void {
+    finishInlineEdit()
     if (state.selectedId) {
       state.selectedId = findLocation(state.content, state.selectedId)?.parent?.id ?? null
     }
@@ -23,10 +57,15 @@ export function editingActions(context: EditorContext) {
 
   /**
    * 新しいブロックを親(null はページの直下)の index の位置に置き、選択する。props は既定値に重ねる(パレットの独自コンポーネントの部品の id など)。
+   * layout は自由配置の面に置くときの位置(なければ面のいちばん下に置く。layout.ts の syncLayouts())。
    */
-  function add(type: string, parentId: string | null, index: number, props: Record<string, unknown> = {}): boolean {
+  function add(type: string, parentId: string | null, index: number, props: Record<string, unknown> = {}, layout?: BuilderLayout): boolean {
     const node = createNode(state.registry, type)
     Object.assign(node.props, JSON.parse(JSON.stringify(props)))
+
+    if (layout) {
+      node.layout = JSON.parse(JSON.stringify(layout))
+    }
 
     const added = mutate(null, () => {
       if (!insertNode(state.registry, state.content, parentId, index, node)) {
@@ -67,6 +106,22 @@ export function editingActions(context: EditorContext) {
     state.message = { type: 'warning', text: t('「:block」は、選んでいるブロックの中や後ろには置けません。', { block: definition(type).label }) }
 
     return false
+  }
+
+  /**
+   * ひな形(sections.ts)のセクションを、ページの直下の index の位置に置き、選択する。
+   */
+  function addSection(key: string, index: number): boolean {
+    const node = buildSection(state.registry, key, state.content.version)
+
+    if (!node || !mutate(null, () => insertNode(state.registry, state.content, null, index, node))) {
+      return false
+    }
+    finishInlineEdit()
+    state.selectedId = node.id
+    state.sectionInsertIndex = null
+
+    return true
   }
 
   function move(id: string, parentId: string | null, index: number): boolean {
@@ -240,7 +295,7 @@ export function editingActions(context: EditorContext) {
 
     if (dragging && dropTarget) {
       if (dragging.kind === 'new') {
-        add(dragging.type, dropTarget.parentId, dropTarget.index, dragging.props)
+        add(dragging.type, dropTarget.parentId, dropTarget.index, dragging.props, dropTarget.layout)
       }
       else if (move(dragging.id, dropTarget.parentId, dropTarget.index)) {
         state.selectedId = dragging.id
@@ -250,5 +305,5 @@ export function editingActions(context: EditorContext) {
     endDrag()
   }
 
-  return { select, selectParent, add, addNearSelection, move, moveSelectedBy, remove, duplicate, copySelected, paste, undo, redo, canDropInto, drop, endDrag }
+  return { select, startInlineEdit, finishInlineEdit, selectParent, add, addNearSelection, addSection, move, moveSelectedBy, remove, duplicate, copySelected, paste, undo, redo, canDropInto, drop, endDrag }
 }

@@ -29,10 +29,10 @@ class BuilderVisibilityTest extends TestCase
         $heading = BuilderContent::node('heading', ['text' => $text]);
         $heading['visibility'] = $visibility;
 
-        return [
+        return BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [BuilderContent::node('section', children: [$heading])],
-        ];
+        ]);
     }
 
     public function test_accepts_valid_visibility(): void
@@ -130,12 +130,12 @@ class BuilderVisibilityTest extends TestCase
         $future = BuilderContent::node('heading', ['text' => 'これから始まる見出し']);
         $future['visibility'] = ['startAt' => '2026-10-10T00:00'];
         $component = PageBuilderComponent::factory()->published()->create([
-            'draft_content' => ['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [BuilderContent::node('section', children: [$future])]],
+            'draft_content' => BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [BuilderContent::node('section', children: [$future])]]),
         ]);
-        $content = (new BuilderValidator)->normalize(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [
+        $content = (new BuilderValidator)->normalize(BuilderContent::withDefaultLayout(['version' => SchemaMigrator::CURRENT_VERSION, 'children' => [
             BuilderContent::node('section', children: [$future]),
             BuilderContent::node('global', ['component' => $component->id]),
-        ]]);
+        ]]));
         $builder = PageBuilder::factory()->top()->create(['draft_content' => $content]);
         $url = URL::temporarySignedRoute('api.builder-previews.show', now()->addMinutes(30), ['pageBuilder' => $builder->id], absolute: false);
 

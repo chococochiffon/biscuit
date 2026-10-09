@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { t } from '../i18n'
 import { useBuilderStore } from '../store'
 import type { BuilderNode, GalleryImageSummary } from '../types'
+import { usePreviewDevice } from './keys'
 
 // ギャラリーのブロックの Canvas の見本。取得の条件どおりの公開中の画像を biscuit から取ってきて、公開側(chococo)と同じく正方形のタイルで並べる。
 // 列数はデスクトップは columns、タブレットは 3 まで、スマートフォンは 2(公開側と同じ)
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>()
 
 const store = useBuilderStore()
+const device = usePreviewDevice(store)
 const images = ref<GalleryImageSummary[] | null>(null)
 
 const condition = computed(() => JSON.stringify([props.node.props.category, props.node.props.limit]))
@@ -18,7 +20,7 @@ const showCaption = computed(() => props.node.props.showCaption !== false)
 const columns = computed(() => {
   const desktop = typeof props.node.props.columns === 'number' ? props.node.props.columns : 4
 
-  return store.state.device === 'desktop' ? desktop : store.state.device === 'tablet' ? Math.min(3, desktop) : 2
+  return device.value === 'desktop' ? desktop : device.value === 'tablet' ? Math.min(3, desktop) : 2
 })
 
 let timer: ReturnType<typeof setTimeout> | undefined

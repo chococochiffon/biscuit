@@ -84,7 +84,7 @@ class PageBuilderSeeder extends Seeder
     }
 
     /**
-     * サンプルの固定ページの内容(MVP のブロックを一通り使う)。
+     * サンプルの固定ページの内容(自由配置で、MVP のブロックを一通り使う)。
      *
      * @return array<string, mixed>
      */
@@ -94,39 +94,26 @@ class PageBuilderSeeder extends Seeder
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
                 BuilderContent::node('section', styles: ['paddingTop' => '64px', 'paddingBottom' => '64px', 'backgroundColor' => '#fff7ef', 'textAlign' => 'center'], children: [
-                    BuilderContent::node('container', styles: ['maxWidth' => '960px'], children: [
-                        BuilderContent::node(
-                            'heading',
-                            ['text' => 'ページビルダーへようこそ', 'level' => 1],
-                            ['fontSize' => '40px', 'fontWeight' => '700'],
-                            responsive: ['mobile' => ['fontSize' => '28px']],
-                        ),
-                        BuilderContent::node('text', ['html' => '<p>このページは、ページビルダーで組み立てたサンプルです。管理画面の「ビルダーで編集」から、ブロックをドラッグして自由に組み立て直せます。</p>']),
-                        BuilderContent::node('spacer', ['height' => 16]),
-                        BuilderContent::node('button', ['text' => 'トップへ戻る', 'href' => '/']),
-                    ]),
+                    BuilderContent::node(
+                        'heading',
+                        ['text' => 'ページビルダーへようこそ', 'level' => 1],
+                        ['fontSize' => '40px', 'fontWeight' => '700'],
+                        responsive: ['mobile' => ['fontSize' => '28px']],
+                        layout: self::at(10, 0, 80),
+                    ),
+                    BuilderContent::node('text', ['html' => '<p>このページは、ページビルダーで組み立てたサンプルです。管理画面の「ビルダーで編集」から、ブロックをドラッグして好きな位置に置き直せます。</p>'], layout: self::at(15, 72, 70)),
+                    BuilderContent::node('button', ['text' => 'トップへ戻る', 'href' => '/'], layout: self::at(35, 160, 30)),
                 ]),
                 BuilderContent::node('section', styles: ['paddingTop' => '48px', 'paddingBottom' => '48px'], children: [
-                    BuilderContent::node('container', children: [
-                        BuilderContent::node('row', ['gap' => 4], children: [
-                            BuilderContent::node('column', ['span' => 6, 'spanMobile' => 12], children: [
-                                BuilderContent::node('image', ['src' => $imagePath, 'alt' => 'サンプルの画像'], ['borderRadius' => '12px']),
-                            ]),
-                            BuilderContent::node('column', ['span' => 6, 'spanMobile' => 12], children: [
-                                BuilderContent::node('heading', ['text' => 'できること', 'level' => 2]),
-                                BuilderContent::node('text', ['html' => '<ul><li>見出し・テキスト・画像・ボタンを並べる</li><li>行とカラムで横に並べる</li><li>余白・色・文字の大きさを変える</li><li>スマートフォンだけ文字の大きさを変える</li></ul>']),
-                            ]),
-                        ]),
-                        BuilderContent::node('divider', styles: ['marginTop' => '32px', 'marginBottom' => '32px', 'borderColor' => '#e0d6cc']),
-                        BuilderContent::node('text', ['html' => '<p>編集した内容は下書きとして保存され、「公開」を押すまで公開中のページは変わりません。</p>'], ['textAlign' => 'center']),
-                    ]),
+                    BuilderContent::node('image', ['src' => $imagePath, 'alt' => 'サンプルの画像'], ['borderRadius' => '12px'], layout: self::at(5, 0, 42, 300)),
+                    BuilderContent::node('heading', ['text' => 'できること', 'level' => 2], layout: self::at(52, 24, 43)),
+                    BuilderContent::node('text', ['html' => '<ul><li>見出し・テキスト・画像・ボタンを好きな位置に置く</li><li>ボックスでまとめて、背景や角丸を付ける</li><li>余白・色・文字の大きさを変える</li><li>スマートフォンだけ位置や文字の大きさを変える</li></ul>'], layout: self::at(52, 80, 43)),
+                    BuilderContent::node('divider', styles: ['borderColor' => '#e0d6cc'], layout: self::at(5, 332, 90)),
+                    BuilderContent::node('text', ['html' => '<p>編集した内容は下書きとして保存され、「公開」を押すまで公開中のページは変わりません。</p>'], ['textAlign' => 'center'], layout: self::at(10, 364, 80)),
                 ]),
                 BuilderContent::node('section', styles: ['paddingTop' => '48px', 'paddingBottom' => '64px', 'backgroundColor' => '#f8f9fa'], children: [
-                    BuilderContent::node('container', children: [
-                        BuilderContent::node('heading', ['text' => '新着記事', 'level' => 2], ['textAlign' => 'center']),
-                        BuilderContent::node('spacer', ['height' => 16]),
-                        BuilderContent::node('article-list', ['limit' => 3]),
-                    ]),
+                    BuilderContent::node('heading', ['text' => '新着記事', 'level' => 2], ['textAlign' => 'center'], layout: self::at(10, 0, 80)),
+                    BuilderContent::node('article-list', ['limit' => 3], layout: self::at(5, 64, 90)),
                 ]),
             ],
         ];
@@ -143,13 +130,21 @@ class PageBuilderSeeder extends Seeder
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
                 BuilderContent::node('section', styles: ['paddingTop' => '48px', 'paddingBottom' => '48px', 'textAlign' => 'center'], children: [
-                    BuilderContent::node('container', children: [
-                        BuilderContent::node('heading', ['text' => 'トップページのビルダー', 'level' => 2]),
-                        BuilderContent::node('text', ['html' => '<p>ここに置いたブロックは、サイト設定で「トップでビルダーを使う」をオンにして公開すると、スライダーの下に表示されます。</p>']),
-                    ]),
+                    BuilderContent::node('heading', ['text' => 'トップページのビルダー', 'level' => 2], layout: self::at(10, 0, 80)),
+                    BuilderContent::node('text', ['html' => '<p>ここに置いたブロックは、サイト設定で「トップでビルダーを使う」をオンにして公開すると、スライダーの下に表示されます。</p>'], layout: self::at(10, 64, 80)),
                 ]),
             ],
         ];
+    }
+
+    /**
+     * 自由配置のデスクトップの位置(x・w は %、y・h は px)。
+     *
+     * @return array{desktop: array{x: int|float, y: int, w: int|float, h?: int}}
+     */
+    private static function at(int|float $x, int $y, int|float $w, ?int $h = null): array
+    {
+        return ['desktop' => ['x' => $x, 'y' => $y, 'w' => $w, ...($h === null ? [] : ['h' => $h])]];
     }
 
     /**

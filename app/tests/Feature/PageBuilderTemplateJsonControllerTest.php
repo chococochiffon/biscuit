@@ -19,7 +19,7 @@ class PageBuilderTemplateJsonControllerTest extends TestCase
      */
     private function content(): array
     {
-        return [
+        return BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
                 BuilderContent::node('section', children: [
@@ -27,7 +27,7 @@ class PageBuilderTemplateJsonControllerTest extends TestCase
                     BuilderContent::node('text', ['html' => '<p onclick="alert(1)">本文</p>']),
                 ]),
             ],
-        ];
+        ]);
     }
 
     public function test_guests_cannot_use_the_templates(): void
@@ -52,7 +52,7 @@ class PageBuilderTemplateJsonControllerTest extends TestCase
             ->assertJsonPath('0.id', $first->id)
             ->assertJsonPath('0.name', '1 つ目')
             ->assertJsonPath('0.node_count', 2)
-            ->assertJsonPath('0.content.version', 1)
+            ->assertJsonPath('0.content.version', SchemaMigrator::CURRENT_VERSION)
             ->assertJsonPath('0.content.children.0.type', 'section');
     }
 

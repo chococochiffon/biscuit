@@ -15,6 +15,8 @@ export function createEditorState() {
     loadError: false,
     page: null as PageInfo | null,
     registry: { rootChildren: [], blocks: {}, styles: {} } as Registry,
+    // 内容の版ごとの定義(版 → 定義)。registry は編集している内容の版のもの(syncRegistry())
+    registries: {} as Record<string, Registry>,
     imageBaseUrl: '',
     // 編集しているページのパンくず(パンくずのブロックの見本)
     breadcrumbs: [] as Breadcrumb[],
@@ -33,8 +35,13 @@ export function createEditorState() {
     content: { version: 1, children: [] } as BuilderContent,
     device: 'desktop' as Device,
     selectedId: null as string | null,
+    // Canvas の上で文字を直接書き換えているブロック(見出し・ボタン・テキスト)
+    editingId: null as string | null,
     hoveredId: null as string | null,
     dragging: null as Dragging | null,
+    // 自由配置でブロックを動かしているときのガイド線(面の ID(一番外側は root)と、面の左上からの px)と、離すと入る面
+    guides: [] as { surfaceId: string, orientation: 'vertical' | 'horizontal', position: number }[],
+    freeDropSurfaceId: null as string | null,
     // ドラッグで大きさを変えているブロック(つまみ・値の表示を出し続けるのに使う)
     resizing: null as { id: string, label: string } | null,
     dropTarget: null as DropTarget | null,
@@ -58,6 +65,8 @@ export function createEditorState() {
     lastSavedAt: null as Date | null,
     // ほかの管理者が先に保存した(読み込み直すまで自動保存を止める)
     conflict: false,
+    // セクションのひな形を選ぶ画面を開いているときの、置く位置(ページの直下の何番目か。閉じているときは null)
+    sectionInsertIndex: null as number | null,
     // テンプレートの画面を開いているか
     templatesOpen: false,
     // 版の履歴の画面を開いているか

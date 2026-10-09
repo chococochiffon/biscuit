@@ -6,6 +6,7 @@ import type { BuilderNode, PropDefinition } from '../types'
 import ImageField from './ImageField.vue'
 import RichTextField from './RichTextField.vue'
 import { videoEmbedUrl } from '../video'
+import { OPTION_LABELS, URL_PATTERN } from './options'
 
 // ブロックの内容(props)の項目 1 つの入力欄。項目の型(BlockRegistry の type)に合わせて入力欄を選ぶ。
 // override を渡すと、独自コンポーネントの差し替えた値の入力欄になる(値の読み書きを override に任せ、空は「部品の値のまま」。
@@ -32,38 +33,6 @@ const id = computed(() => `prop-${props.node.id}-${props.name}`)
 const value = computed(() => (props.override ? props.override.value : props.node.props[props.name]))
 const fallbackText = computed(() => (props.override && typeof props.override.fallback === 'string' ? props.override.fallback : ''))
 
-// 選択肢の表示名(値そのものを出すと分かりにくいもの)
-const OPTION_LABELS: Record<string, string> = {
-  _self: t('同じタブで開く'),
-  _blank: t('新しいタブで開く'),
-  'primary': t('塗りつぶし(メイン)'),
-  'secondary': t('塗りつぶし(サブ)'),
-  'outline-primary': t('枠線(メイン)'),
-  'outline-secondary': t('枠線(サブ)'),
-  'link': t('リンク'),
-  'newest': t('新しい順'),
-  'oldest': t('古い順'),
-  'card': t('カード'),
-  'list': t('リスト'),
-  'site': t('サイトのナビメニューと同じ'),
-  'pages': t('固定ページ(リンクリストに表示するもの)'),
-  'horizontal': t('横に並べる'),
-  'vertical': t('縦に並べる'),
-  'links': t('リンク'),
-  'pills': t('ピル'),
-  'underline': t('下線'),
-  'slash': t('スラッシュ( / )'),
-  'chevron': t('山かっこ( › )'),
-  'arrow': t('矢印( → )'),
-  '16x9': '16:9',
-  '4x3': '4:3',
-  '1x1': '1:1',
-  '21x9': '21:9',
-  'start': t('左揃え'),
-  'center': t('中央揃え'),
-  'end': t('右揃え'),
-}
-
 // 範囲の狭い整数(見出しのレベル・カラムの幅・余白の段階)は選択肢にする
 const intOptions = computed(() => {
   const { min = 0, max = 0 } = props.prop
@@ -71,8 +40,6 @@ const intOptions = computed(() => {
   return max - min <= 12 ? Array.from({ length: max - min + 1 }, (_, index) => min + index) : null
 })
 
-// リンク先として受け付ける形(biscuit の BuilderValidator と同じ)
-const URL_PATTERN = /^(?:https?:\/\/[^\s\\]+|mailto:[^\s\\]+|tel:[0-9+\-() ]+|\/(?!\/)[^\s\\]*|#[^\s\\]*)$/i
 const isUrlInvalid = computed(() => props.prop.type === 'url' && typeof value.value === 'string' && !URL_PATTERN.test(value.value))
 const isVideoInvalid = computed(() => props.prop.type === 'video' && typeof value.value === 'string' && videoEmbedUrl(value.value) === null)
 

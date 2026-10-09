@@ -21,7 +21,7 @@ class PageBuilderPublicTest extends TestCase
      */
     private function content(string $heading, ?string $image = null): array
     {
-        return [
+        return BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [
                 BuilderContent::node('section', children: [
@@ -29,7 +29,7 @@ class PageBuilderPublicTest extends TestCase
                     BuilderContent::node('image', ['src' => $image]),
                 ]),
             ],
-        ];
+        ]);
     }
 
     private function publishedSinglePage(bool $useBuilder): SinglePage
@@ -51,7 +51,7 @@ class PageBuilderPublicTest extends TestCase
         $this->getJson(route('api.resolve', ['path' => '/company']))
             ->assertOk()
             ->assertJsonPath('type', 'single_page')
-            ->assertJsonPath('data.builder.version', 1)
+            ->assertJsonPath('data.builder.version', SchemaMigrator::CURRENT_VERSION)
             ->assertJsonPath('data.builder.children.0.children.0.props.text', '公開中の見出し')
             ->assertJsonPath('data.builder.children.0.children.1.props.src', Storage::disk('public')->url('image/builder/a.png'));
     }

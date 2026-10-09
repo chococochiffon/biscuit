@@ -48,10 +48,10 @@ class VideoBlockTest extends TestCase
 
     public function test_validator_accepts_only_supported_video_urls(): void
     {
-        $content = fn (mixed $url) => [
+        $content = fn (mixed $url) => BuilderContent::withDefaultLayout([
             'version' => SchemaMigrator::CURRENT_VERSION,
             'children' => [BuilderContent::node('section', children: [BuilderContent::node('video', ['url' => $url])])],
-        ];
+        ]);
 
         $this->assertSame([], (new BuilderValidator)->errors($content(null)));
         $this->assertSame([], (new BuilderValidator)->errors($content('https://youtu.be/dQw4w9WgXcQ')));
@@ -64,13 +64,13 @@ class VideoBlockTest extends TestCase
         $singlePage = SinglePage::factory()->create(['slug' => 'video-page', 'use_builder' => true]);
         $builder = PageBuilder::factory()->published()->create([
             'single_page_id' => $singlePage->id,
-            'draft_content' => [
+            'draft_content' => BuilderContent::withDefaultLayout([
                 'version' => SchemaMigrator::CURRENT_VERSION,
                 'children' => [BuilderContent::node('section', children: [
                     BuilderContent::node('video', ['url' => 'https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10', 'aspect' => '4x3']),
                     BuilderContent::node('video'),
                 ])],
-            ],
+            ]),
         ]);
 
         $this->getJson(route('api.resolve', ['path' => '/video-page']))

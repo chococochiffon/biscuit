@@ -1,13 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { t } from '../i18n'
+import { ancestorsOf } from '../nodes'
+import { availableSectionPresets } from '../sections'
 import { useBuilderStore } from '../store'
 import type { BuilderNode } from '../types'
 import CanvasNode from './CanvasNode.vue'
 
 // ブロックの子(またはページの直下)の並び。ドラッグ中のものを置ける並びなら、マウスの位置から入れる位置を決めて線で示す。
 // 置けない並び(例: カラムの中のセクション)では受けずに外側の並びへ任せる(イベントを親へ伝える)。
-// 行(row)の中は横に並ぶため、横向き(horizontal)で位置を決める
+// 行(row)の中は横に並ぶため、横向き(horizontal)で位置を決める。
+// ページの直下では、マウスを乗せたセクションの下の境目に「+ セクションを追加」を出す(ひな形を選ぶ画面を開く)
 const props = withDefaults(defineProps<{
   parentId: string | null
   children: BuilderNode[]
@@ -27,6 +30,18 @@ const listElement = ref<HTMLElement | null>(null)
 const indicatorStyle = ref<Record<string, string>>({})
 
 // コンポーネントツリーの上でドラッグしているあいだは、Canvas には線を出さない(位置を計算していないため)
+// マウスを乗せているブロックを含む、ページの直下のブロック(その下の境目に「+ セクションを追加」を出す)
+const canAddSection = computed(() => props.isRoot && availableSectionPresets(store.state.registry, store.state.content.version).length > 0)
+const hoveredRootId = computed(() => {
+  const id = store.state.hoveredId
+
+  if (!canAddSection.value || id === null || store.state.dragging !== null || store.state.resizing !== null) {
+    return null
+  }
+
+  return ancestorsOf(store.state.content, id)[0]?.id ?? id
+})
+
 const isTarget = computed(() => store.state.dragging !== null && store.state.dropTarget?.from !== 'tree' && store.state.dropTarget?.parentId === props.parentId)
 
 function childElements(): HTMLElement[] {
@@ -121,7 +136,14 @@ function onDrop(event: DragEvent): void {
     @dragover="onDragOver"
     @drop="onDrop"
   >
-    <CanvasNode v-for="child in children" :key="child.id" :node="child" />
+    <template v-for="(child, index) in children" :key="child.id">
+      <CanvasNode :node="child" />
+      <div v-if="hoveredRootId === child.id" class="builder-section-inserter">
+        <button type="button" class="builder-section-inserter-button" @click.stop="store.state.sectionInsertIndex = index + 1">
+          <i class="bi bi-plus-lg" /> {{ t('セクションを追加') }}
+        </button>
+      </div>
+    </template>
     <div v-if="children.length === 0" class="builder-drop-empty" :class="{ 'col-12': direction === 'horizontal' }">
       {{ emptyLabel ?? t('ここにブロックをドラッグ') }}
     </div>
