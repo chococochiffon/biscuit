@@ -21,6 +21,8 @@ class SinglePageSeeder extends Seeder
                 'title' => 'biscuitについて',
                 'short_sentences' => 'biscuitは、シンプルで使いやすいコンテンツ管理システムです。',
                 'parent_path' => 'information',
+                // 記事のサンプルと同じく、公開開始日時は投入日時にする(未設定だと公開側に出ない)
+                'publication_start_datetime' => now(),
                 'top_page_view' => true,
                 'link_list_view' => true,
                 'sort_order' => 0,
