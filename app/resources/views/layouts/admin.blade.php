@@ -162,6 +162,9 @@
                         <div class="d-flex w-100 align-items-center justify-content-end gap-3">
                             @auth('admin')
                                 <div class="small admin-navbar-text">{{ auth('admin')->user()->name }}</div>
+                                <a href="{{ route('admin.two-factor.show') }}" class="small text-secondary" title="{{ __('二段階認証') }}">
+                                    <i class="bi bi-shield-lock"></i> {{ __('二段階認証') }}
+                                </a>
                             @endauth
 
                             <div class="d-flex align-items-center gap-2">
