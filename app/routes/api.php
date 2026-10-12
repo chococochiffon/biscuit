@@ -16,6 +16,7 @@ use App\Http\Controllers\API\MyArticleController;
 use App\Http\Controllers\API\MyDashboardController;
 use App\Http\Controllers\API\MyGalleryImageController;
 use App\Http\Controllers\API\MyPageViewController;
+use App\Http\Controllers\API\MyTwoFactorController;
 use App\Http\Controllers\API\PageViewController;
 use App\Http\Controllers\API\PasswordResetController;
 use App\Http\Controllers\API\QuestionAnswerController;
@@ -66,6 +67,9 @@ Route::post('auth/login/verify', [AuthController::class, 'verifyCode'])
 Route::post('auth/login/resend', [AuthController::class, 'resendCode'])
     ->middleware('throttle:login-code')
     ->name('api.auth.login.resend');
+Route::post('auth/login/email-code', [AuthController::class, 'sendEmailCode'])
+    ->middleware('throttle:login-code')
+    ->name('api.auth.login.email-code');
 
 // パスワード再設定(ログイン前。メールのリンクは chococo の /reset-password を開く)
 Route::post('auth/forgot-password', [PasswordResetController::class, 'forgot'])
@@ -90,6 +94,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('me/profile', [MeController::class, 'updateProfile'])->name('api.me.profile.update');
     Route::post('me/profile/image', [MeController::class, 'updateImage'])->name('api.me.profile.image');
     Route::put('me/password', [MeController::class, 'updatePassword'])->name('api.me.password.update');
+
+    // 二段階認証の方法(メールの確認コードか認証アプリ(Google Authenticator))の設定
+    Route::get('me/two-factor', [MyTwoFactorController::class, 'show'])->name('api.me.two-factor.show');
+    Route::get('me/two-factor/setup', [MyTwoFactorController::class, 'setup'])->name('api.me.two-factor.setup');
+    Route::put('me/two-factor', [MyTwoFactorController::class, 'update'])
+        ->middleware('throttle:login-code')
+        ->name('api.me.two-factor.update');
+    Route::delete('me/two-factor', [MyTwoFactorController::class, 'destroy'])->name('api.me.two-factor.destroy');
 
     // 自分の記事のアクセス(マイページのダッシュボード)
     Route::get('me/page-views', [MyPageViewController::class, 'show'])->name('api.me.page-views.show');

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\TwoFactorMethod;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -26,6 +27,8 @@ class MeResource extends JsonResource
             'email' => $this->email,
             // 記事を承認なしで公開できるか(マイページのボタンの文言などの出し分けに使う)
             'skip_approval' => $this->skip_approval,
+            // 二段階認証の方法(email: メールの確認コード、totp: 認証アプリ)
+            'two_factor_method' => $this->usesTotp() ? TwoFactorMethod::Totp : TwoFactorMethod::Email,
             'detail' => $detail === null ? null : [
                 'first_name' => $detail->first_name,
                 'family_name' => $detail->family_name,

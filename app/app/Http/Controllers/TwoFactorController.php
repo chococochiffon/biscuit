@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Administrator;
 use App\Models\SiteSetting;
+use App\Models\User;
 use App\Support\AuditLogger;
 use App\Support\TwoFactor\Totp;
 use Illuminate\Http\RedirectResponse;
@@ -15,7 +16,7 @@ use Illuminate\View\View;
  * ログイン中の管理者自身の二段階認証の設定(画面上部の「二段階認証」。admin.two-factor.*)。
  * 既定はメールの確認コード。「認証アプリを設定する」で秘密鍵を作ってセッションに入れ、QR コードを読み取った認証アプリのコードを
  * 入れて確かめられたら、認証アプリ(Google Authenticator)に切り替える。今のパスワードを入れるとメールに戻せる。
- * スーパー管理者は、端末をなくした管理者の認証アプリを解除してメールに戻せる(reset()。ゲート reset-two-factor)。
+ * スーパー管理者は、端末をなくした管理者・ユーザーの認証アプリを解除してメールに戻せる(reset()・resetUser()。ゲート reset-two-factor)。
  */
 class TwoFactorController extends Controller
 {
@@ -85,6 +86,16 @@ class TwoFactorController extends Controller
         AuditLogger::updateWithLog($administrator, fn () => $administrator->disableTotp(), ['two_factor' => 'totp_reset']);
 
         return redirect()->route('admin.show', $administrator)->with('status', __(':name の認証アプリを解除し、メールの確認コードに戻しました。', ['name' => $administrator->name]));
+    }
+
+    /**
+     * ユーザー(chococo のマイページ)の認証アプリを解除して、メールの確認コードに戻す(スーパー管理者だけ)。
+     */
+    public function resetUser(User $user): RedirectResponse
+    {
+        AuditLogger::updateWithLog($user, fn () => $user->disableTotp(), ['two_factor' => 'totp_reset']);
+
+        return redirect()->route('admin.users.show', $user)->with('status', __(':name の認証アプリを解除し、メールの確認コードに戻しました。', ['name' => $user->name]));
     }
 
     /**

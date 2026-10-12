@@ -218,6 +218,11 @@ Route::middleware('auth:admin')->group(function () {
     Route::post('admin/users/{user}/invitation', [UserInvitationController::class, 'resend'])
         ->name('admin.users.invitation.resend');
 
+    // ユーザーの認証アプリ(二段階認証)の解除はスーパー管理者だけ(AppServiceProvider の reset-two-factor)
+    Route::delete('admin/users/{user}/two-factor', [TwoFactorController::class, 'resetUser'])
+        ->middleware('can:reset-two-factor')
+        ->name('admin.users.two-factor.reset');
+
     Route::resource('admin/users', UserController::class)
         ->names('admin.users');
 
