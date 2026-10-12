@@ -1190,5 +1190,7 @@
     "この管理者の認証アプリを解除し、メールの確認コードに戻しますか?": "Remove this administrator's authenticator app and go back to email verification codes?",
     "認証アプリを解除する": "Remove the authenticator app",
     "メールの確認コード": "Email verification code",
-    "認証アプリ(Google Authenticator)": "Authenticator app (Google Authenticator)"
+    "認証アプリ(Google Authenticator)": "Authenticator app (Google Authenticator)",
+    "すでに認証アプリを設定しています。": "The authenticator app is already set up.",
+    "このユーザーの認証アプリを解除し、メールの確認コードに戻しますか?": "Remove this user's authenticator app and go back to email verification codes?"
 }

@@ -16,6 +16,20 @@
 
             <x-admin.detail-row :label="__('記事とギャラリーの承認')">{{ $user->skip_approval ? __('承認なしで公開する') : __('承認が必要') }}</x-admin.detail-row>
 
+            <x-admin.detail-row :label="__('二段階認証')">
+                <span data-two-factor-method="{{ $user->usesTotp() ? 'totp' : 'email' }}">{{ ($user->usesTotp() ? \App\Enums\TwoFactorMethod::Totp : \App\Enums\TwoFactorMethod::Email)->label() }}</span>
+                {{-- 端末をなくしたユーザーの認証アプリを、スーパー管理者が解除してメールに戻す --}}
+                @if ($user->usesTotp())
+                    @can('reset-two-factor')
+                        <form method="POST" action="{{ route('admin.users.two-factor.reset', $user) }}" class="mt-2" onsubmit="return confirm(@js(__('このユーザーの認証アプリを解除し、メールの確認コードに戻しますか?')))" data-two-factor-reset>
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-outline-danger">{{ __('認証アプリを解除する') }}</button>
+                        </form>
+                    @endcan
+                @endif
+            </x-admin.detail-row>
+
             @if ($user->detail)
                 <x-admin.detail-row :label="__('氏名')">{{ $user->detail->family_name }} {{ $user->detail->first_name }}</x-admin.detail-row>
 
