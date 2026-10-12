@@ -5,21 +5,25 @@ namespace Database\Seeders;
 use App\Enums\CallContentPlace;
 use App\Enums\CallType;
 use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use Illuminate\Database\Seeder;
 
 class CallContentSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * トップ・本文ページの呼び出しコンテンツを登録する(開発用の DatabaseSeeder と、インストール時の InstallSeeder で使う)。
+     * データ種別は ContentModelRelationSeeder で登録したものをモデル名で引く。同じ呼び出し名が登録済みなら登録しない。
      */
     public function run(): void
     {
+        $relationIds = ContentModelRelation::query()->pluck('id', 'model_name');
+
         $callContents = [
             [
                 'call_name' => 'ArticleArchive',
                 'title' => '最新記事',
                 'call_type' => CallType::Archive,
-                'content_model_relation_id' => 1,
+                'content_model_relation_id' => $relationIds['Article'],
                 'view_count' => 6,
                 'place' => CallContentPlace::Top,
                 'sort_order' => 5,
@@ -29,7 +33,7 @@ class CallContentSeeder extends Seeder
                 'title' => 'About',
                 'subtitle' => 'このサイトについて',
                 'call_type' => CallType::ShortSentence,
-                'content_model_relation_id' => 2,
+                'content_model_relation_id' => $relationIds['SinglePage'],
                 'view_count' => 1,
                 'place' => CallContentPlace::Top,
                 'sort_order' => 1,
@@ -38,7 +42,7 @@ class CallContentSeeder extends Seeder
             [
                 'call_name' => 'ArticleBody',
                 'call_type' => CallType::OriginalText,
-                'content_model_relation_id' => 1,
+                'content_model_relation_id' => $relationIds['Article'],
                 'view_count' => 1,
                 'place' => CallContentPlace::Inside,
                 'sort_order' => 2,
@@ -46,7 +50,7 @@ class CallContentSeeder extends Seeder
             [
                 'call_name' => 'SinglePageBody',
                 'call_type' => CallType::OriginalText,
-                'content_model_relation_id' => 2,
+                'content_model_relation_id' => $relationIds['SinglePage'],
                 'view_count' => 1,
                 'place' => CallContentPlace::Inside,
                 'sort_order' => 3,
@@ -55,7 +59,7 @@ class CallContentSeeder extends Seeder
             [
                 'call_name' => 'UserSkill',
                 'call_type' => CallType::SkillList,
-                'content_model_relation_id' => 3,
+                'content_model_relation_id' => $relationIds['UserDetail'],
                 'view_count' => 3,
                 'place' => CallContentPlace::Top,
                 'sort_order' => 4,
@@ -66,7 +70,7 @@ class CallContentSeeder extends Seeder
                 'title' => 'Gallery',
                 'subtitle' => 'ギャラリー',
                 'call_type' => CallType::TileList,
-                'content_model_relation_id' => 4,
+                'content_model_relation_id' => $relationIds['GalleryImage'],
                 'view_count' => 12,
                 'place' => CallContentPlace::Top,
                 'sort_order' => 6,
@@ -77,7 +81,7 @@ class CallContentSeeder extends Seeder
                 'title' => 'Q&A',
                 'subtitle' => 'よくある質問',
                 'call_type' => CallType::Accordion,
-                'content_model_relation_id' => 5,
+                'content_model_relation_id' => $relationIds['QuestionAnswer'],
                 'view_count' => 5,
                 'place' => CallContentPlace::Top,
                 'sort_order' => 7,
