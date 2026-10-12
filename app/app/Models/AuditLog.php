@@ -78,6 +78,7 @@ class AuditLog extends Model
             'gallery_category' => __('ギャラリーの分類'),
             'gallery_image' => __('ギャラリー画像'),
             'layout' => __('レイアウト'),
+            'mail_setting' => __('メールの設定'),
             'page_builder' => __('ページビルダー'),
             'page_builder_image' => __('ページビルダーの画像'),
             'page_builder_template' => __('ページビルダーのテンプレート'),

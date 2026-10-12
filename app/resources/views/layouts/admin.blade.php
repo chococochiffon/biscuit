@@ -132,19 +132,28 @@
                     </li>
                 </ul>
 
-                {{-- 操作ログ(監査ログ。スーパー管理者のみ) --}}
-                @can('view-audit-logs')
+                {{-- システム: 操作ログ(監査ログ)・メールの設定(スーパー管理者のみ) --}}
+                @canany(['view-audit-logs', 'manage-mail-settings'])
                 <hr class="admin-sidebar-divider">
 
                 <div class="admin-sidebar-heading">{{ __('システム') }}</div>
                 <ul class="nav flex-column admin-sidebar-nav">
+                    @can('view-audit-logs')
                     <li class="nav-item">
                         <a href="{{ route('admin.audit-logs.index') }}" class="nav-link">
                             <i class="bi bi-clock-history"></i>{{ __('操作ログ') }}
                         </a>
                     </li>
+                    @endcan
+                    @can('manage-mail-settings')
+                    <li class="nav-item">
+                        <a href="{{ route('admin.mail-settings.edit') }}" class="nav-link">
+                            <i class="bi bi-envelope-at"></i>{{ __('メールの設定') }}
+                        </a>
+                    </li>
+                    @endcan
                 </ul>
-                @endcan
+                @endcanany
             </aside>
 
             <div class="d-flex flex-column flex-grow-1 min-vh-100">
@@ -153,6 +162,9 @@
                         <div class="d-flex w-100 align-items-center justify-content-end gap-3">
                             @auth('admin')
                                 <div class="small admin-navbar-text">{{ auth('admin')->user()->name }}</div>
+                                <a href="{{ route('admin.two-factor.show') }}" class="small text-secondary" title="{{ __('二段階認証') }}">
+                                    <i class="bi bi-shield-lock"></i> {{ __('二段階認証') }}
+                                </a>
                             @endauth
 
                             <div class="d-flex align-items-center gap-2">

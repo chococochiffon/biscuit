@@ -11,11 +11,19 @@ use App\Installer\InstallerStep;
 use App\Installer\SiteInstaller;
 use App\Installer\TemplateInstaller;
 use App\Models\Administrator;
+use App\Models\Article;
+use App\Models\ArticlePathOption;
+use App\Models\CallContent;
+use App\Models\ContentModelRelation;
 use App\Models\GalleryImage;
 use App\Models\LayoutBlock;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderTemplate;
+use App\Models\QuestionAnswer;
+use App\Models\SinglePage;
 use App\Models\SiteSetting;
+use App\Models\TopSliderImage;
+use App\Models\User;
 use App\Providers\AppServiceProvider;
 use App\Support\Builder\BuilderContent;
 use App\Support\Builder\SchemaMigrator;
@@ -216,7 +224,7 @@ class InstallerStepsTest extends TestCase
         $this->assertStringContainsString("RESEND_API_KEY='re_test_123'", $this->env());
         $this->assertStringContainsString("MAIL_FROM_ADDRESS='no-reply@example.com'", $this->env());
         $this->assertStringContainsString('MAIL_HOST=mailpit', $this->env());
-        $this->assertNull(config('mail.mailers.installer_test'));
+        $this->assertNull(config('mail.mailers.mail_transport_test'));
         $this->assertTrue(app(InstallationState::class)->isCompleted(InstallerStep::Mail));
     }
 
@@ -236,7 +244,7 @@ class InstallerStepsTest extends TestCase
         $this->completeUntil(InstallerStep::Mail);
         $before = $this->env();
         Mail::shouldReceive('mailer->raw')->andThrow(new RuntimeException('API key re_secret_456 is invalid'));
-        Mail::shouldReceive('purge')->with('installer_test');
+        Mail::shouldReceive('purge')->with('mail_transport_test');
 
         $this->post(route('installer.mail.store'), ['driver' => 'resend', 'api_key' => 're_secret_456', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com'])
             ->assertRedirect(route('installer.mail'));
@@ -286,11 +294,49 @@ class InstallerStepsTest extends TestCase
     {
         $this->seed(InstallSeeder::class);
 
+        // 管理者・ユーザーのシーダーは使わない
         $this->assertSame(0, Administrator::query()->count());
+        $this->assertSame(0, User::query()->count());
+        // トップにビルダーを使うかどうかにかかわらず、公開側の標準のトップに並べるサンプルと呼び出しコンテンツを入れる
+        $this->assertSame(5, ContentModelRelation::query()->count());
+        $this->assertSame(
+            ContentModelRelation::query()->where('model_name', 'GalleryImage')->value('id'),
+            CallContent::query()->where('call_name', 'GalleryTileList')->value('content_model_relation_id'),
+        );
+        $this->assertSame(3, TopSliderImage::query()->count());
+        Storage::disk('public')->assertExists(TopSliderImage::query()->pluck('top_image')->all());
+        $this->assertSame(3, Article::query()->published()->count());
+        $this->assertTrue(ArticlePathOption::query()->exists());
+        $this->assertTrue(SinglePage::query()->published()->where('path', '/information/about')->exists());
+        $this->assertSame(3, QuestionAnswer::query()->where('top_view', true)->count());
+        $this->assertSame(2, QuestionAnswer::query()->where('top_view', false)->count());
         $this->assertTrue(PageBuilderTemplate::query()->exists());
         $this->assertSame(4, GalleryImage::query()->count());
         Storage::disk('public')->assertExists(GalleryImage::query()->pluck('image')->all());
         Storage::disk('public')->assertExists(SiteSetting::DEFAULT_SITE_ICON_PATH);
+
+        // 何度呼んでも重複させない
+        $this->seed(InstallSeeder::class);
+        $this->assertSame(3, Article::query()->count());
+        $this->assertSame(5, QuestionAnswer::query()->count());
+        $this->assertSame(1, SinglePage::query()->count());
+        $this->assertSame(7, CallContent::query()->count());
+        $this->assertSame(3, TopSliderImage::query()->count());
+    }
+
+    public function test_design_step_recommends_and_selects_the_default_design(): void
+    {
+        $this->seed(InstallSeeder::class);
+        SiteSetting::query()->create(['site_title' => 'ビスケット商店', 'site_icon' => SiteSetting::DEFAULT_SITE_ICON_PATH, 'site_image' => SiteSetting::DEFAULT_SITE_IMAGE_PATH]);
+        $this->completeUntil(InstallerStep::Design);
+        // デフォルトのデザインを入れてトップのビルダーに下書きがあっても、戻ってきたときはデフォルトを選んでおく
+        app(TemplateInstaller::class)->installDefault();
+
+        $this->get(route('installer.design'))
+            ->assertOk()
+            ->assertSee('data-design-recommended', false)
+            ->assertSee('id="design-default" class="form-check-input" type="radio" name="design" value="default" checked', false)
+            ->assertDontSee('value="builder" checked', false);
     }
 
     public function test_design_step_default_does_not_use_the_builder_on_the_top_page(): void

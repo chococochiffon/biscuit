@@ -3,6 +3,7 @@
 namespace App\Installer;
 
 use App\Models\Administrator;
+use App\Models\MailSetting;
 use App\Models\PageBuilder;
 use App\Models\SiteSetting;
 use App\Services\SystemStatusService;
@@ -81,7 +82,7 @@ class HealthChecker
     }
 
     /**
-     * メールを設定したか(インストール中はメールの段を終えたか、インストール後は SMTP のホストか Resend の API キーがあるか)。
+     * メールを設定したか(インストール中はメールの段を終えたか、インストール後は SMTP のホストか Resend の API キーがあるか。管理画面のメールの設定を含む)。
      */
     private function mailConfigured(): bool
     {
@@ -92,6 +93,9 @@ class HealthChecker
         if (! app(InstallerManager::class)->isInstalled()) {
             return false;
         }
+
+        // 管理画面の「メールの設定」で保存した設定があれば、それを使う(表示する詳細もその設定になる)
+        MailSetting::applyToConfig();
 
         return match (config('mail.default')) {
             'smtp' => filled(config('mail.mailers.smtp.host')),

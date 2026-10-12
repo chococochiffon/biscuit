@@ -14,6 +14,7 @@ use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MailSettingController;
 use App\Http\Controllers\PageBuilderComponentController;
 use App\Http\Controllers\PageBuilderComponentJsonController;
 use App\Http\Controllers\PageBuilderController;
@@ -27,6 +28,7 @@ use App\Http\Controllers\SinglePageController;
 use App\Http\Controllers\SiteSettingController;
 use App\Http\Controllers\TagController;
 use App\Http\Controllers\TagJsonController;
+use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserInvitationController;
 use Illuminate\Support\Facades\Route;
@@ -43,7 +45,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
             ->middleware('throttle:admin-login')
             ->name('login.store');
 
-        // 二段階認証: メールで送った確認コードの入力と再送
+        // 二段階認証: メールで送った確認コード(認証アプリを設定した管理者は認証アプリのコード)の入力と再送
         Route::get('login/verify', [AdministratorSessionController::class, 'verifyForm'])->name('login.verify');
         Route::post('login/verify', [AdministratorSessionController::class, 'verify'])
             ->middleware('throttle:login-code')
@@ -51,6 +53,11 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::post('login/resend', [AdministratorSessionController::class, 'resend'])
             ->middleware('throttle:login-code')
             ->name('login.resend');
+
+        // 二段階認証: 認証アプリ(Google Authenticator)を使えないときに、メールで確認コードを送る
+        Route::post('login/email-code', [AdministratorSessionController::class, 'sendEmailCode'])
+            ->middleware('throttle:login-code')
+            ->name('login.email-code');
     });
 
     Route::post('logout', [AdministratorSessionController::class, 'destroy'])
@@ -211,6 +218,11 @@ Route::middleware('auth:admin')->group(function () {
     Route::post('admin/users/{user}/invitation', [UserInvitationController::class, 'resend'])
         ->name('admin.users.invitation.resend');
 
+    // ユーザーの認証アプリ(二段階認証)の解除はスーパー管理者だけ(AppServiceProvider の reset-two-factor)
+    Route::delete('admin/users/{user}/two-factor', [TwoFactorController::class, 'resetUser'])
+        ->middleware('can:reset-two-factor')
+        ->name('admin.users.two-factor.reset');
+
     Route::resource('admin/users', UserController::class)
         ->names('admin.users');
 
@@ -265,6 +277,33 @@ Route::middleware('auth:admin')->group(function () {
             ->parameters(['audit-logs' => 'auditLog'])
             ->only(['index', 'show'])
             ->names('admin.audit-logs');
+    });
+
+    // ログイン中の管理者自身の二段階認証の設定(認証アプリ(Google Authenticator)の設定・解除)
+    Route::get('admin/two-factor', [TwoFactorController::class, 'show'])
+        ->name('admin.two-factor.show');
+
+    Route::put('admin/two-factor', [TwoFactorController::class, 'update'])
+        ->name('admin.two-factor.update');
+
+    Route::delete('admin/two-factor', [TwoFactorController::class, 'destroy'])
+        ->name('admin.two-factor.destroy');
+
+    // ほかの管理者の認証アプリの解除はスーパー管理者だけ(AppServiceProvider の reset-two-factor)。管理者の resource より前に置く
+    Route::delete('admin/{administrator}/two-factor', [TwoFactorController::class, 'reset'])
+        ->middleware('can:reset-two-factor')
+        ->name('admin.two-factor.reset');
+
+    // システムが使うメールの設定は 1 画面で編集・保存し、スーパー管理者だけが使える(AppServiceProvider の manage-mail-settings)
+    Route::middleware('can:manage-mail-settings')->group(function () {
+        Route::get('admin/mail-settings', [MailSettingController::class, 'edit'])
+            ->name('admin.mail-settings.edit');
+
+        Route::put('admin/mail-settings', [MailSettingController::class, 'update'])
+            ->name('admin.mail-settings.update');
+
+        Route::delete('admin/mail-settings', [MailSettingController::class, 'destroy'])
+            ->name('admin.mail-settings.destroy');
     });
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)

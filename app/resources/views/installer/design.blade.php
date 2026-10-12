@@ -13,8 +13,9 @@
             <input id="design-default" class="form-check-input" type="radio" name="design" value="default" @checked($selected === 'default')>
             <label for="design-default" class="form-check-label">
                 <span class="fw-semibold">{{ __('デフォルトのデザインを使う') }}</span>
+                <span class="badge text-bg-primary ms-1" data-design-recommended>{{ __('推奨') }}</span>
                 <span class="d-block small text-secondary">
-                    {{ __('ヘッダー(サイト名・メニュー)とフッター(コピーライト)を用意し、トップは公開側の標準の表示(スライダー・呼び出しコンテンツ)にします。トップのビルダーには、大きな見出し(サイト名・説明)と新着記事の下書きを用意します。管理画面のビルダーで公開し、サイト設定の「トップでページビルダーを使う」を「使う」にすると、トップに表示されます。') }}
+                    {{ __('ヘッダー(サイト名・メニュー)とフッター(コピーライト)を用意し、トップは公開側の標準の表示(スライダー・呼び出しコンテンツ)にします(トップでページビルダーを使わない)。サンプルのスライダー画像・記事・固定ページ・Q&A・ギャラリーが並びます。トップのビルダーには、大きな見出し(サイト名・説明)と新着記事の下書きを用意します。管理画面のビルダーで公開し、サイト設定の「トップでページビルダーを使う」を「使う」にすると、トップに表示されます。') }}
                 </span>
             </label>
         </div>

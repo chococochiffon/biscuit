@@ -7,6 +7,7 @@ use App\Installer\SiteInstaller;
 use App\Models\Administrator;
 use App\Models\Article;
 use App\Models\GalleryImage;
+use App\Models\MailSetting;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderComponent;
 use App\View\Composers\AnnouncementNoticeComposer;
@@ -54,6 +55,9 @@ class AppServiceProvider extends ServiceProvider
             TrustProxies::at(explode(',', SiteInstaller::PRIVATE_NETWORKS));
             TrustProxies::withHeaders(Request::HEADER_X_FORWARDED_PROTO | Request::HEADER_X_FORWARDED_PORT);
         }
+
+        // 管理画面の「メールの設定」で保存した設定があれば、メールを送るとき(メールのマネージャーを作るとき)に .env の MAIL_* より優先する
+        $this->app->afterResolving('mail.manager', fn () => MailSetting::applyToConfig());
 
         // ページビルダーの版(page_builder_versions.versionable_type)に保存する対象の種類の名前(クラス名を保存しない)
         Relation::morphMap([
@@ -117,6 +121,12 @@ class AppServiceProvider extends ServiceProvider
 
         // ダッシュボードのシステム情報(バージョン・ディスク・エラーのログ)は、サーバーの状態を含むためスーパー管理者だけが見られる
         Gate::define('view-system-status', fn (Administrator $administrator) => $administrator->isSuperAdmin());
+
+        // ほかの管理者・ユーザーの認証アプリ(二段階認証)の解除は、ログインの安全に関わるためスーパー管理者だけができる
+        Gate::define('reset-two-factor', fn (Administrator $administrator) => $administrator->isSuperAdmin());
+
+        // システムが使うメールの設定は、管理画面のログインに関わるためスーパー管理者だけが変えられる
+        Gate::define('manage-mail-settings', fn (Administrator $administrator) => $administrator->isSuperAdmin());
 
         // ページビルダーの Custom CSS とブロックの追加のクラス名は、公開側の見た目を大きく変えられるためスーパー管理者だけが書ける
         // (インストーラーの中のビルダーでは書かせない。インストールのあとに管理画面で書く)

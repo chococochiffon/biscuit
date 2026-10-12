@@ -10,13 +10,14 @@ use App\Installer\InstallerStep;
 use App\Installer\InstallerStepException;
 use App\Installer\TemplateInstaller;
 use App\Models\PageBuilder;
+use App\Models\SiteSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 
 /**
- * インストーラーのデザインの段。デフォルトのデザインを使う(「あとで設定する」も同じ)か、ビルダーでトップを作るかを選ぶ。
+ * インストーラーのデザインの段。デフォルトのデザインを使う(推奨。トップにビルダーを使わない。「あとで設定する」も同じ)か、ビルダーでトップを作るかを選ぶ。
  * ビルダーは管理画面と同じエディタを、インストーラーの JSON の URL で開く(builder())。使えるのは最初の管理者を作ったセッションだけで
  * (installer.builder)、セッションが切れたら作った管理者のメールアドレスとパスワードで解除する(unlock())。
  * 作った下書きは、公開側(chococo)のプレビューで確かめてから「このデザインで次へ」で公開する。
@@ -40,7 +41,8 @@ class DesignController extends Controller
             'canUseBuilder' => $canUseBuilder,
             'hasDraft' => $hasDraft,
             'previewUrl' => $canUseBuilder && $hasDraft ? PageBuilderJsonController::signedPreviewUrl($builder)['url'] : null,
-            'selected' => old('design', $request->query('design', $hasDraft ? 'builder' : 'default')),
+            // 推奨はトップにビルダーを使わないデフォルトのデザイン。ビルダーで作ったトップを公開済み(戻ってきたとき)だけビルダーを選んでおく
+            'selected' => old('design', $request->query('design', SiteSetting::current()?->top_use_builder ? 'builder' : 'default')),
         ]);
     }
 

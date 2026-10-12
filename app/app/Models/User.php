@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\TwoFactorMethod;
+use App\Models\Concerns\HasTwoFactor;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Notifications\ResetPasswordNotification;
 use Database\Factories\UserFactory;
@@ -17,11 +19,11 @@ use Illuminate\Support\Str;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'skip_approval', 'active_flag'])]
-#[Hidden(['password', 'remember_token', 'unique_email'])]
+#[Hidden(['password', 'remember_token', 'unique_email', 'two_factor_secret', 'two_factor_last_used_step'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, SoftDeletes;
+    use HasApiTokens, HasFactory, HasTwoFactor, Notifiable, SoftDeletes;
 
     /**
      * 公開側(chococo)の投稿者ページの URL の先頭(/authors/{id})。記事・固定ページ・カスタムページの URL の先頭には使えない。
@@ -48,6 +50,10 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_method' => TwoFactorMethod::class,
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_last_used_step' => 'integer',
             'skip_approval' => 'boolean',
             'active_flag' => 'boolean',
         ];
