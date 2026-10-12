@@ -14,6 +14,7 @@ use App\Http\Controllers\GalleryCategoryController;
 use App\Http\Controllers\GalleryImageController;
 use App\Http\Controllers\LayoutController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MailSettingController;
 use App\Http\Controllers\PageBuilderComponentController;
 use App\Http\Controllers\PageBuilderComponentJsonController;
 use App\Http\Controllers\PageBuilderController;
@@ -265,6 +266,18 @@ Route::middleware('auth:admin')->group(function () {
             ->parameters(['audit-logs' => 'auditLog'])
             ->only(['index', 'show'])
             ->names('admin.audit-logs');
+    });
+
+    // システムが使うメールの設定は 1 画面で編集・保存し、スーパー管理者だけが使える(AppServiceProvider の manage-mail-settings)
+    Route::middleware('can:manage-mail-settings')->group(function () {
+        Route::get('admin/mail-settings', [MailSettingController::class, 'edit'])
+            ->name('admin.mail-settings.edit');
+
+        Route::put('admin/mail-settings', [MailSettingController::class, 'update'])
+            ->name('admin.mail-settings.update');
+
+        Route::delete('admin/mail-settings', [MailSettingController::class, 'destroy'])
+            ->name('admin.mail-settings.destroy');
     });
 
     Route::resource('admin/question-answers', QuestionAnswerController::class)

@@ -224,7 +224,7 @@ class InstallerStepsTest extends TestCase
         $this->assertStringContainsString("RESEND_API_KEY='re_test_123'", $this->env());
         $this->assertStringContainsString("MAIL_FROM_ADDRESS='no-reply@example.com'", $this->env());
         $this->assertStringContainsString('MAIL_HOST=mailpit', $this->env());
-        $this->assertNull(config('mail.mailers.installer_test'));
+        $this->assertNull(config('mail.mailers.mail_transport_test'));
         $this->assertTrue(app(InstallationState::class)->isCompleted(InstallerStep::Mail));
     }
 
@@ -244,7 +244,7 @@ class InstallerStepsTest extends TestCase
         $this->completeUntil(InstallerStep::Mail);
         $before = $this->env();
         Mail::shouldReceive('mailer->raw')->andThrow(new RuntimeException('API key re_secret_456 is invalid'));
-        Mail::shouldReceive('purge')->with('installer_test');
+        Mail::shouldReceive('purge')->with('mail_transport_test');
 
         $this->post(route('installer.mail.store'), ['driver' => 'resend', 'api_key' => 're_secret_456', 'from_address' => 'no-reply@example.com', 'test_to' => 'owner@example.com'])
             ->assertRedirect(route('installer.mail'));

@@ -1144,5 +1144,20 @@
     "セクションの下の端の丸いつまみをドラッグすると、セクションの高さ(最小の高さ)を変えられます。": "Drag the round handle on the bottom edge of a section to change its height (minimum height).",
     "スマートフォンでは、はじめはデスクトップの上から順に縦 1 列に並びます(タブレットはデスクトップの配置を縮めて使います)。その端末を選んでブロックを動かすと、そのまとまりはその端末だけの位置になります。「位置と大きさ」から自動に戻せます。": "On smartphones, blocks are first stacked in one column from the top of the desktop layout (tablets use the desktop layout scaled down). Select the device and move a block to give that group device-only positions. You can reset them to automatic from \"Position and size\".",
     "行・カラムで並べる形式の内容は保存できません。画面を読み込み直すと、自由配置に変換します。": "Content laid out with rows and columns cannot be saved. Reload the page to convert it to the free layout.",
-    "この内容を自由配置に変換しました。位置を確かめてから公開してください(公開するまで、公開側は今の見た目のままです)。": "This content was converted to the free layout. Check the positions before publishing (the public site keeps the current look until you publish)."
+    "この内容を自由配置に変換しました。位置を確かめてから公開してください(公開するまで、公開側は今の見た目のままです)。": "This content was converted to the free layout. Check the positions before publishing (the public site keeps the current look until you publish).",
+    ".env の設定に戻す": "Go back to the .env settings",
+    "Biscuit の管理画面の「メールの設定」から送った、試しのメールです。このメールが届いていれば、メールの設定は正しく動いています。": "This is a test email sent from \"Mail settings\" in the Biscuit admin panel. If you received it, the mail settings are working correctly.",
+    "【:site】メールの設定の確認": "[:site] Mail settings check",
+    "メールの設定": "Mail settings",
+    "ログインの確認コード・パスワードの再設定・招待・お知らせなど、システムが送るメールの送り方を設定します。保存の前に試しのメールを送り、届いたときだけ保存します(設定を間違えると、確認コードが届かず管理画面にログインできなくなるため)。": "Configure how the system sends emails, such as login verification codes, password resets, invitations and announcements. A test email is sent before saving, and the settings are saved only when it is sent (wrong settings would stop verification codes from arriving and lock you out of the admin panel).",
+    "今は .env の設定(MAIL_*)を使っています。この画面で保存すると、こちらの設定を優先します。": "The .env settings (MAIL_*) are currently in use. Once you save on this screen, these settings take precedence.",
+    "今は、この画面で保存した設定を使っています(.env の MAIL_* より優先します)。": "The settings saved on this screen are currently in use (they take precedence over MAIL_* in .env).",
+    "画面の設定をやめ、.env の設定に戻しました。": "Stopped using the saved settings and went back to the .env settings.",
+    "画面の設定をやめて、.env の設定に戻しますか?": "Stop using the saved settings and go back to the .env settings?",
+    "空のままにすると .env の MAIL_FROM_NAME を使います(ログインの確認コードなどはサイト名で送ります)。": "If left empty, MAIL_FROM_NAME in .env is used (login verification codes and similar emails are sent with the site name).",
+    "試しに送って保存する": "Send a test and save",
+    "試しのメールを送り、メールの設定を保存しました。": "Sent a test email and saved the mail settings.",
+    "試しのメールを送れなかったため、保存していません。設定を確かめてください。(:error)": "The settings were not saved because the test email could not be sent. Please check the settings. (:error)",
+    "送信元": "From",
+    "送信元の名前": "Sender name"
 }
