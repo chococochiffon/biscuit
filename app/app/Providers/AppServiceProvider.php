@@ -122,6 +122,9 @@ class AppServiceProvider extends ServiceProvider
         // ダッシュボードのシステム情報(バージョン・ディスク・エラーのログ)は、サーバーの状態を含むためスーパー管理者だけが見られる
         Gate::define('view-system-status', fn (Administrator $administrator) => $administrator->isSuperAdmin());
 
+        // ほかの管理者・ユーザーの認証アプリ(二段階認証)の解除は、ログインの安全に関わるためスーパー管理者だけができる
+        Gate::define('reset-two-factor', fn (Administrator $administrator) => $administrator->isSuperAdmin());
+
         // システムが使うメールの設定は、管理画面のログインに関わるためスーパー管理者だけが変えられる
         Gate::define('manage-mail-settings', fn (Administrator $administrator) => $administrator->isSuperAdmin());
 

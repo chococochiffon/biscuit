@@ -19,15 +19,19 @@
 
                 @include('admin.partials._form_errors')
 
-                <p class="small text-body-secondary">
-                    {{ __(':email に確認コードを送りました。メールに書かれた 6 桁のコードを入力してください。', ['email' => $email]) }}
+                <p class="small text-body-secondary" data-two-factor-method="{{ $usesTotp ? 'totp' : 'email' }}">
+                    @if ($usesTotp)
+                        {{ __('認証アプリ(Google Authenticator など)に表示されている 6 桁のコードを入力してください。') }}
+                    @else
+                        {{ __(':email に確認コードを送りました。メールに書かれた 6 桁のコードを入力してください。', ['email' => $email]) }}
+                    @endif
                 </p>
 
                 <form method="POST" action="{{ route('admin.login.verify.store') }}">
                     @csrf
 
                     <div class="mb-3">
-                        <label for="code" class="form-label">{{ __('確認コード') }}</label>
+                        <label for="code" class="form-label">{{ $usesTotp ? __('認証アプリのコード') : __('確認コード') }}</label>
                         <input
                             id="code"
                             type="text"
@@ -49,10 +53,18 @@
                 </form>
 
                 <div class="d-flex justify-content-between align-items-center mt-3 small">
-                    <form method="POST" action="{{ route('admin.login.resend') }}">
-                        @csrf
-                        <button type="submit" class="btn btn-link btn-sm p-0">{{ __('コードを送り直す') }}</button>
-                    </form>
+                    @if ($usesTotp)
+                        {{-- 機種変更などで認証アプリを使えないときは、メールの確認コードでログインする --}}
+                        <form method="POST" action="{{ route('admin.login.email-code') }}" data-send-email-code>
+                            @csrf
+                            <button type="submit" class="btn btn-link btn-sm p-0">{{ __('メールにコードを送る') }}</button>
+                        </form>
+                    @else
+                        <form method="POST" action="{{ route('admin.login.resend') }}">
+                            @csrf
+                            <button type="submit" class="btn btn-link btn-sm p-0">{{ __('コードを送り直す') }}</button>
+                        </form>
+                    @endif
                     <a href="{{ route('admin.login') }}" class="text-secondary">{{ __('ログイン画面へ戻る') }}</a>
                 </div>
             </div>
