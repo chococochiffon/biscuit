@@ -31,6 +31,9 @@ class DoctorService
         $backup = $this->safely(fn () => $this->backups->latest());
         $backupHours = (int) config('biscuit.backup.warning_hours');
         $backupAt = $backup === null ? null : CarbonImmutable::parse($backup['created_at']);
+        $memory = $this->safely(fn () => $this->memory());
+        $memoryMinimum = (int) config('biscuit.memory.minimum_mb');
+        $memoryEnough = $memory === null || $memoryMinimum <= $memory['memory'] + $memory['swap'];
 
         return [
             ['key' => 'installed', 'label' => __('インストールを終えている'), 'level' => 'required', 'ok' => $this->installer->isInstalled(), 'detail' => 'v'.config('biscuit.version')],
@@ -56,7 +59,39 @@ class DoctorService
                 'ok' => $backupAt !== null && $backupAt->greaterThan(now()->subHours($backupHours)),
                 'detail' => $backupAt === null ? __('まだありません(./biscuit backup で作れます)') : $backupAt->format('Y-m-d H:i'),
             ],
+            [
+                'key' => 'memory',
+                'label' => __('更新でイメージを作れるメモリがある'),
+                'level' => 'recommended',
+                'ok' => $memoryEnough,
+                'detail' => match (true) {
+                    $memory === null => null,
+                    $memoryEnough => __('メモリ :memoryMB・スワップ :swapMB', $memory),
+                    default => __('メモリ :memoryMB・スワップ :swapMB(合計 :minimumMB 以上が要ります。スワップを足してください)', [...$memory, 'minimum' => $memoryMinimum]),
+                },
+            ],
         ];
+    }
+
+    /**
+     * サーバー(Docker Desktop では仮想マシン)のメモリとスワップの大きさ(MB)。読めないときは null。
+     *
+     * @return array{memory: int, swap: int}|null
+     */
+    private function memory(): ?array
+    {
+        $path = (string) config('biscuit.memory.meminfo');
+        if (! is_readable($path)) {
+            return null;
+        }
+
+        preg_match_all('/^(MemTotal|SwapTotal):\s+(\d+) kB$/m', (string) file_get_contents($path), $matches, PREG_SET_ORDER);
+        $values = array_column($matches, 2, 1);
+        if (! isset($values['MemTotal'])) {
+            return null;
+        }
+
+        return ['memory' => intdiv((int) $values['MemTotal'], 1024), 'swap' => intdiv((int) ($values['SwapTotal'] ?? 0), 1024)];
     }
 
     private function safely(callable $callback): mixed

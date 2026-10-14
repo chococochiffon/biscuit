@@ -11,7 +11,7 @@ return [
     |
     */
 
-    'version' => '1.6.1',
+    'version' => '1.6.2',
 
     /*
     | HTTPS を外側のリバースプロキシで割り当てるとき、プロキシが付ける X-Forwarded-*(元の https・ホスト・IP アドレス)を信じる相手
@@ -90,6 +90,22 @@ return [
     'disk_free_warning_percent' => (int) env('BISCUIT_DISK_FREE_WARNING_PERCENT', 10),
 
     'error_log_hours' => 24,
+
+    /*
+    |--------------------------------------------------------------------------
+    | 更新でイメージを作るのに要るメモリ
+    |--------------------------------------------------------------------------
+    |
+    | メモリとスワップの合計が minimum_mb(MB)より少ないと、診断(./biscuit doctor)が警告し、./biscuit update は止まる
+    | (公開側の nuxt build が 1.1〜1.4GB を使うため。docker/production/lib.sh の MIN_TOTAL_MEMORY_MB と同じ値にする)。
+    | meminfo は読むファイル(テストで差し替える)。
+    |
+    */
+
+    'memory' => [
+        'minimum_mb' => 1700,
+        'meminfo' => '/proc/meminfo',
+    ],
 
     /*
     |--------------------------------------------------------------------------

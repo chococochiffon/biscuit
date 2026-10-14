@@ -73,6 +73,33 @@ class DoctorCommandTest extends TestCase
         $this->assertStringContainsString('v9.0.0', $update['detail']);
     }
 
+    public function test_doctor_warns_when_memory_and_swap_are_too_small_to_build(): void
+    {
+        $this->installedSite();
+        $meminfo = Storage::disk('local')->path('meminfo');
+        Storage::disk('local')->put('meminfo', "MemTotal:         972800 kB\nMemFree:          102400 kB\nSwapTotal:             0 kB\n");
+        config(['biscuit.memory.meminfo' => $meminfo]);
+
+        $this->assertSame(0, Artisan::call('biscuit:doctor', ['--offline' => true, '--json' => true]));
+        $memory = collect(json_decode(trim(Artisan::output()), true)['checks'])->firstWhere('key', 'memory');
+        $this->assertFalse($memory['ok']);
+        $this->assertStringContainsString('メモリ 950MB・スワップ 0MB(合計 1700MB 以上', $memory['detail']);
+
+        // スワップを足せば足りる
+        Storage::disk('local')->put('meminfo', "MemTotal:         972800 kB\nSwapTotal:       1048576 kB\n");
+        Artisan::call('biscuit:doctor', ['--offline' => true, '--json' => true]);
+        $memory = collect(json_decode(trim(Artisan::output()), true)['checks'])->firstWhere('key', 'memory');
+        $this->assertTrue($memory['ok']);
+        $this->assertSame('メモリ 950MB・スワップ 1024MB', $memory['detail']);
+
+        // 読めないとき(macOS など)は確かめない
+        config(['biscuit.memory.meminfo' => $meminfo.'-missing']);
+        Artisan::call('biscuit:doctor', ['--offline' => true, '--json' => true]);
+        $memory = collect(json_decode(trim(Artisan::output()), true)['checks'])->firstWhere('key', 'memory');
+        $this->assertTrue($memory['ok']);
+        $this->assertNull($memory['detail']);
+    }
+
     public function test_design_check_accepts_a_top_page_without_the_builder(): void
     {
         $this->installedSite();
