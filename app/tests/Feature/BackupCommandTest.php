@@ -138,6 +138,27 @@ class BackupCommandTest extends TestCase
         $this->assertCount(3, app(BackupService::class)->list());
     }
 
+    public function test_it_removes_work_directories_left_by_a_crashed_backup(): void
+    {
+        $directory = app(BackupService::class)->directory();
+        $stale = $directory.'/.work-biscuit-20260101-030000-daily-0123abcd';
+        $staleRestore = $directory.'/.restore-0123abcd';
+        $recent = $directory.'/.work-biscuit-20260101-040000-manual-4567cdef';
+        foreach ([$stale, $staleRestore, $recent] as $work) {
+            File::ensureDirectoryExists($work);
+            File::put($work.'/archive.tar', 'tar');
+        }
+        // PHP ごと落ちて残ったもの(古い)と、いま動いているかもしれないもの(新しい)
+        touch($stale, time() - 7 * 3600);
+        touch($staleRestore, time() - 7 * 3600);
+
+        $this->backup();
+
+        $this->assertDirectoryDoesNotExist($stale);
+        $this->assertDirectoryDoesNotExist($staleRestore);
+        $this->assertDirectoryExists($recent);
+    }
+
     public function test_it_lists_the_backups(): void
     {
         $this->artisan('biscuit:backup --list')->expectsOutputToContain('バックアップはまだありません')->assertSuccessful();
