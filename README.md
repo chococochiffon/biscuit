@@ -14,7 +14,7 @@ Biscuit は、記事・固定ページ・ページビルダーを持つ CMS で�
 
 - Linux・macOS・Windows(WSL2)
 - Docker(Docker Compose v2 を含む)・git・curl。ホストに PHP・Node.js は要りません
-- メモリ 2GB 以上、ディスクの空き 5GB 以上(イメージのビルドに使います)
+- メモリ 2GB 以上、ディスクの空き 5GB 以上(イメージのビルドに使います)。メモリが 2GB ちょうどのときは、スワップも用意しておくと安心です(「メモリが少ないサーバー」)
 - 管理画面のログインは確認コードをメールで送るため、メールを送れる SMTP サーバー、または [Resend](https://resend.com/) の API キー(送信元のドメインを Resend で認証しておく)
 
 ### 手順
@@ -115,6 +115,18 @@ v1.0.0 には `./biscuit` がないため、v1.0.0 からは、先に新しい�
 ❯ git fetch --tags
 ❯ git checkout v1.6.1
 ❯ ./biscuit update --from v1.0.0
+```
+
+### メモリが少ないサーバー
+
+公開側のイメージのビルド(`nuxt build`)は、1.1〜1.4GB のメモリを使います。`./biscuit update` は、使えるメモリ(空き + スワップの空き)が 1.3GB に足りないときは、ビルドのあいだ公開側のサイトを止め、それでも足りなければ管理画面とデータベースも止めます(メンテナンス中のため、ビルドのあとに起動し直します)。メモリとスワップの合計が 1.7GB に足りないときは、何も変えずに止めます(`./biscuit doctor` も警告します)。そのときは、スワップを足してから動かしてください。
+
+```
+❯ sudo fallocate -l 2G /swapfile
+❯ sudo chmod 600 /swapfile
+❯ sudo mkswap /swapfile
+❯ sudo swapon /swapfile
+❯ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab   # 再起動しても使う
 ```
 
 以下は、開発用の環境(`docker-compose.yml`)の作り方です。
