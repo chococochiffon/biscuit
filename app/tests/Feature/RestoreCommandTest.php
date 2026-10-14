@@ -133,6 +133,18 @@ class RestoreCommandTest extends TestCase
             ->assertFailed();
     }
 
+    public function test_it_refuses_a_broken_archive(): void
+    {
+        $directory = app(BackupService::class)->directory();
+        File::put($directory.'/biscuit-20260101-030000-manual.tar.gz', 'not a gzip');
+
+        $this->artisan('biscuit:restore', ['name' => 'biscuit-20260101-030000-manual.tar.gz', '--force' => true])
+            ->expectsOutputToContain('を開けません')
+            ->assertFailed();
+
+        $this->assertSame([], glob($directory.'/.restore-*'));
+    }
+
     public function test_the_reader_splits_statements_outside_quotes(): void
     {
         $path = Storage::disk('local')->path('statements.sql');

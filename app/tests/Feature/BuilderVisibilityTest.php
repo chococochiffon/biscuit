@@ -113,6 +113,8 @@ class BuilderVisibilityTest extends TestCase
 
     public function test_resolve_api_hides_scheduled_blocks_until_they_start(): void
     {
+        // 固定ページの公開開始日時(ファクトリーは今の日時)が、ブロックの表示の開始より前になるよう、先に日時を決めてから作る
+        $this->travelTo('2026-10-09 12:00:00');
         $singlePage = SinglePage::factory()->create(['slug' => 'campaign', 'use_builder' => true]);
         $content = (new BuilderValidator)->normalize(self::content(['startAt' => '2026-10-10T00:00'], 'キャンペーン'));
         PageBuilder::factory()->for($singlePage)->create(['draft_content' => $content, 'published_content' => $content, 'published_at' => now()]);

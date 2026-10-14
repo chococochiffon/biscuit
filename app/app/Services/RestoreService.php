@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Support\Backup\DatabaseDump;
+use App\Support\Backup\Gzip;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -30,17 +31,85 @@ class RestoreService
      */
     public function inspect(string $name): array
     {
-        $path = $this->backups->find($name);
+        return $this->withWork(fn (string $work) => $this->inspectArchive($name, $this->open($name, $work)));
+    }
+
+    /**
+     * バックアップから戻す。
+     *
+     * @return array{manifest: array<string, mixed>, statements: int, files: int, migrated: bool}
+     */
+    public function restore(string $name): array
+    {
+        return $this->withWork(function (string $work) use ($name) {
+            $phar = $this->open($name, $work);
+            $manifest = $this->inspectArchive($name, $phar);
+            $phar->extractTo($work.'/files');
+
+            $statements = (new DatabaseDump)->import($work.'/files/database.sql');
+            $files = $this->replacePublicFiles($work.'/files/storage/public');
+
+            // 古い版のバックアップを今の版のテーブルに合わせる
+            Artisan::call('migrate', ['--force' => true]);
+            $migrated = ! str_contains(Artisan::output(), 'Nothing to migrate');
+
+            Cache::flush();
+
+            return ['manifest' => $manifest, 'statements' => $statements, 'files' => $files, 'migrated' => $migrated];
+        });
+    }
+
+    /**
+     * 作業用のフォルダ(バックアップの置き場所の中。ほかの利用者に読ませない)を作って渡し、終わったら消す。
+     *
+     * @template T
+     *
+     * @param  callable(string): T  $callback
+     * @return T
+     */
+    private function withWork(callable $callback): mixed
+    {
+        $work = $this->backups->directory().'/.restore-'.bin2hex(random_bytes(4));
+        $umask = umask(0077);
 
         try {
-            $phar = new PharData($path);
+            File::ensureDirectoryExists($work, 0700);
+
+            return $callback($work);
+        } finally {
+            umask($umask);
+            File::deleteDirectory($work);
+        }
+    }
+
+    /**
+     * バックアップを作業用のフォルダへ tar に展開して開く(tar.gz を PharData で直接開くと、中身を丸ごとメモリに載せて落ちるため)。
+     */
+    private function open(string $name, string $work): PharData
+    {
+        $path = $this->backups->find($name);
+        $tar = $work.'/archive.tar';
+
+        try {
+            Gzip::decompress($path, $tar);
+
+            return new PharData($tar);
         } catch (Throwable $e) {
             throw new RuntimeException("{$name} を開けません(壊れているか、バックアップのファイルではありません)。", previous: $e);
         }
+    }
 
+    /**
+     * 開いたバックアップの中身を確かめ、manifest.json を返す。
+     *
+     * @return array<string, mixed>
+     */
+    private function inspectArchive(string $name, PharData $phar): array
+    {
+        $root = 'phar://'.$phar->getPath().'/';
         $entries = [];
         foreach (new RecursiveIteratorIterator($phar) as $file) {
-            $entries[] = substr($file->getPathname(), strlen('phar://'.$path.'/'));
+            $entries[] = substr($file->getPathname(), strlen($root));
         }
 
         foreach ($entries as $entry) {
@@ -72,36 +141,6 @@ class RestoreService
         }
 
         return $manifest;
-    }
-
-    /**
-     * バックアップから戻す。
-     *
-     * @return array{manifest: array<string, mixed>, statements: int, files: int, migrated: bool}
-     */
-    public function restore(string $name): array
-    {
-        $manifest = $this->inspect($name);
-        $work = $this->backups->directory().'/.restore-'.bin2hex(random_bytes(4));
-        $umask = umask(0077);
-
-        try {
-            (new PharData($this->backups->find($name)))->extractTo($work);
-
-            $statements = (new DatabaseDump)->import($work.'/database.sql');
-            $files = $this->replacePublicFiles($work.'/storage/public');
-
-            // 古い版のバックアップを今の版のテーブルに合わせる
-            Artisan::call('migrate', ['--force' => true]);
-            $migrated = ! str_contains(Artisan::output(), 'Nothing to migrate');
-
-            Cache::flush();
-        } finally {
-            umask($umask);
-            File::deleteDirectory($work);
-        }
-
-        return ['manifest' => $manifest, 'statements' => $statements, 'files' => $files, 'migrated' => $migrated];
     }
 
     /**

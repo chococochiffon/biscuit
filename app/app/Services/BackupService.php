@@ -3,12 +3,12 @@
 namespace App\Services;
 
 use App\Support\Backup\DatabaseDump;
+use App\Support\Backup\Gzip;
 use Carbon\CarbonImmutable;
 use FilesystemIterator;
 use Generator;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use Phar;
 use PharData;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
@@ -19,8 +19,9 @@ use Throwable;
 /**
  * バックアップ(./biscuit backup・毎日のスケジュール・更新の前(./biscuit update))。データベース・画像(public ディスク)・.env を
  * 1 つの tar.gz にまとめ、local ディスクの backups/ に 0600 で置く(.env の秘密の値が入るため、www-data だけが読める)。
- * 本番の app イメージには mysqldump・zip がないため、データベースは DatabaseDump で SQL に書き出し、PharData で固める
- * (PharData は phar.readonly=1 でも書ける)。古いものは config('biscuit.backup.keep') 世代だけ残して消す。
+ * 本番の app イメージには mysqldump・zip がないため、データベースは DatabaseDump で SQL に書き出し、PharData で tar に固めて
+ * Gzip で圧縮する(PharData は phar.readonly=1 でも書ける。圧縮を PharData に任せるとメモリが足りなくなる)。
+ * 古いものは config('biscuit.backup.keep') 世代だけ残して消す。
  *
  * 中身: manifest.json(版・日時・理由・件数)・database.sql・env/.env・storage/public/**
  */
@@ -34,6 +35,12 @@ class BackupService
 
     /** 作るときの理由(manifest.json と、ファイル名の末尾に入れる) */
     public const REASONS = ['manual', 'daily', 'pre-update', 'pre-restore', 'pre-down'];
+
+    /** 作業用のフォルダの名前の頭(バックアップ・リストアの途中のファイル) */
+    public const WORK_PREFIXES = ['.work-', '.restore-'];
+
+    /** この時間より古い作業用のフォルダは、途中で落ちて残ったものとして消す */
+    private const STALE_WORK_HOURS = 6;
 
     /** バックアップのファイル名(日時・理由)。./biscuit の BACKUP_NAME_PATTERN と同じ形 */
     public const NAME_PATTERN = '/^biscuit-(\d{8}-\d{6})-([a-z-]+)\.tar\.gz$/';
@@ -52,6 +59,7 @@ class BackupService
         $createdAt = CarbonImmutable::now();
         $name = 'biscuit-'.$createdAt->format('Ymd-His').'-'.$reason;
         $directory = $this->directory();
+        $this->removeStaleWork($directory);
         // PharData は同じプロセスで開いたアーカイブをパスで覚えているため、作業用のパスは毎回変える
         $work = $directory.'/.work-'.$name.'-'.bin2hex(random_bytes(4));
         $tar = $work.'/archive.tar';
@@ -71,6 +79,7 @@ class BackupService
             $database = (new DatabaseDump)->export($work.'/database.sql');
 
             $phar = new PharData($tar);
+            $phar->startBuffering();
             $phar->addFile($work.'/database.sql', 'database.sql');
 
             $env = base_path('.env');
@@ -92,8 +101,9 @@ class BackupService
             ];
             $phar->addFromString('manifest.json', (string) json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-            $phar->compress(Phar::GZ);
+            $phar->stopBuffering();
             unset($phar);
+            Gzip::compress($tar, $tar.'.gz');
             File::move($tar.'.gz', $archive);
             chmod($archive, 0600);
         } catch (Throwable $e) {
@@ -200,6 +210,22 @@ class BackupService
         }
 
         return $directory;
+    }
+
+    /**
+     * PHP ごと落ちて(メモリ不足など)finally が動かずに残った、古い作業用のフォルダを消す。
+     */
+    private function removeStaleWork(string $directory): void
+    {
+        $limit = time() - self::STALE_WORK_HOURS * 3600;
+
+        foreach (self::WORK_PREFIXES as $prefix) {
+            foreach (glob($directory.'/'.$prefix.'*', GLOB_ONLYDIR) ?: [] as $work) {
+                if (filemtime($work) < $limit) {
+                    File::deleteDirectory($work);
+                }
+            }
+        }
     }
 
     /**
