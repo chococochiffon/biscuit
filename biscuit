@@ -374,15 +374,14 @@ checkout_version() {
 }
 
 # いまのソースで、イメージ・PHP の依存関係・管理画面の CSS と JS を作り直し、サービスを起動し直す(install.sh と同じ手順)
+# メモリが少ないサーバー(2GB)でも動くよう、足りなければビルドのあいだサービスを止め、イメージは 1 つずつ作る
 rebuild_and_start() {
-  info "イメージを作り直します(数分かかります)"
-  compose build app scheduler front >>"$HOST_LOG" 2>&1 || return 1
-  info "PHP の依存関係を入れます"
-  install_php_dependencies >>"$HOST_LOG" 2>&1 || return 1
-  info "管理画面の CSS・JS をビルドします"
-  build_admin_assets >>"$HOST_LOG" 2>&1 || return 1
-  info "サービスを起動し直します"
-  compose up -d db app web front >>"$HOST_LOG" 2>&1 || return 1
+  free_memory_for_build
+  run_logged "PHP のイメージを作り直します" compose build app scheduler || return 1
+  run_logged "公開側のイメージを作り直します(数分かかります)" compose build front || return 1
+  run_logged "PHP の依存関係を入れます" install_php_dependencies || return 1
+  run_logged "管理画面の CSS・JS をビルドします" build_admin_assets || return 1
+  run_logged "サービスを起動し直します" compose up -d db app web front || return 1
   wait_for_db || return 1
 }
 
@@ -479,6 +478,8 @@ cmd_update() {
   if ! in_app php artisan biscuit:doctor --offline ${ignore[@]+"${ignore[@]}"} </dev/null >/dev/null; then
     fail "診断で問題(✘)が見つかったため、更新しません。./biscuit doctor で確かめてください。"
   fi
+
+  check_build_memory
 
   if [ "$yes" -ne 1 ]; then
     printf '  更新のあいだ(数分〜十数分)は、サイトをメンテナンスモードにします。先にバックアップを作り、失敗したら元に戻します。\n\n'
