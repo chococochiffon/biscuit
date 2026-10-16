@@ -36,7 +36,7 @@
                 <button type="submit" class="btn btn-primary">
                     {{ $submitLabel }}
                 </button>
-                <a href="{{ route('admin.articles.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+                <a href="{{ \App\Support\AdminListUrl::to('admin.articles.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
             </div>
         </div>
     </div>

@@ -16,6 +16,7 @@ import { initGalleryCategoryManagerModal } from './admin/gallery-images.js';
 import { initLayoutBlocks } from './admin/layouts.js';
 import { initPageViewCharts } from './admin/page-views.js';
 import { initUpdateNotice } from './admin/update-notice.js';
+import { initListScrollRestore } from './admin/list-scroll.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     initTagSelector();
@@ -39,4 +40,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initLayoutBlocks();
     initPageViewCharts();
     initUpdateNotice();
+    initListScrollRestore();
 });

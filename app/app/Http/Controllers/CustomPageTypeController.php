@@ -8,6 +8,7 @@ use App\Http\Requests\StoreCustomPageTypeRequest;
 use App\Http\Requests\UpdateCustomPageTypeRequest;
 use App\Models\CustomPages\CustomForm;
 use App\Models\CustomPageType;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use App\Support\CustomPages\CustomPageSchema;
 use Illuminate\Http\RedirectResponse;
@@ -113,7 +114,7 @@ class CustomPageTypeController extends Controller
     {
         AuditLogger::deleteWithLog($customPageType);
 
-        return redirect()->route('admin.custom-page-types.index')->with('status', __('カスタムページを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.custom-page-types.index'))->with('status', __('カスタムページを削除しました。'));
     }
 
     /**

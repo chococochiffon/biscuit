@@ -44,7 +44,7 @@
 
         <div class="d-flex align-items-center gap-3">
             <button type="submit" class="btn btn-primary">{{ __('登録する') }}</button>
-            <a href="{{ route('admin.custom-page-types.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.custom-page-types.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </form>
 @endsection

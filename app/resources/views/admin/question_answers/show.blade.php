@@ -31,6 +31,6 @@
     @endif
 
     <div class="mt-4">
-        <a href="{{ route('admin.question-answers.index') }}" class="text-secondary">{{ __('一覧へ戻る') }}</a>
+        <a href="{{ \App\Support\AdminListUrl::to('admin.question-answers.index') }}" class="text-secondary">{{ __('一覧へ戻る') }}</a>
     </div>
 @endsection

@@ -8,6 +8,7 @@ use App\Models\Administrator;
 use App\Models\User;
 use App\Models\UserInvitation;
 use App\Notifications\UserInvitationNotification;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -53,7 +54,7 @@ class UserInvitationController extends Controller
 
         $user->notify(new UserInvitationNotification($token));
 
-        return redirect()->route('admin.users.index')->with('status', __(':email に招待のメールを送りました。', ['email' => $user->email]));
+        return redirect()->to(AdminListUrl::to('admin.users.index'))->with('status', __(':email に招待のメールを送りました。', ['email' => $user->email]));
     }
 
     /**
@@ -72,7 +73,7 @@ class UserInvitationController extends Controller
 
         $user->notify(new UserInvitationNotification($token));
 
-        return redirect()->route('admin.users.index')->with('status', __(':email に招待のメールを送り直しました。', ['email' => $user->email]));
+        return redirect()->to(AdminListUrl::to('admin.users.index'))->with('status', __(':email に招待のメールを送り直しました。', ['email' => $user->email]));
     }
 
     private function administrator(): ?Administrator

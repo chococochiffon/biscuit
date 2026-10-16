@@ -15,7 +15,7 @@
             <button type="submit" class="btn btn-primary">
                 {{ __('更新する') }}
             </button>
-            <a href="{{ route('admin.builder-components.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.builder-components.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
             <a href="{{ route('admin.builder.components', $builderComponent) }}" class="ms-auto btn btn-outline-secondary">
                 <i class="bi bi-grid-1x2"></i> {{ __('ページビルダーで編集') }}
             </a>

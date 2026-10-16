@@ -190,7 +190,7 @@
                     </div>
                 </nav>
 
-                <main class="flex-grow-1 p-4">
+                <main class="flex-grow-1 p-4" @if (\App\Support\AdminListUrl::isListRoute(request()->route()?->getName())) data-list-page @endif>
                     {{-- Biscuit からの重要・セキュリティのお知らせ(すべての管理者)と、更新できる Biscuit のバージョンのお知らせ(スーパー管理者だけ)。
                          「閉じる」で隠したものは admin.js(update-notice.js)がこのブラウザで出さない --}}
                     @foreach ($urgentAnnouncements as $urgentAnnouncement)

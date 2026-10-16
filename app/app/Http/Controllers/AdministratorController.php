@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAdministratorRequest;
 use App\Http\Requests\UpdateAdministratorRequest;
 use App\Models\Administrator;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -41,7 +42,7 @@ class AdministratorController extends Controller
 
         AuditLogger::createWithLog(fn () => Administrator::create($data));
 
-        return redirect()->route('admin.index')->with('status', __('管理者を登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.index'))->with('status', __('管理者を登録しました。'));
     }
 
     /**
@@ -74,7 +75,7 @@ class AdministratorController extends Controller
         // パスワードは値を残さず、変更したことだけを残す
         AuditLogger::updateWithLog($administrator, fn () => $administrator->update($data), ['password_changed' => isset($data['password'])]);
 
-        return redirect()->route('admin.index')->with('status', __('管理者を更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.index'))->with('status', __('管理者を更新しました。'));
     }
 
     /**
@@ -84,6 +85,6 @@ class AdministratorController extends Controller
     {
         AuditLogger::deleteWithLog($administrator);
 
-        return redirect()->route('admin.index')->with('status', __('管理者を削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.index'))->with('status', __('管理者を削除しました。'));
     }
 }

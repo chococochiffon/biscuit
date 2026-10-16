@@ -14,7 +14,7 @@
             <button type="submit" class="btn btn-primary">
                 {{ __('登録する') }}
             </button>
-            <a href="{{ route('admin.content-model-relations.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.content-model-relations.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </form>
 @endsection

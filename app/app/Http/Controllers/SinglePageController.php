@@ -8,6 +8,7 @@ use App\Http\Controllers\Concerns\SyncsSortableRows;
 use App\Http\Requests\StoreSinglePageRequest;
 use App\Http\Requests\UpdateSinglePageRequest;
 use App\Models\SinglePage;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use App\Support\SyncedRows;
 use Illuminate\Http\RedirectResponse;
@@ -78,7 +79,7 @@ class SinglePageController extends Controller
             AuditLogger::created($singlePage, ['details' => $details->summary()]);
         });
 
-        return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.single-pages.index'))->with('status', __('固定ページを登録しました。'));
     }
 
     /**
@@ -122,7 +123,7 @@ class SinglePageController extends Controller
             AuditLogger::updated($singlePage, $before, ['details' => $details->summary()]);
         });
 
-        return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.single-pages.index'))->with('status', __('固定ページを更新しました。'));
     }
 
     /**
@@ -136,7 +137,7 @@ class SinglePageController extends Controller
             $singlePage->delete();
         });
 
-        return redirect()->route('admin.single-pages.index')->with('status', __('固定ページを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.single-pages.index'))->with('status', __('固定ページを削除しました。'));
     }
 
     /**

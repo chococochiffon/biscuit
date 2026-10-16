@@ -6,7 +6,7 @@
     <div class="mx-auto" style="max-width: 80rem;">
         <div class="mb-4 d-flex align-items-center justify-content-between">
             <h1 class="h5 mb-0">{{ __('操作ログの詳細') }}</h1>
-            <a href="{{ route('admin.audit-logs.index') }}" class="text-secondary">{{ __('一覧へ戻る') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.audit-logs.index') }}" class="text-secondary">{{ __('一覧へ戻る') }}</a>
         </div>
 
         <div class="card mb-4">

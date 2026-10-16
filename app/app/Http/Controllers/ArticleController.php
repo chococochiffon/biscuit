@@ -9,6 +9,7 @@ use App\Http\Controllers\Concerns\SavesArticle;
 use App\Http\Requests\StoreArticleRequest;
 use App\Http\Requests\UpdateArticleRequest;
 use App\Models\Article;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -79,7 +80,7 @@ class ArticleController extends Controller
             AuditLogger::created($article, extra: $this->auditTags($article));
         });
 
-        return redirect()->route('admin.articles.index')->with('status', __('記事を登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.articles.index'))->with('status', __('記事を登録しました。'));
     }
 
     /**
@@ -122,7 +123,7 @@ class ArticleController extends Controller
             AuditLogger::updated($article, $before, extra: $this->auditTags($article->load('tags')));
         });
 
-        return redirect()->route('admin.articles.index')->with('status', __('記事を更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.articles.index'))->with('status', __('記事を更新しました。'));
     }
 
     /**
@@ -132,7 +133,7 @@ class ArticleController extends Controller
     {
         AuditLogger::deleteWithLog($article);
 
-        return redirect()->route('admin.articles.index')->with('status', __('記事を削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.articles.index'))->with('status', __('記事を削除しました。'));
     }
 
     /**

@@ -7,6 +7,7 @@ use App\Http\Requests\StorePageBuilderComponentRequest;
 use App\Http\Requests\UpdatePageBuilderComponentRequest;
 use App\Models\PageBuilder;
 use App\Models\PageBuilderComponent;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -68,7 +69,7 @@ class PageBuilderComponentController extends Controller
     {
         AuditLogger::updateWithLog($pageBuilderComponent, fn () => $pageBuilderComponent->update($request->validated()));
 
-        return redirect()->route('admin.builder-components.index')->with('status', __('コンポーネントを更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.builder-components.index'))->with('status', __('コンポーネントを更新しました。'));
     }
 
     /**
@@ -82,12 +83,12 @@ class PageBuilderComponentController extends Controller
         if ($usedBy->isNotEmpty()) {
             $pages = $usedBy->implode('・');
 
-            return redirect()->route('admin.builder-components.index')
+            return redirect()->to(AdminListUrl::to('admin.builder-components.index'))
                 ->with('error', __('「:name」は次の場所で使っているため削除できません: :pages', ['name' => $pageBuilderComponent->name, 'pages' => $pages]));
         }
 
         AuditLogger::deleteWithLog($pageBuilderComponent);
 
-        return redirect()->route('admin.builder-components.index')->with('status', __('コンポーネントを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.builder-components.index'))->with('status', __('コンポーネントを削除しました。'));
     }
 }

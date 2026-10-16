@@ -8,6 +8,7 @@ use App\Models\Answer;
 use App\Models\BranchQuestionAnswer;
 use App\Models\Question;
 use App\Models\QuestionAnswer;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\RedirectResponse;
@@ -50,7 +51,7 @@ class QuestionAnswerController extends Controller
             AuditLogger::created($questionAnswer, ['type' => $request->validated('type')]);
         });
 
-        return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.question-answers.index'))->with('status', __('Q&Aを登録しました。'));
     }
 
     /**
@@ -89,7 +90,7 @@ class QuestionAnswerController extends Controller
             AuditLogger::updated($questionAnswer, $before, ['type' => $request->validated('type')]);
         });
 
-        return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.question-answers.index'))->with('status', __('Q&Aを更新しました。'));
     }
 
     /**
@@ -99,7 +100,7 @@ class QuestionAnswerController extends Controller
     {
         AuditLogger::deleteWithLog($questionAnswer);
 
-        return redirect()->route('admin.question-answers.index')->with('status', __('Q&Aを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.question-answers.index'))->with('status', __('Q&Aを削除しました。'));
     }
 
     /**

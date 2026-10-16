@@ -138,12 +138,14 @@ class GalleryImageControllerTest extends TestCase
         $response->assertSeeInOrder(['未分類', '風景', '料理']);
     }
 
-    public function test_store_saves_image_scaled_down_within_max_size_at_the_end(): void
+    public function test_store_saves_image_scaled_down_within_max_size_at_the_top(): void
     {
         $this->actingAsAdmin();
         Storage::fake('public');
         $category = GalleryCategory::factory()->create();
-        GalleryImage::factory()->create(['sort_order' => 3]);
+        $existing = GalleryImage::factory()->create(['sort_order' => 0, 'updated_at' => now()->subDay()]);
+        $trashed = GalleryImage::factory()->create(['sort_order' => 1]);
+        $trashed->delete();
 
         $response = $this->post(route('admin.gallery-images.store'), [
             'image' => UploadedFile::fake()->image('wide.jpg', 2400, 1200),
@@ -156,7 +158,11 @@ class GalleryImageControllerTest extends TestCase
         $galleryImage = GalleryImage::where('name', '海辺')->firstOrFail();
         $this->assertSame($category->id, $galleryImage->gallery_category_id);
         $this->assertSame('夏の海です。', $galleryImage->comment);
-        $this->assertSame(4, $galleryImage->sort_order);
+        // 新しい画像を先頭にし、今ある画像は更新日時を変えずに 1 つ後ろへずらす(論理削除した画像はずらさない)
+        $this->assertSame(0, $galleryImage->sort_order);
+        $this->assertSame(1, $existing->fresh()->sort_order);
+        $this->assertTrue($existing->updated_at->equalTo($existing->fresh()->updated_at));
+        $this->assertSame(1, GalleryImage::withTrashed()->findOrFail($trashed->id)->sort_order);
         // 管理者の登録は承認なしで公開にする
         $this->assertNull($galleryImage->user_id);
         $this->assertSame(ArticleApprovalStatus::Published, $galleryImage->approval);

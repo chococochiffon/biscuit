@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreTagRequest;
 use App\Http\Requests\UpdateTagRequest;
 use App\Models\Tag;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -41,7 +42,7 @@ class TagController extends Controller
     {
         AuditLogger::createWithLog(fn () => Tag::create($request->validated()));
 
-        return redirect()->route('admin.tags.index')->with('status', __('タグを登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.tags.index'))->with('status', __('タグを登録しました。'));
     }
 
     /**
@@ -67,7 +68,7 @@ class TagController extends Controller
     {
         AuditLogger::updateWithLog($tag, fn () => $tag->update($request->validated()));
 
-        return redirect()->route('admin.tags.index')->with('status', __('タグを更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.tags.index'))->with('status', __('タグを更新しました。'));
     }
 
     /**
@@ -77,6 +78,6 @@ class TagController extends Controller
     {
         AuditLogger::deleteWithLog($tag);
 
-        return redirect()->route('admin.tags.index')->with('status', __('タグを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.tags.index'))->with('status', __('タグを削除しました。'));
     }
 }

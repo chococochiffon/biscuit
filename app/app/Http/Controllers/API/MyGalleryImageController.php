@@ -74,7 +74,7 @@ class MyGalleryImageController extends Controller
         $galleryImage = AuditLogger::createWithLog(fn () => $this->user($request)->galleryImages()->create([
             ...$request->safe()->except('image'),
             'image' => GalleryImage::storeImage($request->file('image')),
-            'sort_order' => GalleryImage::nextSortOrder(),
+            'sort_order' => GalleryImage::prependSortOrder(),
             'approval' => ArticleApprovalStatus::Draft,
         ]));
 

@@ -11,6 +11,7 @@ use App\Models\CustomPages\CustomFormValue;
 use App\Models\CustomPages\CustomPageDetail;
 use App\Models\CustomPages\CustomPageEntry;
 use App\Models\CustomPageType;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +62,7 @@ class CustomPageEntryController extends Controller
             AuditLogger::created($entry, array_filter(['details' => $details]), $this->auditFormValues($customPageType, $entry));
         });
 
-        return redirect()->route('admin.custom-pages.entries.index', $customPageType)
+        return redirect()->to(AdminListUrl::to('admin.custom-pages.entries.index', $customPageType))
             ->with('status', __(':labelを登録しました。', ['label' => $customPageType->label]));
     }
 
@@ -102,7 +103,7 @@ class CustomPageEntryController extends Controller
             AuditLogger::updated($entry, $before, array_filter(['details' => $details]), extra: $this->auditFormValues($customPageType, $entry));
         });
 
-        return redirect()->route('admin.custom-pages.entries.index', $customPageType)
+        return redirect()->to(AdminListUrl::to('admin.custom-pages.entries.index', $customPageType))
             ->with('status', __(':labelを更新しました。', ['label' => $customPageType->label]));
     }
 
@@ -123,7 +124,7 @@ class CustomPageEntryController extends Controller
             $entry->delete();
         });
 
-        return redirect()->route('admin.custom-pages.entries.index', $customPageType)
+        return redirect()->to(AdminListUrl::to('admin.custom-pages.entries.index', $customPageType))
             ->with('status', __(':labelを削除しました。', ['label' => $customPageType->label]));
     }
 

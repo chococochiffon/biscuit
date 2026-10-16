@@ -7,6 +7,7 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\UpdateUserRequest;
 use App\Models\User;
 use App\Models\UserDetail;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
@@ -61,7 +62,7 @@ class UserController extends Controller
             AuditLogger::created($user, ['skills' => $skills->summary()], $this->auditDetail($detail->fresh()));
         });
 
-        return redirect()->route('admin.users.index')->with('status', __('ユーザーを登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.users.index'))->with('status', __('ユーザーを登録しました。'));
     }
 
     /**
@@ -119,7 +120,7 @@ class UserController extends Controller
             );
         });
 
-        return redirect()->route('admin.users.index')->with('status', __('ユーザーを更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.users.index'))->with('status', __('ユーザーを更新しました。'));
     }
 
     /**
@@ -129,7 +130,7 @@ class UserController extends Controller
     {
         AuditLogger::deleteWithLog($user);
 
-        return redirect()->route('admin.users.index')->with('status', __('ユーザーを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.users.index'))->with('status', __('ユーザーを削除しました。'));
     }
 
     /**
