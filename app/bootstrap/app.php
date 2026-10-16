@@ -5,6 +5,7 @@ use App\Http\Middleware\Installer\EnsureInstallerStep;
 use App\Http\Middleware\Installer\EnsureNotInstalled;
 use App\Http\Middleware\Installer\RedirectIfNotInstalled;
 use App\Http\Middleware\Installer\UseInstallerDrivers;
+use App\Http\Middleware\RememberAdminListUrl;
 use App\Http\Middleware\SetLocale;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -28,7 +29,8 @@ return Application::configure(basePath: dirname(__DIR__))
         then: fn () => Route::middleware('installer')->group(base_path('routes/installer.php')),
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [SetLocale::class]);
+        // 言語の設定を反映し、管理画面の一覧を開いたときはクエリ付きの URL を覚える(更新・削除などのあとに同じページへ戻す)
+        $middleware->web(append: [SetLocale::class, RememberAdminListUrl::class]);
 
         // インストールを終えるまでは、管理画面・API をインストーラーへ回す(DB を使うセッションなどより前に置く)
         $middleware->web(prepend: [RedirectIfNotInstalled::class]);

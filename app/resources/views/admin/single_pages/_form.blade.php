@@ -100,7 +100,7 @@
                 <button type="submit" class="btn btn-primary">
                     {{ $submitLabel }}
                 </button>
-                <a href="{{ route('admin.single-pages.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+                <a href="{{ \App\Support\AdminListUrl::to('admin.single-pages.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
             </div>
         </div>
     </div>

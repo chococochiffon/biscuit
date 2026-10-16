@@ -35,6 +35,6 @@
     </div>
 
     <div class="mt-4">
-        <a href="{{ route('admin.index') }}" class="text-secondary">{{ __('一覧へ戻る') }}</a>
+        <a href="{{ \App\Support\AdminListUrl::to('admin.index') }}" class="text-secondary">{{ __('一覧へ戻る') }}</a>
     </div>
 @endsection

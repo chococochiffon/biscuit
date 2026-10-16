@@ -36,7 +36,7 @@
 
         <div class="d-flex align-items-center gap-3">
             <button type="submit" class="btn btn-primary">{{ __('招待する') }}</button>
-            <a href="{{ route('admin.users.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.users.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </form>
 @endsection

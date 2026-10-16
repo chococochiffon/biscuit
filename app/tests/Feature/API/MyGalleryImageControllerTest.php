@@ -56,11 +56,11 @@ class MyGalleryImageControllerTest extends TestCase
             ->assertJsonPath('data.0.approval', 'pending');
     }
 
-    public function test_store_creates_draft_image_at_the_end_with_audit_log(): void
+    public function test_store_creates_draft_image_at_the_top_with_audit_log(): void
     {
         Storage::fake('public');
         $category = GalleryCategory::factory()->create(['name' => '風景']);
-        GalleryImage::factory()->create(['sort_order' => 5]);
+        $existing = GalleryImage::factory()->create(['sort_order' => 5]);
         $this->actingAsUserWithToken();
 
         $response = $this->post(route('api.me.gallery-images.store'), [
@@ -77,7 +77,8 @@ class MyGalleryImageControllerTest extends TestCase
 
         $image = GalleryImage::query()->findOrFail($response->json('data.id'));
         $this->assertSame($this->user->id, $image->user_id);
-        $this->assertSame(6, $image->sort_order);
+        $this->assertSame(0, $image->sort_order);
+        $this->assertSame(6, $existing->fresh()->sort_order);
         $this->assertSame([1200, 600], array_slice(getimagesizefromstring(Storage::disk('public')->get($image->image)), 0, 2));
         $this->assertSame(AuditAction::Created, AuditLog::query()->where('subject_id', $image->id)->sole()->action);
     }

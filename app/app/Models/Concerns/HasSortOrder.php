@@ -29,4 +29,17 @@ trait HasSortOrder
     {
         return (int) (($query ?? static::query())->max('sort_order') ?? -1) + 1;
     }
+
+    /**
+     * 先頭に追加する行の並び順。今ある行の並び順を 1 つずつ後ろへずらし、空いた 0 を返す。
+     * 更新日時は変えない(並び順をずらしただけで「更新」扱いにしない)。行の追加と同じトランザクションの中で呼ぶ。
+     *
+     * @param  Builder<static>|null  $query
+     */
+    public static function prependSortOrder(?Builder $query = null): int
+    {
+        ($query ?? static::query())->toBase()->increment('sort_order');
+
+        return 0;
+    }
 }

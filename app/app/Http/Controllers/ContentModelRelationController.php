@@ -6,6 +6,7 @@ use App\Http\Requests\StoreContentModelRelationRequest;
 use App\Http\Requests\UpdateContentModelRelationRequest;
 use App\Models\ContentModelRelation;
 use App\Rules\AllowedTableName;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
@@ -44,7 +45,7 @@ class ContentModelRelationController extends Controller
     {
         AuditLogger::createWithLog(fn () => ContentModelRelation::create($request->validated()));
 
-        return redirect()->route('admin.content-model-relations.index')->with('status', __('データ種別の紐付けを登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.content-model-relations.index'))->with('status', __('データ種別の紐付けを登録しました。'));
     }
 
     /**
@@ -78,7 +79,7 @@ class ContentModelRelationController extends Controller
     {
         AuditLogger::updateWithLog($contentModelRelation, fn () => $contentModelRelation->update($request->validated()));
 
-        return redirect()->route('admin.content-model-relations.index')->with('status', __('データ種別の紐付けを更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.content-model-relations.index'))->with('status', __('データ種別の紐付けを更新しました。'));
     }
 
     /**
@@ -89,11 +90,11 @@ class ContentModelRelationController extends Controller
         $inUseMessage = $contentModelRelation->inUseMessage();
 
         if ($inUseMessage !== null) {
-            return redirect()->route('admin.content-model-relations.index')->with('error', $inUseMessage);
+            return redirect()->to(AdminListUrl::to('admin.content-model-relations.index'))->with('error', $inUseMessage);
         }
 
         AuditLogger::deleteWithLog($contentModelRelation);
 
-        return redirect()->route('admin.content-model-relations.index')->with('status', __('データ種別の紐付けを削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.content-model-relations.index'))->with('status', __('データ種別の紐付けを削除しました。'));
     }
 }

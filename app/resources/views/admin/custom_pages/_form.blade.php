@@ -105,7 +105,7 @@
 
         <div class="d-flex align-items-center gap-3">
             <button type="submit" class="btn btn-primary">{{ $submitLabel }}</button>
-            <a href="{{ route('admin.custom-pages.entries.index', $customPageType) }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.custom-pages.entries.index', $customPageType) }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </div>
 

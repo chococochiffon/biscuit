@@ -8,6 +8,7 @@ use App\Http\Requests\StoreGalleryImageRequest;
 use App\Http\Requests\UpdateGalleryImageRequest;
 use App\Models\GalleryCategory;
 use App\Models\GalleryImage;
+use App\Support\AdminListUrl;
 use App\Support\AuditLogger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -82,19 +83,19 @@ class GalleryImageController extends Controller
     }
 
     /**
-     * ギャラリー画像を登録する。管理者の登録は承認なしで公開にし、並び順は末尾にする。
+     * ギャラリー画像を登録する。管理者の登録は承認なしで公開にし、並び順は先頭にする(新しい画像ほど前に出す)。
      */
     public function store(StoreGalleryImageRequest $request): RedirectResponse
     {
         AuditLogger::createWithLog(fn () => GalleryImage::create([
             ...$request->safe()->except('image'),
             'image' => GalleryImage::storeImage($request->file('image')),
-            'sort_order' => GalleryImage::nextSortOrder(),
+            'sort_order' => GalleryImage::prependSortOrder(),
             'user_id' => null,
             'approval' => ArticleApprovalStatus::Published,
         ]));
 
-        return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を登録しました。'));
+        return redirect()->to(AdminListUrl::to('admin.gallery-images.index'))->with('status', __('ギャラリー画像を登録しました。'));
     }
 
     /**
@@ -117,7 +118,7 @@ class GalleryImageController extends Controller
             ...($request->hasFile('image') ? ['image' => GalleryImage::storeImage($request->file('image'))] : []),
         ]));
 
-        return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を更新しました。'));
+        return redirect()->to(AdminListUrl::to('admin.gallery-images.index'))->with('status', __('ギャラリー画像を更新しました。'));
     }
 
     /**
@@ -127,7 +128,7 @@ class GalleryImageController extends Controller
     {
         AuditLogger::deleteWithLog($galleryImage);
 
-        return redirect()->route('admin.gallery-images.index')->with('status', __('ギャラリー画像を削除しました。'));
+        return redirect()->to(AdminListUrl::to('admin.gallery-images.index'))->with('status', __('ギャラリー画像を削除しました。'));
     }
 
     /**

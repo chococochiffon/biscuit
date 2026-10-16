@@ -21,7 +21,7 @@
             <button type="submit" class="btn btn-primary">
                 {{ __('更新する') }}
             </button>
-            <a href="{{ route('admin.users.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.users.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </form>
 @endsection

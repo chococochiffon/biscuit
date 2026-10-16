@@ -15,7 +15,7 @@
             <button type="submit" class="btn btn-primary">
                 {{ __('更新する') }}
             </button>
-            <a href="{{ route('admin.tags.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
+            <a href="{{ \App\Support\AdminListUrl::to('admin.tags.index') }}" class="text-secondary">{{ __('キャンセル') }}</a>
         </div>
     </form>
 @endsection
