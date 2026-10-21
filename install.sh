@@ -60,8 +60,9 @@ prepare() {
     cp "$APP/.env.example" "$APP/.env"
   fi
 
+  # --pull: 手元に残っている古いベースイメージ(php:8.5-fpm など)を使わず、最新のパッチ版を取る
   info "PHP のイメージを作ります(初回は数分かかります)"
-  compose build app
+  compose build --pull app
 
   info "PHP の依存関係を入れます"
   install_php_dependencies
@@ -107,7 +108,7 @@ start_services() {
   fi
 
   write_status running build "公開側のイメージを作っています(初回は数分かかります)"
-  if ! compose build front scheduler >>"$HOST_LOG" 2>&1; then
+  if ! compose build --pull front scheduler >>"$HOST_LOG" 2>&1; then
     write_status failed build "公開側のイメージを作れませんでした。install.sh の画面と install.log を確認してください。"
     return
   fi

@@ -375,10 +375,11 @@ checkout_version() {
 
 # いまのソースで、イメージ・PHP の依存関係・管理画面の CSS と JS を作り直し、サービスを起動し直す(install.sh と同じ手順)
 # メモリが少ないサーバー(2GB)でも動くよう、足りなければビルドのあいだサービスを止め、イメージは 1 つずつ作る
+# ベースイメージ(php:8.5-fpm・node:24-slim)は --pull で取り直し、更新のたびに最新のパッチ版にする
 rebuild_and_start() {
   free_memory_for_build
-  run_logged "PHP のイメージを作り直します" compose build app scheduler || return 1
-  run_logged "公開側のイメージを作り直します(数分かかります)" compose build front || return 1
+  run_logged "PHP のイメージを作り直します" compose build --pull app scheduler || return 1
+  run_logged "公開側のイメージを作り直します(数分かかります)" compose build --pull front || return 1
   run_logged "PHP の依存関係を入れます" install_php_dependencies || return 1
   run_logged "管理画面の CSS・JS をビルドします" build_admin_assets || return 1
   run_logged "サービスを起動し直します" compose up -d db app web front || return 1
